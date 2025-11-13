@@ -4,10 +4,21 @@ local settings = require("settings")
 local app_icons = require("helpers.app_icons")
 
 local spaces = {}
+local space_brackets = {}
 
--- Workspace to monitor mapping based on aerospace config
--- main monitor (display 1): workspaces 1, 3, 5
--- secondary monitor (display 2): workspaces 2, 4, 6
+-- ============================================================================
+-- WORKSPACE COUNT CONFIGURATION
+-- ============================================================================
+-- Change this number to add/remove workspaces (e.g., 6, 9, etc.)
+-- Also update aerospace.toml keyboard shortcuts to match:
+--   - Add: cmd-N = 'workspace N'
+--   - Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
+-- ============================================================================
+local WORKSPACE_COUNT = 6
+
+-- Multi-monitor workspace assignment
+-- Odd workspaces (1, 3, 5) on main monitor (display 1)
+-- Even workspaces (2, 4, 6) on secondary monitor (display 2)
 local workspace_to_display = {
   [1] = 1, -- main
   [2] = 2, -- secondary
@@ -17,7 +28,7 @@ local workspace_to_display = {
   [6] = 2, -- secondary
 }
 
-for i = 1, 6, 1 do
+for i = 1, WORKSPACE_COUNT, 1 do
   local space = sbar.add("space", "space." .. i, {
     space = i,
     display = workspace_to_display[i],
@@ -80,33 +91,20 @@ for i = 1, 6, 1 do
     }
   })
 
-  -- Subscribe to aerospace workspace change event
-  space:subscribe("aerospace_workspace_change", function(env)
-    local focused_workspace = env.FOCUSED_WORKSPACE
-    local is_focused = (focused_workspace == tostring(i))
-
-    space:set({
-      icon = { highlight = is_focused },
-      label = { highlight = is_focused },
-      background = { border_color = is_focused and colors.black or colors.bg2 }
-    })
-    space_bracket:set({
-      background = { border_color = is_focused and colors.grey or colors.bg2 }
-    })
-  end)
-
   space:subscribe("mouse.clicked", function(env)
     if env.BUTTON == "other" then
-      space_popup:set({ background = { image = "space." .. env.SID } })
+      space_popup:set({ background = { image = "space." .. i } })
       space:set({ popup = { drawing = "toggle" } })
     else
       -- Use aerospace instead of yabai
       if env.BUTTON == "right" then
         -- Right click: close all windows in workspace
-        sbar.exec("aerospace workspace " .. env.SID .. " && aerospace close-all-windows-but-current")
+        sbar.exec("aerospace workspace " .. i .. " && aerospace close-all-windows-but-current")
       else
         -- Left click: focus workspace
-        sbar.exec("aerospace workspace " .. env.SID)
+        sbar.exec("aerospace workspace " .. i)
+        -- Manually trigger highlighting update immediately
+        sbar.trigger("aerospace_workspace_change", "FOCUSED_WORKSPACE=" .. i)
       end
     end
   end)
@@ -115,6 +113,35 @@ for i = 1, 6, 1 do
     space:set({ popup = { drawing = false } })
   end)
 end
+
+-- Global event handler for aerospace workspace changes
+local workspace_handler = sbar.add("item", {
+  drawing = false,
+  updates = true,
+})
+
+workspace_handler:subscribe("aerospace_workspace_change", function(env)
+  local focused_workspace = tonumber(env.FOCUSED_WORKSPACE)
+
+  -- Update all workspaces
+  for i = 1, WORKSPACE_COUNT do
+    local is_focused = (focused_workspace == i)
+
+    if spaces[i] then
+      spaces[i]:set({
+        icon = { highlight = is_focused },
+        label = { highlight = is_focused },
+        background = { border_color = is_focused and colors.black or colors.bg2 }
+      })
+    end
+
+    if space_brackets[i] then
+      space_brackets[i]:set({
+        background = { border_color = is_focused and colors.grey or colors.bg2 }
+      })
+    end
+  end
+end)
 
 local space_window_observer = sbar.add("item", {
   drawing = false,
@@ -145,7 +172,7 @@ local spaces_indicator = sbar.add("item", {
 
 -- Function to update workspace icons using aerospace
 local function update_workspace_icons()
-  for i = 1, 6 do
+  for i = 1, WORKSPACE_COUNT do
     sbar.exec("aerospace list-windows --workspace " .. i .. " --format '%{app-name}'", function(result)
       local icon_line = ""
       local has_windows = false
