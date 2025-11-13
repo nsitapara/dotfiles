@@ -76,6 +76,17 @@ outer.right =      5
     cmd-comma = 'layout accordion horizontal vertical'
     alt-f = 'fullscreen'
 
+    # =========================================================================
+    # WORKSPACE KEYBOARD SHORTCUTS
+    # =========================================================================
+    # To add more workspaces (e.g., workspace 5-9):
+    # 1. Add: cmd-N = 'workspace N'
+    # 2. Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
+    # 3. Update cmd-end to point to last workspace
+    # 4. Update WORKSPACE_COUNT in sketchybar/items/spaces.lua
+    # =========================================================================
+
+    # Switch to workspace
     cmd-1 = 'workspace 1'
     cmd-2 = 'workspace 2'
     cmd-3 = 'workspace 3'
@@ -85,8 +96,9 @@ outer.right =      5
     cmd-pageDown = ['workspace next']
 
     cmd-home = ['workspace 1']
-    cmd-end = ['workspace 4']
+    cmd-end = ['workspace 4']  # Update this when adding more workspaces
 
+    # Move window to workspace
     cmd-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
     cmd-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
     cmd-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'

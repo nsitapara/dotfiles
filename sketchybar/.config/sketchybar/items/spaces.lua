@@ -6,8 +6,18 @@ local app_icons = require("helpers.app_icons")
 local spaces = {}
 local space_brackets = {}
 
--- Single monitor setup - hardcoded 4 workspaces
-for i = 1, 4, 1 do
+-- ============================================================================
+-- WORKSPACE COUNT CONFIGURATION
+-- ============================================================================
+-- Change this number to add/remove workspaces (e.g., 6, 9, etc.)
+-- Also update aerospace.toml keyboard shortcuts to match:
+--   - Add: cmd-N = 'workspace N'
+--   - Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
+-- ============================================================================
+local WORKSPACE_COUNT = 4
+
+-- Single monitor setup
+for i = 1, WORKSPACE_COUNT, 1 do
   local space = sbar.add("space", "space." .. i, {
     space = i,
     ignore_association = "on",
@@ -103,7 +113,7 @@ workspace_handler:subscribe("aerospace_workspace_change", function(env)
   local focused_workspace = tonumber(env.FOCUSED_WORKSPACE)
 
   -- Update all workspaces
-  for i = 1, 4 do
+  for i = 1, WORKSPACE_COUNT do
     local is_focused = (focused_workspace == i)
 
     if spaces[i] then
@@ -151,7 +161,7 @@ local spaces_indicator = sbar.add("item", {
 
 -- Function to update workspace icons using aerospace
 local function update_workspace_icons()
-  for i = 1, 4 do
+  for i = 1, WORKSPACE_COUNT do
     sbar.exec("aerospace list-windows --workspace " .. i .. " --format '%{app-name}'", function(result)
       local icon_line = ""
       local has_windows = false
