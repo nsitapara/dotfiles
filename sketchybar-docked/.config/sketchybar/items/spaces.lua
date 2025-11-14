@@ -35,13 +35,13 @@ for i = 1, WORKSPACE_COUNT, 1 do
     icon = {
       font = { family = settings.font.numbers },
       string = i,
-      padding_left = 15,
+      padding_left = 12,
       padding_right = 8,
       color = colors.white,
-      highlight_color = colors.red,
+      highlight_color = colors.mauve,
     },
     label = {
-      padding_right = 20,
+      padding_right = 18,
       color = colors.grey,
       highlight_color = colors.white,
       font = "sketchybar-app-font:Regular:16.0",
@@ -52,7 +52,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
     background = {
       color = colors.bg1,
       border_width = 1,
-      height = 26,
+      height = 32,
       border_color = colors.black,
     },
     popup = { background = { border_width = 5, border_color = colors.black } }
@@ -60,15 +60,17 @@ for i = 1, WORKSPACE_COUNT, 1 do
 
   spaces[i] = space
 
-  -- Single item bracket for space items to achieve double border on highlight
+  -- Single item bracket for space items (disabled for single border design)
   local space_bracket = sbar.add("bracket", { space.name }, {
     background = {
       color = colors.transparent,
-      border_color = colors.bg2,
-      height = 28,
-      border_width = 2
+      border_color = colors.transparent,
+      height = 34,
+      border_width = 0
     }
   })
+
+  space_brackets[i] = space_bracket
 
   -- Padding space
   sbar.add("space", "space.padding." .. i, {
@@ -129,15 +131,31 @@ workspace_handler:subscribe("aerospace_workspace_change", function(env)
 
     if spaces[i] then
       spaces[i]:set({
-        icon = { highlight = is_focused },
-        label = { highlight = is_focused },
-        background = { border_color = is_focused and colors.black or colors.bg2 }
+        icon = {
+          highlight = is_focused,
+          padding_left = is_focused and 16 or 12,
+          padding_right = is_focused and 12 or 8
+        },
+        label = {
+          highlight = is_focused,
+          padding_right = is_focused and 24 or 18
+        },
+        padding_left = is_focused and 2 or 1,
+        padding_right = is_focused and 2 or 1,
+        background = {
+          border_color = is_focused and colors.mauve or colors.black,
+          border_width = is_focused and 2 or 1,
+          color = is_focused and colors.bg2 or colors.bg1
+        }
       })
     end
 
     if space_brackets[i] then
       space_brackets[i]:set({
-        background = { border_color = is_focused and colors.grey or colors.bg2 }
+        background = {
+          border_color = colors.transparent,
+          border_width = 0
+        }
       })
     end
   end

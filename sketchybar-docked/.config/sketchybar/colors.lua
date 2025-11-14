@@ -7,6 +7,7 @@ return {
   yellow = 0xffe7c664,
   orange = 0xfff39660,
   magenta = 0xffb39df3,
+  mauve = 0xffcba6f7, -- Catppuccin Mocha Mauve (matches aerospace active border)
   grey = 0xff7f8490,
   transparent = 0x00000000,
 
