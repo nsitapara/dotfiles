@@ -40,6 +40,7 @@ key-mapping.preset = 'qwerty'
 
 # Mouse follows focus when focused monitor changes
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-focus-changed = "move-mouse window-lazy-center"
 
 [gaps]
 inner.horizontal = 5
@@ -190,42 +191,13 @@ outer.right =      5
 # Application-specific configurations
 #
 
-[[on-window-detected]]
-if.app-name-regex-substring = 'Code - Insiders|Cursor|Simulator|Warp|Xcode|Sublime|iTerm|terminal|VSCode'
-run = ['layout tiling', 'move-node-to-workspace 3']
+# [[on-window-detected]]
+# if.app-name-regex-substring = 'Code - Insiders|Cursor|Simulator|Warp|Xcode|Sublime|iTerm|terminal|VSCode'
+# run = ['layout tiling', 'move-node-to-workspace 3']
 
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-run = "move-node-to-workspace 1"
-
-
-[[on-window-detected]]
-if.app-name-regex-substring = 'Basecamp'
-run = ['layout tiling', 'move-node-to-workspace 6']
-
-[[on-window-detected]]
-if.app-name-regex-substring = 'Hey|Mail'
-run = ['layout tiling', 'move-node-to-workspace 4']
-
-[[on-window-detected]]
-if.app-name-regex-substring = 'Figma|Framer'
-run = ['layout tiling', 'move-node-to-workspace 2']
-
-[[on-window-detected]]
-if.app-id = 'com.spotify.client'
-run = ['layout tiling', 'move-node-to-workspace 5']
-
-[[on-window-detected]]
-if.app-id = 'com.hnc.Discord'
-run = ['layout tiling', 'move-node-to-workspace 5']
-
-[[on-window-detected]]
-if.app-name-regex-substring = 'Obsidian|Notes'
-run = ['layout tiling', 'move-node-to-workspace 5']
-
-[[on-window-detected]]
-if.app-id = 'com.1password.1password'
-run = 'layout floating'
+#[[on-window-detected]]
+#if.app-id = 'com.google.Chrome'
+#run = "move-node-to-workspace 1"
 
 [[on-window-detected]]
 if.app-id = 'com.apple.ActivityMonitor'
@@ -241,8 +213,4 @@ run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.FaceTime'
-run = 'layout floating'
-
-[[on-window-detected]]
-if.app-id = 'org.pqrs.Karabiner-Elements.Settings'
 run = 'layout floating'
