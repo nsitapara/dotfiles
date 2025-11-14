@@ -1,26 +1,35 @@
+-- Catppuccin Mocha Color Palette
+-- https://catppuccin.com/palette
+-- Only includes colors actually used in the configuration
+
 return {
-  black = 0xff181819,
-  white = 0xffe2e2e3,
-  red = 0xfffc5d7c,
-  green = 0xff9ed072,
-  blue = 0xff76cce0,
-  yellow = 0xffe7c664,
-  orange = 0xfff39660,
-  magenta = 0xffb39df3,
-  mauve = 0xffcba6f7, -- Catppuccin Mocha Mauve (matches aerospace active border)
-  grey = 0xff7f8490,
+  -- Primary colors (mapped to Catppuccin Mocha)
+  black = 0xff11111b,      -- Crust
+  white = 0xffcdd6f4,      -- Text
+  red = 0xfff38ba8,        -- Red
+  green = 0xffa6e3a1,      -- Green
+  blue = 0xff89b4fa,       -- Blue
+  yellow = 0xfff9e2af,     -- Yellow
+  orange = 0xfffab387,     -- Peach
+  mauve = 0xffcba6f7,      -- Mauve
+  grey = 0xff6c7086,       -- Overlay0
   transparent = 0x00000000,
 
+  -- Background shades
+  bg1 = 0xff313244,  -- Surface0
+  bg2 = 0xff45475a,  -- Surface1
+
+  -- Bar specific
   bar = {
-    bg = 0xf02c2e34,
-    border = 0xff2c2e34,
+    bg = 0xf01e1e2e,       -- Base with transparency
+    border = 0xff1e1e2e,   -- Base
   },
+
+  -- Popup specific
   popup = {
-    bg = 0xc02c2e34,
-    border = 0xff7f8490
+    bg = 0xf0313244,       -- Surface0 with transparency
+    border = 0xff6c7086    -- Overlay0
   },
-  bg1 = 0xff363944,
-  bg2 = 0xff414550,
 
   with_alpha = function(color, alpha)
     if alpha > 1.0 or alpha < 0.0 then return color end
