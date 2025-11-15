@@ -29,3 +29,8 @@
 [user]
 	email = nsitapara@gmail.com
 	name = Nish Sitapara
+[filter "lfs"]
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
