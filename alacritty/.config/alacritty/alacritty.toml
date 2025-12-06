@@ -19,3 +19,6 @@ bindings = [
 { key = "Insert", mods = "Shift", action = "Paste" },
 { key = "Insert", mods = "Control", action = "Copy" }
 ]
+
+[selection]
+save_to_clipboard = true
