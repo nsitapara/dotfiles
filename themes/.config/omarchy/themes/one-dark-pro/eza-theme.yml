@@ -1,0 +1,115 @@
+# One Dark Pro Theme for Eza
+# Derived from: https://github.com/sc0ttman/omarchy-one-dark-pro-theme
+#
+# Color Palette:
+#   Background: #1e2229
+#   Foreground: #abb2bf
+#   Red: #e06c75
+#   Green: #98c379
+#   Yellow: #e5c07b
+#   Blue: #61afef
+#   Magenta: #c678dd
+#   Cyan: #56b6c2
+#   Grey: #5c6370
+
+colourful: true
+
+filekinds:
+  normal: {foreground: "#abb2bf"}
+  directory: {foreground: "#61afef"}
+  symlink: {foreground: "#56b6c2"}
+  pipe: {foreground: "#5c6370"}
+  block_device: {foreground: "#e06c75"}
+  char_device: {foreground: "#e06c75"}
+  socket: {foreground: "#5c6370"}
+  special: {foreground: "#c678dd"}
+  executable: {foreground: "#98c379"}
+  mount_point: {foreground: "#56b6c2"}
+
+perms:
+  user_read: {foreground: "#e06c75", is_bold: true}
+  user_write: {foreground: "#e5c07b", is_bold: true}
+  user_execute_file: {foreground: "#98c379", is_bold: true}
+  user_execute_other: {foreground: "#98c379", is_bold: true}
+  group_read: {foreground: "#e06c75"}
+  group_write: {foreground: "#e5c07b"}
+  group_execute: {foreground: "#98c379"}
+  other_read: {foreground: "#e06c75"}
+  other_write: {foreground: "#e5c07b"}
+  other_execute: {foreground: "#98c379"}
+  special_user_file: {foreground: "#c678dd"}
+  special_other: {foreground: "#5c6370"}
+  attribute: {foreground: "#5c6370"}
+
+size:
+  major: {foreground: "#abb2bf"}
+  minor: {foreground: "#56b6c2"}
+  number_byte: {foreground: "#abb2bf"}
+  number_kilo: {foreground: "#abb2bf"}
+  number_mega: {foreground: "#61afef"}
+  number_giga: {foreground: "#c678dd"}
+  number_huge: {foreground: "#c678dd"}
+  unit_byte: {foreground: "#5c6370"}
+  unit_kilo: {foreground: "#56b6c2"}
+  unit_mega: {foreground: "#c678dd"}
+  unit_giga: {foreground: "#c678dd"}
+  unit_huge: {foreground: "#56b6c2"}
+
+users:
+  user_you: {foreground: "#abb2bf"}
+  user_root: {foreground: "#e06c75"}
+  user_other: {foreground: "#e06c75"}
+  group_yours: {foreground: "#5c6370"}
+  group_other: {foreground: "#5c6370"}
+  group_root: {foreground: "#e06c75"}
+
+links:
+  normal: {foreground: "#56b6c2"}
+  multi_link_file: {foreground: "#56b6c2"}
+
+git:
+  new: {foreground: "#98c379"}
+  modified: {foreground: "#e5c07b"}
+  deleted: {foreground: "#e06c75"}
+  renamed: {foreground: "#56b6c2"}
+  typechange: {foreground: "#c678dd"}
+  ignored: {foreground: "#5c6370"}
+  conflicted: {foreground: "#da6f3f"}
+
+git_repo:
+  branch_main: {foreground: "#abb2bf"}
+  branch_other: {foreground: "#c678dd"}
+  git_clean: {foreground: "#98c379"}
+  git_dirty: {foreground: "#e06c75"}
+
+security_context:
+  colon: {foreground: "#5c6370"}
+  user: {foreground: "#5c6370"}
+  role: {foreground: "#c678dd"}
+  typ: {foreground: "#3e4451"}
+  range: {foreground: "#c678dd"}
+
+file_type:
+  image: {foreground: "#e5c07b"}
+  video: {foreground: "#e06c75"}
+  music: {foreground: "#98c379"}
+  lossless: {foreground: "#56b6c2"}
+  crypto: {foreground: "#5c6370"}
+  document: {foreground: "#abb2bf"}
+  compressed: {foreground: "#c678dd"}
+  temp: {foreground: "#e06c75"}
+  compiled: {foreground: "#56b6c2"}
+  source: {foreground: "#61afef"}
+
+punctuation: {foreground: "#5c6370"}
+date: {foreground: "#e5c07b"}
+inode: {foreground: "#5c6370"}
+blocks: {foreground: "#5c6370"}
+header: {foreground: "#abb2bf"}
+octal: {foreground: "#56b6c2"}
+flags: {foreground: "#c678dd"}
+
+symlink_path: {foreground: "#56b6c2"}
+control_char: {foreground: "#56b6c2"}
+broken_symlink: {foreground: "#e06c75"}
+broken_path_overlay: {foreground: "#3e4451"}

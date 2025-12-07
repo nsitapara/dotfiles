@@ -1,1 +1,4 @@
 .DS_Store
+
+# Machine-specific theme symlinks (managed by theme CLI)
+nvim/.config/nvim/lua/plugins/theme.lua

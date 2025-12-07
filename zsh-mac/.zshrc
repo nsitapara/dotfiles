@@ -6,7 +6,7 @@ export PATH="/Users/nishsitapara/.local/bin:$PATH"
 
 
 # FZF colors loaded from Omarchy theme
-source ~/.config/omarchy/current/macos/fzf-colors.sh
+source ~/.config/omarchy/current/fzf-colors.sh
 
 # CHANGE TO PROD IF NEED TO USE PROD OR OVERRIDE LOCAL SESSION
 export AWS_PROFILE=dev

@@ -6,7 +6,7 @@ start-at-login = true
 after-startup-command = [
     # JankyBorders - colors loaded from Omarchy theme
     # sketchybar has built-in detection of already running process
-    'exec-and-forget source ~/.config/omarchy/current/macos/borders.sh && borders active_color=$BORDER_ACTIVE inactive_color=$BORDER_INACTIVE width=$BORDER_WIDTH',
+    'exec-and-forget source ~/.config/omarchy/current/borders.sh && borders active_color=$BORDER_ACTIVE inactive_color=$BORDER_INACTIVE width=$BORDER_WIDTH',
     'exec-and-forget sketchybar'
 ]
 

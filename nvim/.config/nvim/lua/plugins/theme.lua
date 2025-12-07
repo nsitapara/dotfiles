@@ -1,1 +1,0 @@
-/home/nsitapara/.config/omarchy/current/theme/neovim.lua

@@ -26,7 +26,7 @@ $time\
 [ ](fg:purple)\
 $line_break$character"""
 
-palette = 'one_dark_pro'
+palette = 'catppuccin_mocha'
 
 [palettes.gruvbox_dark]
 color_fg0 = '#fbf1c7'
@@ -129,6 +129,68 @@ surface0 = "#ccd0da"
 base = "#eff1f5"
 mantle = "#e6e9ef"
 crust = "#dce0e8"
+
+[palettes.pulsar]
+# Pulsar theme palette (cyberpunk/neon)
+# Derived from: https://github.com/bjarneo/omarchy-pulsar-theme
+rosewater = "#ff5779"
+flamingo = "#ff5779"
+pink = "#d25dff"
+orange = "#ff5779"
+red = "#e53e61"
+maroon = "#e53e61"
+peach = "#f2e42e"
+yellow = "#f2e42e"
+green = "#5cb960"
+teal = "#3df2f2"
+sky = "#59ffff"
+sapphire = "#50b0ff"
+blue = "#3298fa"
+lavender = "#d25dff"
+purple = "#b82aff"
+text = "#e0e6ff"
+subtext1 = "#c0c6df"
+subtext0 = "#aa5abc"
+overlay2 = "#aa5abc"
+overlay1 = "#8a4a9c"
+overlay0 = "#6a3a7c"
+surface2 = "#2a1f34"
+surface1 = "#1a0f24"
+surface0 = "#150a1a"
+base = "#0a0314"
+mantle = "#080210"
+crust = "#05010a"
+
+[palettes.rose_pine]
+# Rose Pine Dark theme palette
+# Derived from: https://github.com/guilhermetk/omarchy-rose-pine-dark
+rosewater = "#ebbcba"
+flamingo = "#ebbcba"
+pink = "#ebbcba"
+orange = "#f6c177"
+red = "#eb6f92"
+maroon = "#eb6f92"
+peach = "#f6c177"
+yellow = "#f6c177"
+green = "#31748f"
+teal = "#31748f"
+sky = "#9ccfd8"
+sapphire = "#9ccfd8"
+blue = "#9ccfd8"
+lavender = "#c4a7e7"
+purple = "#c4a7e7"
+text = "#e0def4"
+subtext1 = "#e0def4"
+subtext0 = "#908caa"
+overlay2 = "#6e6a86"
+overlay1 = "#6e6a86"
+overlay0 = "#524f67"
+surface2 = "#403d52"
+surface1 = "#26233a"
+surface0 = "#1f1d2e"
+base = "#191724"
+mantle = "#1f1d2e"
+crust = "#26233a"
 
 [os]
 disabled = false

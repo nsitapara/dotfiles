@@ -1,0 +1,115 @@
+# Pulsar Theme for Eza
+# Derived from: https://github.com/bjarneo/omarchy-pulsar-theme
+#
+# Color Palette:
+#   Background: #0a0314
+#   Foreground: #e0e6ff
+#   Red: #e53e61
+#   Green: #5cb960
+#   Yellow: #f2e42e
+#   Blue: #3298fa
+#   Magenta: #b82aff
+#   Cyan: #3df2f2
+#   Grey: #aa5abc
+
+colourful: true
+
+filekinds:
+  normal: {foreground: "#e0e6ff"}
+  directory: {foreground: "#3298fa"}
+  symlink: {foreground: "#3df2f2"}
+  pipe: {foreground: "#aa5abc"}
+  block_device: {foreground: "#e53e61"}
+  char_device: {foreground: "#e53e61"}
+  socket: {foreground: "#aa5abc"}
+  special: {foreground: "#b82aff"}
+  executable: {foreground: "#5cb960"}
+  mount_point: {foreground: "#3df2f2"}
+
+perms:
+  user_read: {foreground: "#e53e61", is_bold: true}
+  user_write: {foreground: "#f2e42e", is_bold: true}
+  user_execute_file: {foreground: "#5cb960", is_bold: true}
+  user_execute_other: {foreground: "#5cb960", is_bold: true}
+  group_read: {foreground: "#e53e61"}
+  group_write: {foreground: "#f2e42e"}
+  group_execute: {foreground: "#5cb960"}
+  other_read: {foreground: "#e53e61"}
+  other_write: {foreground: "#f2e42e"}
+  other_execute: {foreground: "#5cb960"}
+  special_user_file: {foreground: "#b82aff"}
+  special_other: {foreground: "#aa5abc"}
+  attribute: {foreground: "#aa5abc"}
+
+size:
+  major: {foreground: "#e0e6ff"}
+  minor: {foreground: "#3df2f2"}
+  number_byte: {foreground: "#e0e6ff"}
+  number_kilo: {foreground: "#e0e6ff"}
+  number_mega: {foreground: "#3298fa"}
+  number_giga: {foreground: "#b82aff"}
+  number_huge: {foreground: "#b82aff"}
+  unit_byte: {foreground: "#aa5abc"}
+  unit_kilo: {foreground: "#3df2f2"}
+  unit_mega: {foreground: "#b82aff"}
+  unit_giga: {foreground: "#b82aff"}
+  unit_huge: {foreground: "#3df2f2"}
+
+users:
+  user_you: {foreground: "#e0e6ff"}
+  user_root: {foreground: "#e53e61"}
+  user_other: {foreground: "#e53e61"}
+  group_yours: {foreground: "#aa5abc"}
+  group_other: {foreground: "#aa5abc"}
+  group_root: {foreground: "#e53e61"}
+
+links:
+  normal: {foreground: "#3df2f2"}
+  multi_link_file: {foreground: "#3df2f2"}
+
+git:
+  new: {foreground: "#5cb960"}
+  modified: {foreground: "#f2e42e"}
+  deleted: {foreground: "#e53e61"}
+  renamed: {foreground: "#3df2f2"}
+  typechange: {foreground: "#b82aff"}
+  ignored: {foreground: "#aa5abc"}
+  conflicted: {foreground: "#ff5779"}
+
+git_repo:
+  branch_main: {foreground: "#e0e6ff"}
+  branch_other: {foreground: "#b82aff"}
+  git_clean: {foreground: "#5cb960"}
+  git_dirty: {foreground: "#e53e61"}
+
+security_context:
+  colon: {foreground: "#aa5abc"}
+  user: {foreground: "#aa5abc"}
+  role: {foreground: "#b82aff"}
+  typ: {foreground: "#1a0f24"}
+  range: {foreground: "#b82aff"}
+
+file_type:
+  image: {foreground: "#f2e42e"}
+  video: {foreground: "#e53e61"}
+  music: {foreground: "#5cb960"}
+  lossless: {foreground: "#3df2f2"}
+  crypto: {foreground: "#aa5abc"}
+  document: {foreground: "#e0e6ff"}
+  compressed: {foreground: "#b82aff"}
+  temp: {foreground: "#e53e61"}
+  compiled: {foreground: "#3df2f2"}
+  source: {foreground: "#3298fa"}
+
+punctuation: {foreground: "#aa5abc"}
+date: {foreground: "#f2e42e"}
+inode: {foreground: "#aa5abc"}
+blocks: {foreground: "#aa5abc"}
+header: {foreground: "#e0e6ff"}
+octal: {foreground: "#3df2f2"}
+flags: {foreground: "#b82aff"}
+
+symlink_path: {foreground: "#3df2f2"}
+control_char: {foreground: "#3df2f2"}
+broken_symlink: {foreground: "#e53e61"}
+broken_path_overlay: {foreground: "#1a0f24"}

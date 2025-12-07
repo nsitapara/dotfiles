@@ -1,0 +1,10 @@
+#!/bin/bash
+# Rose Pine Dark theme colors for FZF
+# Derived from: https://github.com/guilhermetk/omarchy-rose-pine-dark
+
+export FZF_DEFAULT_OPTS=" \
+--color=bg+:#26233a,bg:#191724,spinner:#f6c177,hl:#eb6f92 \
+--color=fg:#e0def4,header:#eb6f92,info:#c4a7e7,pointer:#f6c177 \
+--color=marker:#9ccfd8,fg+:#e0def4,prompt:#c4a7e7,hl+:#eb6f92 \
+--color=selected-bg:#403d52 \
+--color=border:#6e6a86,label:#e0def4"

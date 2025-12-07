@@ -5,6 +5,8 @@
 OMARCHY_DIR="$HOME/.config/omarchy"
 THEMES_DIR="$OMARCHY_DIR/themes"
 CURRENT_LINK="$OMARCHY_DIR/current"
+# For install, use dotfiles location so themes are git-tracked
+DOTFILES_THEMES_DIR="$HOME/dotfiles/themes/.config/omarchy/themes"
 
 case "$1" in
   list)
@@ -38,13 +40,27 @@ case "$1" in
     rm -f "$CURRENT_LINK"
     ln -s "themes/$THEME" "$CURRENT_LINK"
 
-    # Ensure eza theme symlink exists (can't be handled by stow)
+    # Ensure eza theme symlink exists
     EZA_THEME="$HOME/.config/eza/theme.yml"
-    if [ ! -L "$EZA_THEME" ] || [ "$(readlink "$EZA_THEME")" != "$CURRENT_LINK/macos/eza-theme.yml" ]; then
+    EZA_SRC="$CURRENT_LINK/eza-theme.yml"
+    if [ -f "$EZA_SRC" ]; then
       mkdir -p "$(dirname "$EZA_THEME")"
       rm -f "$EZA_THEME"
-      ln -s "$CURRENT_LINK/macos/eza-theme.yml" "$EZA_THEME"
+      ln -s "$EZA_SRC" "$EZA_THEME"
       echo "✓ Eza theme symlink created"
+    fi
+
+    # Update Neovim theme symlink
+    NVIM_THEME="$HOME/.config/nvim/lua/plugins/theme.lua"
+    NVIM_THEME_SRC="$CURRENT_LINK/neovim.lua"
+    if [ -f "$NVIM_THEME_SRC" ]; then
+      mkdir -p "$(dirname "$NVIM_THEME")"
+      rm -f "$NVIM_THEME"
+      ln -s "$NVIM_THEME_SRC" "$NVIM_THEME"
+      echo "✓ Neovim theme symlink updated"
+    else
+      rm -f "$NVIM_THEME" 2>/dev/null
+      echo "⚠ Theme has no neovim.lua"
     fi
 
     # Reload Sketchybar
@@ -52,21 +68,21 @@ case "$1" in
       sketchybar --reload 2>/dev/null && echo "✓ Sketchybar reloaded"
     fi
 
-    # Kitty requires restart for theme colors (SIGUSR1 doesn't reload includes)
+    # Kitty requires restart for theme colors
     if pgrep -x "kitty" > /dev/null; then
       echo "⚠ Restart Kitty for theme colors"
     fi
 
     # Reload JankyBorders
-    if [ -f "$CURRENT_LINK/macos/borders.sh" ] && command -v borders &> /dev/null; then
-      source "$CURRENT_LINK/macos/borders.sh"
+    if [ -f "$CURRENT_LINK/borders.sh" ] && command -v borders &> /dev/null; then
+      source "$CURRENT_LINK/borders.sh"
       borders active_color=$BORDER_ACTIVE inactive_color=$BORDER_INACTIVE width=$BORDER_WIDTH 2>/dev/null
       echo "✓ Borders reloaded"
     fi
 
     # Update Starship palette
     STARSHIP_CONFIG="$HOME/.config/starship.toml"
-    PALETTE_FILE="$CURRENT_LINK/macos/starship-palette.txt"
+    PALETTE_FILE="$CURRENT_LINK/starship-palette.txt"
     if [ -e "$STARSHIP_CONFIG" ] && [ -f "$PALETTE_FILE" ]; then
       PALETTE_NAME=$(cat "$PALETTE_FILE" | tr -d '[:space:]')
       if [ -n "$PALETTE_NAME" ]; then
@@ -76,7 +92,6 @@ case "$1" in
         else
           REAL_STARSHIP_CONFIG="$STARSHIP_CONFIG"
         fi
-        # Use sed to replace the palette line
         sed -i '' "s/^palette = .*/palette = '$PALETTE_NAME'/" "$REAL_STARSHIP_CONFIG"
         echo "✓ Starship palette set to $PALETTE_NAME"
       fi
@@ -102,14 +117,46 @@ case "$1" in
       exit 1
     fi
     THEME_NAME=$(basename "$REPO_URL" .git | sed 's/omarchy-//' | sed 's/-theme//')
-    echo "Installing theme: $THEME_NAME"
+    INSTALL_DIR="$DOTFILES_THEMES_DIR/$THEME_NAME"
 
-    mkdir -p "$THEMES_DIR"
-    git clone "$REPO_URL" "$THEMES_DIR/$THEME_NAME"
+    if [ -d "$INSTALL_DIR" ]; then
+      echo "Theme already exists: $THEME_NAME"
+      echo "Location: $INSTALL_DIR"
+      exit 1
+    fi
+
+    echo "Installing theme: $THEME_NAME"
+    mkdir -p "$DOTFILES_THEMES_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR"
 
     if [ $? -eq 0 ]; then
-      echo "Installed! Run: theme switch $THEME_NAME"
-      echo "Note: Add macOS configs to $THEMES_DIR/$THEME_NAME/macos/"
+      # Remove .git so theme is tracked by dotfiles repo
+      rm -rf "$INSTALL_DIR/.git"
+      echo "✓ Installed: $THEME_NAME"
+      echo ""
+
+      # Check for required files
+      MISSING=""
+      [ ! -f "$INSTALL_DIR/alacritty.toml" ] && MISSING="$MISSING  - alacritty.toml (colors source)\n"
+      [ ! -f "$INSTALL_DIR/kitty.conf" ] && MISSING="$MISSING  - kitty.conf\n"
+      [ ! -f "$INSTALL_DIR/ghostty.conf" ] && MISSING="$MISSING  - ghostty.conf\n"
+      [ ! -f "$INSTALL_DIR/neovim.lua" ] && MISSING="$MISSING  - neovim.lua\n"
+      [ ! -f "$INSTALL_DIR/sketchybar-colors.lua" ] && MISSING="$MISSING  - sketchybar-colors.lua\n"
+      [ ! -f "$INSTALL_DIR/borders.sh" ] && MISSING="$MISSING  - borders.sh\n"
+      [ ! -f "$INSTALL_DIR/fzf-colors.sh" ] && MISSING="$MISSING  - fzf-colors.sh\n"
+      [ ! -f "$INSTALL_DIR/eza-theme.yml" ] && MISSING="$MISSING  - eza-theme.yml\n"
+      [ ! -f "$INSTALL_DIR/starship-palette.txt" ] && MISSING="$MISSING  - starship-palette.txt (+ add palette to starship.toml)\n"
+
+      if [ -n "$MISSING" ]; then
+        echo "⚠ Missing config files:"
+        echo -e "$MISSING"
+        echo "Extract colors from alacritty.toml to create missing files."
+      else
+        echo "✓ All config files present!"
+      fi
+
+      echo ""
+      echo "Run: cd ~/dotfiles && stow -R themes && theme switch $THEME_NAME"
     else
       echo "Failed to install theme"
       exit 1
