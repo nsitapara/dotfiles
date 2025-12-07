@@ -15,3 +15,8 @@ fi
 source ~/.local/share/omarchy/default/bash/rc
 
 # Add your own exports, aliases, and functions below.
+
+. "$HOME/.atuin/bin/env"
+
+[[ -f ~/.bash-preexec.sh ]] && source ~/.bash-preexec.sh
+eval "$(atuin init bash)"

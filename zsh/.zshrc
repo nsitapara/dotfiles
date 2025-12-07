@@ -32,3 +32,10 @@ source ~/Documents/fzf-tab/fzf-tab.plugin.zsh
 zstyle ':fzf-tab:*' use-fzf-default-opts yes
 
 export PATH=~/.local/bin:$PATH
+alias j='z'
+
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh)"
+
+source $HOME/.atuin/bin/env
