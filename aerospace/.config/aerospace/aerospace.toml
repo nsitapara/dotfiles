@@ -111,7 +111,7 @@ outer.right =      5
     # Move current workspace to previous monitor (wrap-around)
     cmd-ctrl-left = 'move-workspace-to-monitor --wrap-around prev'
 
-    cmd-shift-g = 'mode service'
+    cmd-g = 'mode service'
 
     alt-shift-c = 'reload-config'
 

@@ -195,9 +195,6 @@ outer.right =      5
 # if.app-name-regex-substring = 'Code - Insiders|Cursor|Simulator|Warp|Xcode|Sublime|iTerm|terminal|VSCode'
 # run = ['layout tiling', 'move-node-to-workspace 3']
 
-#[[on-window-detected]]
-#if.app-id = 'com.google.Chrome'
-#run = "move-node-to-workspace 1"
 
 [[on-window-detected]]
 if.app-id = 'com.apple.ActivityMonitor'
@@ -214,3 +211,25 @@ run = 'layout floating'
 [[on-window-detected]]
 if.app-id = 'com.apple.FaceTime'
 run = 'layout floating'
+
+
+[[on-window-detected]]
+if.app-id = 'dev.warp.Warp-Stable'
+run = ['move-node-to-workspace 1']
+
+[[on-window-detected]]
+if.app-id = 'com.jetbrains.pycharm'
+run = ['move-node-to-workspace 1']
+
+[[on-window-detected]]
+if.app-id = 'com.github.GitHubClient'
+run = ['move-node-to-workspace 2']
+
+[[on-window-detected]]
+if.app-id = 'com.tinyspeck.slackmacgap'
+run = ['move-node-to-workspace 2']
+
+
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+run = "move-node-to-workspace 3"
