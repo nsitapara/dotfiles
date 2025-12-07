@@ -1,6 +1,7 @@
 font-family = JetBrainsMono Nerd Font
 font-size = 16
-theme = catppuccin-mocha
+# Theme loaded from Omarchy
+config-file = /Users/nishsitapara/.config/omarchy/current/macos/ghostty.conf
 copy-on-select = clipboard
 cursor-style-blink = false
 

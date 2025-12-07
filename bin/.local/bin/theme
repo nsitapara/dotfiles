@@ -1,0 +1,130 @@
+#!/bin/bash
+# Omarchy-compatible theme switcher for macOS
+# Usage: theme [list|switch <name>|current|install <repo-url>]
+
+OMARCHY_DIR="$HOME/.config/omarchy"
+THEMES_DIR="$OMARCHY_DIR/themes"
+CURRENT_LINK="$OMARCHY_DIR/current"
+
+case "$1" in
+  list)
+    echo "Available themes:"
+    ls -1 "$THEMES_DIR" 2>/dev/null || echo "No themes directory found"
+    ;;
+
+  current)
+    if [ -L "$CURRENT_LINK" ]; then
+      basename "$(readlink "$CURRENT_LINK")"
+    else
+      echo "No theme currently set"
+    fi
+    ;;
+
+  switch)
+    THEME="$2"
+    if [ -z "$THEME" ]; then
+      echo "Usage: theme switch <theme-name>"
+      exit 1
+    fi
+    if [ ! -d "$THEMES_DIR/$THEME" ]; then
+      echo "Theme not found: $THEME"
+      echo "Available: $(ls -1 "$THEMES_DIR" 2>/dev/null | tr '\n' ' ')"
+      exit 1
+    fi
+
+    echo "Switching to $THEME..."
+
+    # Update symlink
+    rm -f "$CURRENT_LINK"
+    ln -s "themes/$THEME" "$CURRENT_LINK"
+
+    # Ensure eza theme symlink exists (can't be handled by stow)
+    EZA_THEME="$HOME/.config/eza/theme.yml"
+    if [ ! -L "$EZA_THEME" ] || [ "$(readlink "$EZA_THEME")" != "$CURRENT_LINK/macos/eza-theme.yml" ]; then
+      mkdir -p "$(dirname "$EZA_THEME")"
+      rm -f "$EZA_THEME"
+      ln -s "$CURRENT_LINK/macos/eza-theme.yml" "$EZA_THEME"
+      echo "✓ Eza theme symlink created"
+    fi
+
+    # Reload Sketchybar
+    if command -v sketchybar &> /dev/null; then
+      sketchybar --reload 2>/dev/null && echo "✓ Sketchybar reloaded"
+    fi
+
+    # Kitty requires restart for theme colors (SIGUSR1 doesn't reload includes)
+    if pgrep -x "kitty" > /dev/null; then
+      echo "⚠ Restart Kitty for theme colors"
+    fi
+
+    # Reload JankyBorders
+    if [ -f "$CURRENT_LINK/macos/borders.sh" ] && command -v borders &> /dev/null; then
+      source "$CURRENT_LINK/macos/borders.sh"
+      borders active_color=$BORDER_ACTIVE inactive_color=$BORDER_INACTIVE width=$BORDER_WIDTH 2>/dev/null
+      echo "✓ Borders reloaded"
+    fi
+
+    # Update Starship palette
+    STARSHIP_CONFIG="$HOME/.config/starship.toml"
+    PALETTE_FILE="$CURRENT_LINK/macos/starship-palette.txt"
+    if [ -e "$STARSHIP_CONFIG" ] && [ -f "$PALETTE_FILE" ]; then
+      PALETTE_NAME=$(cat "$PALETTE_FILE" | tr -d '[:space:]')
+      if [ -n "$PALETTE_NAME" ]; then
+        # Resolve symlink to get the actual file
+        if [ -L "$STARSHIP_CONFIG" ]; then
+          REAL_STARSHIP_CONFIG=$(cd "$(dirname "$STARSHIP_CONFIG")" && cd "$(dirname "$(readlink "$STARSHIP_CONFIG")")" && pwd)/$(basename "$(readlink "$STARSHIP_CONFIG")")
+        else
+          REAL_STARSHIP_CONFIG="$STARSHIP_CONFIG"
+        fi
+        # Use sed to replace the palette line
+        sed -i '' "s/^palette = .*/palette = '$PALETTE_NAME'/" "$REAL_STARSHIP_CONFIG"
+        echo "✓ Starship palette set to $PALETTE_NAME"
+      fi
+    fi
+
+    # FZF will pick up on next shell
+    echo "✓ FZF colors updated (new shells)"
+
+    # Ghostty requires restart
+    if pgrep -x "ghostty" > /dev/null; then
+      echo "⚠ Restart Ghostty for theme changes"
+    fi
+
+    echo ""
+    echo "Switched to: $THEME"
+    echo "Open a new terminal to see all changes"
+    ;;
+
+  install)
+    REPO_URL="$2"
+    if [ -z "$REPO_URL" ]; then
+      echo "Usage: theme install <github-repo-url>"
+      exit 1
+    fi
+    THEME_NAME=$(basename "$REPO_URL" .git | sed 's/omarchy-//' | sed 's/-theme//')
+    echo "Installing theme: $THEME_NAME"
+
+    mkdir -p "$THEMES_DIR"
+    git clone "$REPO_URL" "$THEMES_DIR/$THEME_NAME"
+
+    if [ $? -eq 0 ]; then
+      echo "Installed! Run: theme switch $THEME_NAME"
+      echo "Note: Add macOS configs to $THEMES_DIR/$THEME_NAME/macos/"
+    else
+      echo "Failed to install theme"
+      exit 1
+    fi
+    ;;
+
+  *)
+    echo "Omarchy-compatible theme manager for macOS"
+    echo ""
+    echo "Usage:"
+    echo "  theme list              List available themes"
+    echo "  theme current           Show current theme"
+    echo "  theme switch <name>     Switch to theme (with auto-reload)"
+    echo "  theme install <url>     Install theme from GitHub"
+    echo ""
+    echo "Current: $(theme current 2>/dev/null || echo 'none')"
+    ;;
+esac

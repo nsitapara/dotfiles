@@ -4,14 +4,9 @@
 start-at-login = true
 
 after-startup-command = [
-    # JankyBorders has a built-in detection of already running process,
-    # so it won't be run twice on AeroSpace restart
-    # A color formatted as 0xAARRGGBB, where A is the alpha channel, R the red channel, G the green channel and B the blue channel. All constituents take a base 16 number, i.e. 0-F.
-    # Run Sketchybar together with AeroSpace
-    # sketchbar has a built-in detection of already running process,
-    # so it won't be run twice on AeroSpace restart
-    # Catppuccin Mocha: Mauve (active) & Surface 2 (inactive)
-    'exec-and-forget borders active_color=0xffcba6f7 inactive_color=0xff585b70 width=8.0',
+    # JankyBorders - colors loaded from Omarchy theme
+    # sketchybar has built-in detection of already running process
+    'exec-and-forget source ~/.config/omarchy/current/macos/borders.sh && borders active_color=$BORDER_ACTIVE inactive_color=$BORDER_INACTIVE width=$BORDER_WIDTH',
     'exec-and-forget sketchybar'
 ]
 

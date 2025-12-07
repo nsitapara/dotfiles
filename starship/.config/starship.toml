@@ -26,7 +26,7 @@ $time\
 [ ](fg:purple)\
 $line_break$character"""
 
-palette = 'catppuccin_mocha'
+palette = 'one_dark_pro'
 
 [palettes.gruvbox_dark]
 color_fg0 = '#fbf1c7'
@@ -67,6 +67,68 @@ surface0 = "#313244"
 base = "#1e1e2e"
 mantle = "#181825"
 crust = "#11111b"
+
+[palettes.one_dark_pro]
+# One Dark Pro theme palette
+# Derived from: https://github.com/sc0ttman/omarchy-one-dark-pro-theme
+rosewater = "#e06c75"
+flamingo = "#e06c75"
+pink = "#c678dd"
+orange = "#d19a66"
+red = "#e06c75"
+maroon = "#be5046"
+peach = "#d19a66"
+yellow = "#e5c07b"
+green = "#98c379"
+teal = "#56b6c2"
+sky = "#56b6c2"
+sapphire = "#61afef"
+blue = "#61afef"
+lavender = "#c678dd"
+purple = "#c678dd"
+text = "#abb2bf"
+subtext1 = "#9da5b4"
+subtext0 = "#828997"
+overlay2 = "#7f848e"
+overlay1 = "#6b727d"
+overlay0 = "#5c6370"
+surface2 = "#4b5263"
+surface1 = "#3e4451"
+surface0 = "#323842"
+base = "#1e2229"
+mantle = "#1a1d23"
+crust = "#14171c"
+
+[palettes.catppuccin_latte]
+# Catppuccin Latte theme palette (light theme)
+# Derived from: https://github.com/basecamp/omarchy/tree/master/themes/catppuccin-latte
+rosewater = "#dc8a78"
+flamingo = "#dd7878"
+pink = "#ea76cb"
+orange = "#fe640b"
+red = "#d20f39"
+maroon = "#e64553"
+peach = "#fe640b"
+yellow = "#df8e1d"
+green = "#40a02b"
+teal = "#179299"
+sky = "#04a5e5"
+sapphire = "#209fb5"
+blue = "#1e66f5"
+lavender = "#7287fd"
+purple = "#8839ef"
+text = "#4c4f69"
+subtext1 = "#5c5f77"
+subtext0 = "#6c6f85"
+overlay2 = "#7c7f93"
+overlay1 = "#8c8fa1"
+overlay0 = "#9ca0b0"
+surface2 = "#acb0be"
+surface1 = "#bcc0cc"
+surface0 = "#ccd0da"
+base = "#eff1f5"
+mantle = "#e6e9ef"
+crust = "#dce0e8"
 
 [os]
 disabled = false
