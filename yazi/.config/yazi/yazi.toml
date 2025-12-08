@@ -1,0 +1,17 @@
+# Yazi Configuration
+# Custom openers and file associations
+
+[opener]
+edit = [
+  { run = 'nvim "$@"', block = true, desc = "Open with Neovim", for = "unix" }
+]
+csvlens = [
+  { run = 'csvlens "$@"', block = true, desc = "Open with csvlens", for = "unix" }
+]
+
+[open]
+prepend_rules = [
+  { name = "*.csv", use = "csvlens" },
+  { name = "*.tsv", use = "csvlens" },
+  { mime = "text/csv", use = "csvlens" },
+]
