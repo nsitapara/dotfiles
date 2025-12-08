@@ -1,0 +1,6 @@
+# Yazi Theme Configuration
+# This file is managed by the theme CLI
+# The flavor is set based on the current Omarchy theme
+
+[flavor]
+dark = "catppuccin-mocha"

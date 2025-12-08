@@ -1,0 +1,154 @@
+# Pulsar Theme for Yazi
+# Derived from: https://github.com/bjarneo/omarchy-pulsar-theme
+
+# : Manager {{{
+[manager]
+cwd = { fg = "#3298fa" }  # Blue
+
+# Hovered
+hovered = { bg = "#1a0a2e" }  # Slightly lighter than background
+preview_hovered = { underline = true }
+
+# Find
+find_keyword = { fg = "#e53e61", italic = true, underline = true }  # Red
+find_position = { fg = "#f2e42e", italic = true }  # Yellow
+
+# Marker
+marker_copied = { fg = "#e0e6ff", bg = "#5cb960" }  # White on Green
+marker_cut = { fg = "#e0e6ff", bg = "#e53e61" }  # White on Red
+marker_marked = { fg = "#e0e6ff", bg = "#3df2f2" }  # White on Cyan
+marker_selected = { fg = "#e0e6ff", bg = "#f2e42e" }  # White on Yellow
+
+# Tab
+tab_active = { bg = "#1a0a2e", fg = "#b82aff" }  # Magenta accent
+tab_inactive = {}
+tab_width = 1
+
+# Count
+count_copied = { fg = "#5cb960", bg = "#1a0a2e" }  # Green
+count_cut = { fg = "#e53e61", bg = "#1a0a2e" }  # Red
+count_selected = { fg = "#5cb960", bg = "#1a0a2e" }  # Green
+
+# Border
+border_symbol = "│"
+border_style = { fg = "#aa5abc" }  # Bright black (purple-ish)
+
+# : }}}
+
+# : Status {{{
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#b82aff", bg = "#0a0314" }  # Magenta on background
+
+# Mode
+mode_normal = { fg = "#0a0314", bg = "#b82aff", bold = true }  # Background on Magenta
+mode_select = { fg = "#0a0314", bg = "#3298fa", bold = true }  # Background on Blue
+mode_unset = { fg = "#0a0314", bg = "#aa5abc", bold = true }  # Background on Bright black
+
+# Progress
+progress_label = { fg = "#e0e6ff", bold = true }  # Foreground
+progress_normal = { fg = "#5cb960", bg = "#0a0314" }  # Green on background
+progress_error = { fg = "#e53e61", bg = "#0a0314" }  # Red on background
+
+# Permissions
+permissions_t = { fg = "#5cb960" }  # Green
+permissions_r = { fg = "#e53e61" }  # Red
+permissions_w = { fg = "#f2e42e" }  # Yellow
+permissions_x = { fg = "#5cb960" }  # Green
+permissions_s = { fg = "#aa5abc" }  # Bright black
+
+# : }}}
+
+# : Select {{{
+[select]
+border = { fg = "#b82aff" }  # Magenta
+active = { fg = "#f2e42e", bold = true }  # Yellow
+inactive = {}
+
+# : }}}
+
+# : Input {{{
+[input]
+border = { fg = "#b82aff" }  # Magenta
+title = {}
+value = {}
+selected = { reversed = true }
+
+# : }}}
+
+# : Completion {{{
+[completion]
+border = { fg = "#b82aff" }  # Magenta
+
+# : }}}
+
+# : Tasks {{{
+[tasks]
+border = { fg = "#b82aff" }  # Magenta
+title = {}
+hovered = { fg = "#f2e42e", underline = true }  # Yellow
+
+# : }}}
+
+# : Which {{{
+[which]
+mask = { bg = "#0a0314" }  # Background
+cand = { fg = "#b82aff" }  # Magenta
+rest = { fg = "#e0e6ff" }  # Foreground
+desc = { fg = "#f2e42e" }  # Yellow
+separator = "  "
+separator_style = { fg = "#aa5abc" }  # Bright black
+
+# : }}}
+
+# : Help {{{
+[help]
+on = { fg = "#b82aff" }  # Magenta
+run = { fg = "#f2e42e" }  # Yellow
+hovered = { reversed = true, bold = true }
+footer = { fg = "#e0e6ff", bg = "#0a0314" }  # Foreground on background
+
+# : }}}
+
+# : Notify {{{
+[notify]
+title_info = { fg = "#5cb960" }  # Green
+title_warn = { fg = "#f2e42e" }  # Yellow
+title_error = { fg = "#e53e61" }  # Red
+
+# : }}}
+
+# : File-specific styles {{{
+
+[filetype]
+
+rules = [
+    # Images
+    { mime = "image/*", fg = "#f2e42e" },  # Yellow
+
+    # Media
+    { mime = "video/*", fg = "#e53e61" },  # Red
+    { mime = "audio/*", fg = "#e53e61" },  # Red
+
+    # Archives
+    { mime = "application/zip", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-tar", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-bzip*", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-bzip2", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-7z-compressed", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-rar", fg = "#b82aff" },  # Magenta
+    { mime = "application/x-xz", fg = "#b82aff" },  # Magenta
+
+    # Documents
+    { mime = "application/doc", fg = "#5cb960" },  # Green
+    { mime = "application/pdf", fg = "#5cb960" },  # Green
+    { mime = "application/rtf", fg = "#5cb960" },  # Green
+    { mime = "application/vnd.*", fg = "#5cb960" },  # Green
+
+    # Fallback
+    { name = "*", fg = "#e0e6ff" },  # Foreground
+    { name = "*/", fg = "#3298fa" }  # Blue for directories
+]
+
+# : }}}

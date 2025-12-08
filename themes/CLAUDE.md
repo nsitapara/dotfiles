@@ -11,14 +11,14 @@ The theme system uses Omarchy's structure with added macOS-specific extensions:
 ├── alacritty.toml      # FROM OMARCHY (cross-platform)
 ├── neovim.lua          # FROM OMARCHY (cross-platform)
 ├── backgrounds/        # Wallpapers
-└── macos/              # OUR macOS ADDITIONS
-    ├── sketchybar-colors.lua
-    ├── kitty.conf
-    ├── ghostty.conf
-    ├── borders.sh
-    ├── eza-theme.yml
-    ├── fzf-colors.sh
-    └── starship-palette.txt
+├── sketchybar-colors.lua
+├── kitty.conf
+├── ghostty.conf
+├── borders.sh
+├── eza-theme.yml
+├── fzf-colors.sh
+├── starship-palette.txt
+└── yazi-flavor.txt     # Yazi theme flavor name
 ```
 
 ## When Adding a New Theme
@@ -292,6 +292,52 @@ Examples:
 
 ---
 
+## Template: yazi-flavor.txt
+
+This file contains the Yazi flavor name. The theme CLI reads this file and updates the `dark = "xxx"` line in `~/.config/yazi/theme.toml`.
+
+**Important:** The flavor must exist in `~/dotfiles/yazi/.config/yazi/flavors/<flavor-name>.yazi/`.
+
+```
+<flavor_name>
+```
+
+Examples:
+- `catppuccin-mocha`
+- `catppuccin-latte`
+- `onedark`
+- `rose-pine`
+- `pulsar`
+
+### Adding a New Yazi Flavor
+
+If no existing flavor matches your theme:
+
+1. **Check if a community flavor exists:**
+   - [yazi-rs/flavors](https://github.com/yazi-rs/flavors) - Official community flavors
+   - [catppuccin/yazi](https://github.com/catppuccin/yazi) - Catppuccin flavors
+   - [awesome-yazi](https://github.com/AnirudhG07/awesome-yazi) - Curated list
+
+2. **Install an existing flavor:**
+   ```bash
+   cd ~/dotfiles/yazi/.config/yazi/flavors
+   git clone https://github.com/<user>/<flavor>.yazi
+   rm -rf <flavor>.yazi/.git  # Remove .git to track in dotfiles
+   ```
+
+3. **Or create a custom flavor:**
+   - Copy an existing flavor as a template (e.g., `onedark.yazi`)
+   - Create `<theme-name>.yazi/flavor.toml`
+   - Map colors from `alacritty.toml` to the flavor format
+   - Key sections: `[manager]`, `[status]`, `[select]`, `[input]`, `[filetype]`
+
+4. **Re-stow yazi:**
+   ```bash
+   cd ~/dotfiles && stow -R yazi
+   ```
+
+---
+
 ## Adding a New Theme - Step by Step
 
 1. **Clone the Omarchy theme:**
@@ -334,6 +380,7 @@ After creating a new theme, verify:
 - [ ] FZF colors show correctly in new terminal
 - [ ] `eza --icons` shows correct colors
 - [ ] Ghostty colors work (after restart)
+- [ ] Yazi flavor switches correctly (run `yazi` to verify)
 
 ---
 
