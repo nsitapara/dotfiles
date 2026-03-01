@@ -273,6 +273,19 @@ stow_dotfiles() {
     info "Restoring dotfiles to git version..."
     git checkout .
     info "Dotfiles restored to git version"
+
+    # ── Post-stow symlinks (platform-agnostic) ────────────
+    # eza theme.yml must point to the omarchy current theme.
+    # We create this after stow because the target path uses $HOME
+    # which differs between macOS (/Users/x) and Linux (/home/x).
+    local eza_theme="$HOME/.config/eza/theme.yml"
+    local eza_target="$HOME/.config/omarchy/current/eza-theme.yml"
+    if [[ -f "$eza_target" || -L "$eza_target" ]]; then
+        ln -sf "$eza_target" "$eza_theme"
+        info "Linked eza theme.yml -> $eza_target"
+    else
+        warn "eza theme target not found: $eza_target"
+    fi
 }
 
 # ══════════════════════════════════════════════════════════════

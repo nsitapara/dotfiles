@@ -1,7 +1,7 @@
 font-family = JetBrainsMono Nerd Font
 font-size = 16
 # Theme loaded from Omarchy
-config-file = /Users/nishsitapara/.config/omarchy/current/ghostty.conf
+config-file = ~/.config/omarchy/current/ghostty.conf
 copy-on-select = clipboard
 cursor-style-blink = false
 
