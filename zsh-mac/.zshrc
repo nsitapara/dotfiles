@@ -100,3 +100,36 @@ function y() {
 	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
 	rm -f -- "$tmp"
 }
+
+alias claude="claude --dangerously-skip-permissions"
+
+
+# Quick worktree creation + cd
+gtn() {
+  local existing
+  existing=$(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | grep "$1")
+  if [[ -n "$existing" ]]; then
+    cd "$existing"
+  else
+    git gtr new "$1" && cd "$(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | grep "$1")"
+  fi
+}
+
+# fzf worktree switcher
+gtc() {
+  local selected
+  selected=$(git worktree list --porcelain \
+    | grep '^worktree ' \
+    | sed 's/^worktree //' \
+    | fzf --prompt="worktree> " --with-nth=-1 --delimiter='/')
+  [[ -n "$selected" ]] && cd "$selected"
+}
+
+gtrm() {
+  local selected
+  selected=$(git worktree list --porcelain \
+    | grep '^branch ' \
+    | sed 's|^branch refs/heads/||' \
+    | fzf --prompt="remove> ")
+  [[ -n "$selected" ]] && git gtr rm "$selected"
+}
