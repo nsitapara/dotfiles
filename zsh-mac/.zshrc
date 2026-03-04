@@ -2,7 +2,7 @@
  export NVM_DIR="$HOME/.nvm"
   [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
   [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
-export PATH="/Users/nishsitapara/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 
 # FZF colors loaded from Omarchy theme
@@ -11,13 +11,13 @@ source ~/.config/omarchy/current/fzf-colors.sh
 # CHANGE TO PROD IF NEED TO USE PROD OR OVERRIDE LOCAL SESSION
 export AWS_PROFILE=dev
 
-alias pp="/Users/nishsitapara/Documents/web-platform/scripts/prep_push.sh"
-alias rt="cd /Users/nishsitapara/Documents/web-platform && just reset --many --report=0" 
-alias mm="cd /Users/nishsitapara/Documents/web-platform && just lman makemigrations"
-alias ds="cd /Users/nishsitapara/Documents/web-platform && docker compose up -d"
-alias dsr="cd /Users/nishsitapara/Documents/web-platform && docker compose up --remove-orphans --build -d"
-alias dal="cd /Users/nishsitapara/Documents/web-platform && docker compose logs --follow api"
-alias as="cd /Users/nishsitapara/Documents/web-platform && pnpm dev"
+alias pp="$HOME/Documents/web-platform/scripts/prep_push.sh"
+alias rt="cd $HOME/Documents/web-platform && just reset --many --report=0" 
+alias mm="cd $HOME/Documents/web-platform && just lman makemigrations"
+alias ds="cd $HOME/Documents/web-platform && docker compose up -d"
+alias dsr="cd $HOME/Documents/web-platform && docker compose up --remove-orphans --build -d"
+alias dal="cd $HOME/Documents/web-platform && docker compose logs --follow api"
+alias as="cd $HOME/Documents/web-platform && pnpm dev"
 alias copy_aws_creds="aws configure export-credentials --format env | sed 's/^export //'"
 alias pw_config="cursor ~/Documents/web-platform/apps/staff/e2e/debug-config.json"
 
