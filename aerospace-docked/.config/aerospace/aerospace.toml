@@ -46,8 +46,11 @@ key-mapping.preset = 'qwerty'
 inner.horizontal = 15
 inner.vertical =   15
 outer.left =       10
-outer.bottom =     15
-outer.top =        50
+outer.bottom =     8
+# Per-monitor top gap: laptop (built-in) needs less because the notch makes
+# the native menu bar taller, so windows already start lower. External
+# monitors keep the larger gap to clear sketchybar. Last bare value = default.
+outer.top =        [{ monitor.'built-in' = 16 }, 50]
 outer.right =      10
 
 
@@ -105,7 +108,8 @@ outer.right =      10
     cmd-ctrl-left = 'move-workspace-to-monitor --wrap-around prev'
 
     cmd-alt-s = 'mode service'
-
+    f14 = 'mode service'
+    
     alt-shift-c = 'reload-config'
 
     # Reset view to default split
@@ -121,6 +125,7 @@ outer.right =      10
 
 [mode.service.binding]
     esc = ['reload-config', 'mode main']
+    f15 = 'mode main'
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
     f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
     backspace = ['close-all-windows-but-current', 'mode main']

@@ -19,14 +19,32 @@ local WORKSPACE_COUNT = 6
 -- Multi-monitor workspace assignment
 -- Odd workspaces (1, 3, 5) on main monitor (display 1)
 -- Even workspaces (2, 4, 6) on secondary monitor (display 2)
-local workspace_to_display = {
-  [1] = 1, -- main
-  [2] = 2, -- secondary
-  [3] = 1, -- main
-  [4] = 2, -- secondary
-  [5] = 1, -- main
-  [6] = 2, -- secondary
-}
+--
+-- IMPORTANT: computed dynamically from the number of connected monitors.
+-- With only one display (e.g. laptop alone), pinning even workspaces to
+-- "display 2" leaves orphaned space/padding items and breaks the bar
+-- spacing, so we collapse everything onto display 1 in that case.
+local function get_display_count()
+  local handle = io.popen("aerospace list-monitors 2>/dev/null | wc -l")
+  if not handle then return 1 end
+  local result = handle:read("*a") or ""
+  handle:close()
+  local count = tonumber((result:gsub("%s+", ""))) or 1
+  return math.max(count, 1)
+end
+
+local display_count = get_display_count()
+
+local workspace_to_display = {}
+for i = 1, WORKSPACE_COUNT do
+  if display_count >= 2 then
+    -- odd -> display 1, even -> display 2
+    workspace_to_display[i] = (i % 2 == 1) and 1 or 2
+  else
+    -- single display: everything on display 1
+    workspace_to_display[i] = 1
+  end
+end
 
 for i = 1, WORKSPACE_COUNT, 1 do
   local space = sbar.add("space", "space." .. i, {
