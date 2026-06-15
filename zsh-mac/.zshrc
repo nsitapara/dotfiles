@@ -18,7 +18,6 @@ alias ds="cd $HOME/Documents/web-platform && docker compose up -d"
 alias dsr="cd $HOME/Documents/web-platform && docker compose up --remove-orphans --build -d"
 alias dal="cd $HOME/Documents/web-platform && docker compose logs --follow api"
 alias as="cd $HOME/Documents/web-platform && pnpm dev"
-alias copy_aws_creds="aws configure export-credentials --format env | sed 's/^export //'"
 alias pw_config="cursor ~/Documents/web-platform/apps/staff/e2e/debug-config.json"
 
 # eza aliases (modern ls replacement)
@@ -89,7 +88,33 @@ zatuin_run_selected() {
 # Your alias can stay exactly like this:
 alias hh='zatuin_run_selected'
 
-alias copy_aws_creds="aws configure export-credentials --format env | sed 's/^export //' | tee /dev/tty | pbcopy"
+unalias copy_aws_creds 2>/dev/null
+copy_aws_creds() {
+  local creds
+  creds=$(aws configure export-credentials --format env | sed 's/^export //') || return 1
+  printf '%s\n' "$creds"
+  printf '%s' "$creds" | pbcopy
+
+  if [[ -f "$PWD/.env.secrets" ]]; then
+    local file="$PWD/.env.secrets" tmp
+    tmp=$(mktemp) || return 1
+    while IFS= read -r line; do
+      local key="${line%%=*}"
+      if grep -q "^${key}=" "$file"; then
+        awk -v k="$key" -v l="$line" 'BEGIN{FS=OFS="="} $1==k{print l; next} {print}' "$file" > "$tmp" && mv "$tmp" "$file"
+      else
+        printf '%s\n' "$line" >> "$file"
+      fi
+    done <<< "$creds"
+    rm -f "$tmp"
+    echo ""
+    echo "✓ Copied to clipboard and updated $file"
+  else
+    echo ""
+    echo "✓ Copied to clipboard"
+    echo "ℹ No .env.secrets found in $PWD"
+  fi
+}
 
 
 # https://yazi-rs.github.io/docs/quick-start
@@ -133,3 +158,38 @@ gtrm() {
     | fzf --prompt="remove> ")
   [[ -n "$selected" ]] && git gtr rm "$selected"
 }
+# bun completions
+[ -s "/Users/nishsitapara/.bun/_bun" ] && source "/Users/nishsitapara/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# Sync current branch with latest origin/dev
+alias gmd='git fetch origin dev && git merge origin/dev'
+alias ports='lsof -iTCP -sTCP:LISTEN -nP'
+
+# AWS ECS shell helpers — sso login, set profile, exec into ApiContainer
+ssh_aws_dev() {
+  aws sso login --profile dev || return 1
+  export AWS_PROFILE=dev
+  "$HOME/Documents/web-platform/scripts/ecs_shell.sh" web-platform-cluster ApiContainer
+}
+
+ssh_aws_prod() {
+  aws sso login --profile prod || return 1
+  export AWS_PROFILE=prod
+  "$HOME/Documents/web-platform/scripts/ecs_shell.sh" web-platform-cluster ApiContainer
+}
+
+# pnpm
+export PNPM_HOME="/Users/nishsitapara/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
+# >>> headroom docker-native >>>
+export PATH="/Users/nishsitapara/.local/bin:$PATH"
+# <<< headroom docker-native <<<
