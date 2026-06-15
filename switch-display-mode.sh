@@ -24,11 +24,21 @@ else
     SKETCHYBAR_PKG="sketchybar"
 fi
 
-# Check if mode has changed
+# Verify the actually-stowed config matches the expected mode. Relying on the
+# state file alone is not enough: if the file says e.g. "non-docked" but the
+# docked packages are still stowed (a desync), the old early-exit would never
+# correct it. This checks where the live config symlink really points.
+live_config_matches() {
+    local live
+    live=$(readlink -f "$HOME/.config/aerospace/aerospace.toml" 2>/dev/null)
+    [[ "$live" == *"/$AEROSPACE_PKG/.config/"* ]]
+}
+
+# Check if mode has changed AND the config is already correctly stowed
 if [ -f "$STATE_FILE" ]; then
     CURRENT_MODE=$(cat "$STATE_FILE")
-    if [ "$CURRENT_MODE" = "$MODE" ]; then
-        # No change, exit silently
+    if [ "$CURRENT_MODE" = "$MODE" ] && live_config_matches; then
+        # No change and config already correct, exit silently
         exit 0
     fi
 fi
@@ -65,10 +75,12 @@ else
     echo "Aerospace is not running, skipping restart"
 fi
 
-# Restart sketchybar
+# Reload sketchybar. Note: `brew services restart sketchybar` fails when the
+# felixkratz tap is untrusted, so use the in-process reload which re-runs the
+# (newly stowed) config and rebuilds every item.
 if pgrep -x "sketchybar" > /dev/null; then
-    brew services restart sketchybar
-    echo "Sketchybar restarted"
+    sketchybar --reload
+    echo "Sketchybar reloaded"
 else
     echo "Sketchybar is not running, skipping restart"
 fi

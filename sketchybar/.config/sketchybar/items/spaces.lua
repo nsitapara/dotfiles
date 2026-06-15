@@ -14,7 +14,7 @@ local space_brackets = {}
 --   - Add: cmd-N = 'workspace N'
 --   - Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
 -- ============================================================================
-local WORKSPACE_COUNT = 4
+local WORKSPACE_COUNT = 6
 
 -- Single monitor setup
 for i = 1, WORKSPACE_COUNT, 1 do

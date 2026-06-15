@@ -37,12 +37,13 @@ key-mapping.preset = 'qwerty'
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 [gaps]
-inner.horizontal = 10
-inner.vertical =   10
-outer.left =       5
-outer.bottom =     5
-outer.top =        15 
-outer.right =      5
+inner.horizontal = 15
+inner.vertical =   15
+outer.left =       10
+outer.bottom =     8
+# Single display (laptop): top gap just clears the sketchybar with a small margin.
+outer.top =        16
+outer.right =      10
 
 
 [mode.main.binding]
@@ -86,18 +87,22 @@ outer.right =      5
     cmd-2 = 'workspace 2'
     cmd-3 = 'workspace 3'
     cmd-4 = 'workspace 4'
+    cmd-5 = 'workspace 5'
+    cmd-6 = 'workspace 6'
 
     cmd-pageUp = ['workspace prev']
     cmd-pageDown = ['workspace next']
 
     cmd-home = ['workspace 1']
-    cmd-end = ['workspace 4']  # Update this when adding more workspaces
+    cmd-end = ['workspace 6']  # Update this when adding more workspaces
 
     # Move window to workspace
     cmd-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
     cmd-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
     cmd-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
     cmd-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
+    cmd-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
+    cmd-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
 
     alt-tab = 'workspace-back-and-forth' 
     # Move current workspace to next monitor (wrap-around)
