@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Bar — Six Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Catppuccin Mocha — pulled from your live sketchybar-colors.lua */
+    --base:#1e1e2e; --mantle:#181826; --crust:#11111b;
+    --bg1:#313244; --bg2:#45475a; --surface:#3a3c4e;
+    --text:#cdd6f4; --subtext:#a6adc8; --grey:#6c7086;
+    --mauve:#cba6f7; --blue:#89b4fa; --green:#a6e3a1;
+    --red:#f38ba8; --yellow:#f9e2af; --peach:#fab387; --pink:#f5c2e7; --teal:#94e2d5;
+    --black:#181926;
+    --bar-h:38px;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--mono);
+    color:var(--text);
+    background:
+      radial-gradient(1200px 700px at 12% -10%, rgba(203,166,247,.16), transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, rgba(137,180,250,.12), transparent 55%),
+      radial-gradient(900px 900px at 50% 120%, rgba(245,194,231,.08), transparent 60%),
+      var(--crust);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 120px;
+  }
+  /* film grain */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- header ---------- */
+  header{
+    padding:64px 40px 30px;
+    max-width:1180px;margin:0 auto;
+  }
+  .eyebrow{
+    font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--mauve);
+    display:flex;align-items:center;gap:12px;margin-bottom:22px;
+  }
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--mauve);opacity:.7}
+  h1{
+    font-family:var(--display);font-weight:800;
+    font-size:clamp(40px,7vw,86px);line-height:.94;letter-spacing:-.025em;
+    color:var(--text);
+  }
+  h1 em{font-style:normal;color:var(--mauve);
+    background:linear-gradient(120deg,var(--mauve),var(--pink));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .lede{margin-top:26px;max-width:620px;color:var(--subtext);font-size:14.5px;line-height:1.7}
+  .constraints{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+  .chip{
+    font-size:11.5px;letter-spacing:.04em;
+    border:1px solid var(--bg2);background:rgba(49,50,68,.5);
+    color:var(--subtext);padding:7px 13px;border-radius:999px;display:flex;gap:8px;align-items:center;
+  }
+  .chip b{color:var(--text);font-weight:600}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+  /* ---------- mockup grid ---------- */
+  main{max-width:1180px;margin:0 auto;padding:24px 40px;display:flex;flex-direction:column;gap:30px}
+  .card{
+    border:1px solid var(--bg1);
+    border-radius:20px;
+    background:linear-gradient(180deg,rgba(49,50,68,.34),rgba(24,24,38,.5));
+    overflow:hidden;
+    opacity:0;transform:translateY(24px);
+    animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards;
+    transition:border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .card:hover{border-color:var(--bg2)}
+  .card.picked{border-color:var(--mauve);box-shadow:0 0 0 1px var(--mauve),0 22px 60px -28px rgba(203,166,247,.6)}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.12s}
+  .card:nth-child(3){animation-delay:.19s}.card:nth-child(4){animation-delay:.26s}
+  .card:nth-child(5){animation-delay:.33s}.card:nth-child(6){animation-delay:.40s}
+
+  .card-head{display:flex;align-items:baseline;gap:16px;padding:22px 26px 4px}
+  .num{font-family:var(--display);font-weight:800;font-size:30px;color:var(--mauve);line-height:1}
+  .title{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:-.01em}
+  .pick-btn{
+    margin-left:auto;align-self:center;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--subtext);background:transparent;border:1px solid var(--bg2);
+    padding:8px 15px;border-radius:999px;cursor:pointer;transition:.2s;white-space:nowrap;
+  }
+  .pick-btn:hover{color:var(--text);border-color:var(--mauve)}
+  .card.picked .pick-btn{background:var(--mauve);color:var(--crust);border-color:var(--mauve);font-weight:600}
+  .desc{padding:0 26px 18px;color:var(--subtext);font-size:13px;line-height:1.6;max-width:760px}
+  .desc .warn{color:var(--peach)}
+
+  /* the faux desktop strip the bar sits on */
+  .stage{
+    position:relative;margin:0 18px 22px;border-radius:13px;overflow:hidden;
+    background:
+      linear-gradient(120deg,#2a2740,#22202f 40%,#1a2030 75%,#241f2e),
+      var(--mantle);
+    padding:14px 16px 30px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .stage::before{ /* wallpaper streaks like your screenshots */
+    content:"";position:absolute;inset:0;opacity:.5;
+    background:
+      linear-gradient(75deg,transparent 40%,rgba(205,214,244,.05) 42%,transparent 44%),
+      linear-gradient(105deg,transparent 60%,rgba(203,166,247,.06) 62%,transparent 64%);
+  }
+
+  /* ---------- the bar itself ---------- */
+  .bar{
+    position:relative;display:flex;align-items:center;gap:7px;
+    height:var(--bar-h);padding:0 7px;border-radius:11px;
+    background:rgba(30,30,46,.94);
+    box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -14px #000;
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',var(--mono);
+    width:max-content;max-width:100%;
+  }
+
+  /* generic pill */
+  .pill{
+    display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;
+    border-radius:9px;background:var(--bg1);border:1px solid var(--black);
+    color:var(--text);font-size:13px;font-weight:600;line-height:1;
+    transition:.2s;
+  }
+  .pill .wsnum{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text)}
+  .pill.empty{color:var(--subtext)}
+  .pill.empty .wsnum{color:var(--subtext)}
+  /* focused = larger + mauve theme border */
+  .pill.focused{
+    height:31px;padding:0 11px;background:var(--bg2);
+    border:2px solid var(--mauve);box-shadow:0 0 0 3px rgba(203,166,247,.14);
+  }
+  .pill.focused .app{width:25px;height:25px}
+  .pill.focused .wsnum{color:#fff}
+
+  /* far-left global current-space (for #6) */
+  .pill.global{background:var(--bg2);height:30px;padding:0 13px;font-size:15px}
+  .pill.global.focused{border:2px solid var(--mauve)}
+
+  /* segmented pill (#4) */
+  .pill.seg{padding:0;gap:0;overflow:hidden}
+  .pill.seg .cap{display:flex;align-items:center;justify-content:center;min-width:26px;height:100%;
+    padding:0 8px;background:rgba(203,166,247,.16);color:var(--mauve);border-right:1px solid var(--black);font-weight:700}
+  .pill.seg.focused .cap{background:rgba(203,166,247,.28);color:#fff}
+  .pill.seg .seg-body{display:flex;align-items:center;gap:6px;padding:0 9px}
+
+  /* trailing dim number (#2) */
+  .wsnum.dim{color:var(--grey);font-size:11px;font-weight:600;margin-left:1px}
+
+  /* corner badge number (#5) */
+  .pill.badge{position:relative}
+  .pill.badge .corner{
+    position:absolute;top:-7px;left:-6px;min-width:16px;height:16px;padding:0 4px;
+    display:flex;align-items:center;justify-content:center;border-radius:6px;
+    background:var(--bg2);border:1px solid var(--black);color:var(--text);
+    font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .pill.badge.focused .corner{background:var(--mauve);color:var(--crust);border-color:var(--mauve)}
+
+  /* dot for empty (#6) */
+  .dotmark{width:6px;height:6px;border-radius:50%;background:var(--grey)}
+
+  /* front app element */
+  .frontapp{display:flex;align-items:center;gap:8px;margin-left:6px;padding:0 6px;height:26px}
+  .frontapp .name{font-size:13px;font-weight:800;color:var(--text);letter-spacing:.01em}
+  .frontapp.boxed{background:var(--bg1);border:1px solid var(--black);border-radius:9px}
+
+  .cluster{display:flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:9px;
+    background:var(--bg1);border:1px solid var(--black);margin-left:6px}
+  .cluster .name{font-size:13px;font-weight:800;margin-left:2px}
+  .divider{width:1px;height:14px;background:var(--bg2);margin:0 2px}
+
+  .spacer{width:14px}
+
+  /* ---------- app icon tiles (macOS-ish) ---------- */
+  .app{position:relative;width:22px;height:22px;border-radius:6px;flex:0 0 auto;
+    box-shadow:0 1px 2px rgba(0,0,0,.4);transition:width .2s,height .2s}
+  .app.chrome{background:#fff}
+  .app.chrome::before{content:"";position:absolute;inset:2.5px;border-radius:50%;
+    background:conic-gradient(from -30deg,#ea4335 0 30%,#fbbc05 30% 50%,#34a853 50% 75%,#4285f4 75% 100%)}
+  .app.chrome::after{content:"";position:absolute;inset:6.5px;border-radius:50%;background:#4285f4;box-shadow:0 0 0 2px #fff inset}
+  .app.finder{background:linear-gradient(160deg,#2aa9ff,#1467ff)}
+  .app.finder::before{content:"";position:absolute;left:0;top:0;bottom:0;width:50%;background:rgba(255,255,255,.26);border-radius:6px 0 0 6px}
+  .app.finder::after{content:"";position:absolute;right:4px;bottom:4px;width:7px;height:3px;border:0 solid #fff;border-bottom-width:2px;border-radius:0 0 8px 8px;opacity:.85}
+  .app.github{background:#0d1117;display:grid;place-items:center}
+  .app.github svg{width:15px;height:15px;fill:#fff}
+  .app.warp{background:radial-gradient(120% 120% at 20% 10%,#2b2740,#15131f);display:grid;place-items:center;overflow:hidden}
+  .app.warp::before{content:"";position:absolute;width:130%;height:130%;
+    background:conic-gradient(from 200deg,#f5c2e7,#cba6f7,#89b4fa,#94e2d5,#f5c2e7);
+    filter:blur(1px);opacity:.0}
+  .app.warp::after{content:"";position:absolute;inset:5px;border-radius:3px;
+    background:linear-gradient(135deg,#f5c2e7,#94e2d5);
+    -webkit-mask:linear-gradient(#000,#000);mask:linear-gradient(#000 0 0);
+    clip-path:polygon(20% 75%,50% 25%,55% 35%,30% 75%,75% 75%,70% 85%,20% 85%);opacity:.95}
+
+  /* legend + footer */
+  .legend{max-width:1180px;margin:10px auto 0;padding:0 40px;display:flex;gap:18px;flex-wrap:wrap;color:var(--subtext);font-size:12px}
+  .legend span{display:flex;align-items:center;gap:7px}
+  footer{max-width:1180px;margin:50px auto 0;padding:30px 40px;border-top:1px solid var(--bg1);color:var(--grey);font-size:12.5px;line-height:1.7}
+  .tally{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;
+    background:rgba(24,24,38,.92);border:1px solid var(--mauve);backdrop-filter:blur(12px);
+    padding:12px 20px;border-radius:14px;font-size:13px;color:var(--text);
+    box-shadow:0 18px 50px -20px rgba(203,166,247,.6);opacity:0;transform:translate(-50%,16px);transition:.3s;pointer-events:none}
+  .tally.show{opacity:1;transform:translate(-50%,0)}
+  .tally b{color:var(--mauve)}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Sketchybar · Catppuccin Mocha</div>
+  <h1>Workspace bar,<br><em>six directions.</em></h1>
+  <p class="lede">Same live theme colors, real macOS-style app tiles, and the real focused-pill behaviour.
+  Every option holds your four rules — only the layout language changes. Click <b>Pick this</b> on the one you want (or mix two).</p>
+  <div class="constraints">
+    <span class="chip"><span class="dot"></span><b>Selected</b>&nbsp;= mauve border</span>
+    <span class="chip"><span class="dot"></span><b>Selected</b>&nbsp;= larger / pronounced</span>
+    <span class="chip"><span class="dot"></span><b>Number</b>&nbsp;always shown</span>
+    <span class="chip"><span class="dot"></span><b>App icons</b>&nbsp;+ front app visible</span>
+  </div>
+</header>
+
+<div class="legend">
+  <span><i class="app chrome" style="display:inline-block"></i> Chrome</span>
+  <span><i class="app finder" style="display:inline-block"></i> Finder</span>
+  <span><i class="app github" style="display:inline-block"><svg viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.2 3.44 9.6 8.21 11.16.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.55-1.38-1.34-1.75-1.34-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.23 1.84 1.23 1.07 1.82 2.81 1.3 3.5.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.32-5.47-5.88 0-1.3.47-2.36 1.24-3.19-.13-.3-.54-1.52.12-3.16 0 0 1.01-.32 3.3 1.22a11.6 11.6 0 0 1 6 0c2.29-1.54 3.3-1.22 3.3-1.22.66 1.64.25 2.86.12 3.16.77.83 1.24 1.89 1.24 3.19 0 4.57-2.81 5.58-5.49 5.87.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z"/></svg></i> GitHub</span>
+  <span><i class="app warp" style="display:inline-block"></i> Warp (front app)</span>
+</div>
+
+<main id="grid">
+  <!-- the six cards are injected by JS so the bar markup stays DRY -->
+</main>
+
+<footer>
+  Mockups are CSS approximations — real bar uses true native macOS icons (full resolution).
+  Focused pill here grows to 31px with a 2px mauve border; tune freely once you pick.
+</footer>
+
+<div class="tally" id="tally"></div>
+
+<script>
+// app tile factory
+const gh = `<svg viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.2 3.44 9.6 8.21 11.16.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.55-1.38-1.34-1.75-1.34-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.23 1.84 1.23 1.07 1.82 2.81 1.3 3.5.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.32-5.47-5.88 0-1.3.47-2.36 1.24-3.19-.13-.3-.54-1.52.12-3.16 0 0 1.01-.32 3.3 1.22a11.6 11.6 0 0 1 6 0c2.29-1.54 3.3-1.22 3.3-1.22.66 1.64.25 2.86.12 3.16.77.83 1.24 1.89 1.24 3.19 0 4.57-2.81 5.58-5.49 5.87.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z"/></svg>`;
+const A = {
+  chrome:`<i class="app chrome"></i>`,
+  finder:`<i class="app finder"></i>`,
+  github:`<i class="app github">${gh}</i>`,
+  warp:`<i class="app warp"></i>`,
+};
+const front = (boxed)=>`<div class="frontapp ${boxed?'boxed':''}">${A.warp}<span class="name">Warp</span></div>`;
+
+const STYLES = [
+  {
+    n:'①', title:'Number-prefix pill',
+    desc:'Number sits inside each pill, app icons follow. The clearest number→apps mapping; reads like labeled tabs.',
+    bar:`
+      <div class="pill focused"><span class="wsnum">1</span>${A.chrome}${A.finder}</div>
+      <div class="pill"><span class="wsnum">2</span>${A.github}</div>
+      <div class="pill empty"><span class="wsnum">3</span></div>
+      <div class="pill empty"><span class="wsnum">4</span></div>
+      <div class="pill empty"><span class="wsnum">5</span></div>
+      <div class="pill empty"><span class="wsnum">6</span></div>
+      <div class="spacer"></div>${front(false)}`
+  },
+  {
+    n:'②', title:'Icons lead · trailing dim number',
+    desc:'Apps are the star; a small dim number is tucked on the right. Most colorful-forward while still glanceable.',
+    bar:`
+      <div class="pill focused">${A.chrome}${A.finder}<span class="wsnum dim">1</span></div>
+      <div class="pill">${A.github}<span class="wsnum dim">2</span></div>
+      <div class="pill empty"><span class="wsnum">3</span></div>
+      <div class="pill empty"><span class="wsnum">4</span></div>
+      <div class="pill empty"><span class="wsnum">5</span></div>
+      <div class="pill empty"><span class="wsnum">6</span></div>
+      <div class="spacer"></div>${front(false)}`
+  },
+  {
+    n:'③', title:'Number tabs · focused-app cluster',
+    desc:'Pills stay minimal numbers; the focused space’s icons merge with the app name in one cluster. Cleanest bar — <span class="warn">but you only see icons for the active space.</span>',
+    bar:`
+      <div class="pill focused"><span class="wsnum">1</span></div>
+      <div class="pill"><span class="wsnum">2</span></div>
+      <div class="pill"><span class="wsnum">3</span></div>
+      <div class="pill empty"><span class="wsnum">4</span></div>
+      <div class="pill empty"><span class="wsnum">5</span></div>
+      <div class="pill empty"><span class="wsnum">6</span></div>
+      <div class="cluster">${A.chrome}${A.finder}<div class="divider"></div><span class="name">Warp</span></div>`
+  },
+  {
+    n:'④', title:'Segmented pill',
+    desc:'Number lives in a tinted left cap, icons fill the main segment. Structured “editor tab” feel; the number stays anchored even with many icons.',
+    bar:`
+      <div class="pill seg focused"><span class="cap">1</span><span class="seg-body">${A.chrome}${A.finder}</span></div>
+      <div class="pill seg"><span class="cap">2</span><span class="seg-body">${A.github}</span></div>
+      <div class="pill empty"><span class="wsnum">3</span></div>
+      <div class="pill empty"><span class="wsnum">4</span></div>
+      <div class="pill empty"><span class="wsnum">5</span></div>
+      <div class="pill empty"><span class="wsnum">6</span></div>
+      <div class="spacer"></div>${front(false)}`
+  },
+  {
+    n:'⑤', title:'Corner-badge number',
+    desc:'Number as a small badge on the pill’s top-left corner; icons dominate the body. Most icon-forward while still always showing the index.',
+    bar:`
+      <div class="pill badge focused"><span class="corner">1</span>${A.chrome}${A.finder}</div>
+      <div class="pill badge"><span class="corner">2</span>${A.github}</div>
+      <div class="pill empty"><span class="wsnum">3</span></div>
+      <div class="pill empty"><span class="wsnum">4</span></div>
+      <div class="pill empty"><span class="wsnum">5</span></div>
+      <div class="pill empty"><span class="wsnum">6</span></div>
+      <div class="spacer"></div>${front(false)}`
+  },
+  {
+    n:'⑥', title:'Global number · icon-only pills',
+    desc:'A big mauve “current space” lives once on the far left; pills become pure icons, app name on the right. <span class="warn">Per-pill numbers drop to secondary (dots when empty).</span>',
+    bar:`
+      <div class="pill global focused"><span class="wsnum">1</span></div>
+      <div class="spacer"></div>
+      <div class="pill">${A.chrome}${A.finder}</div>
+      <div class="pill">${A.github}</div>
+      <div class="pill empty"><span class="dotmark"></span></div>
+      <div class="pill empty"><span class="dotmark"></span></div>
+      <div class="pill empty"><span class="dotmark"></span></div>
+      <div class="pill empty"><span class="dotmark"></span></div>
+      <div class="spacer"></div>${front(false)}`
+  },
+];
+
+const grid = document.getElementById('grid');
+STYLES.forEach((s,i)=>{
+  const card = document.createElement('section');
+  card.className='card';
+  card.innerHTML = `
+    <div class="card-head">
+      <span class="num">${s.n}</span>
+      <span class="title">${s.title}</span>
+      <button class="pick-btn" data-i="${i}">Pick this</button>
+    </div>
+    <p class="desc">${s.desc}</p>
+    <div class="stage"><div class="bar">${s.bar}</div></div>`;
+  grid.appendChild(card);
+});
+
+// pick interaction
+const tally=document.getElementById('tally');
+let picked=null;
+grid.addEventListener('click',e=>{
+  const btn=e.target.closest('.pick-btn'); if(!btn)return;
+  const card=btn.closest('.card');
+  const was=card.classList.contains('picked');
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('picked'));
+  if(was){picked=null;tally.classList.remove('show');return;}
+  card.classList.add('picked');
+  picked=STYLES[+btn.dataset.i];
+  tally.innerHTML=`Picked <b>${picked.n} ${picked.title}</b> — tell Claude to build it`;
+  tally.classList.add('show');
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+});
+</script>
+</body>
+</html>

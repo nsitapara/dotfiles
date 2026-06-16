@@ -1,10 +1,10 @@
 local colors = require("colors")
-local icons = require("icons")
 local settings = require("settings")
-local app_icons = require("helpers.app_icons")
 
 local spaces = {}
 local space_brackets = {}
+local space_icon_slots = {} -- native macOS app-icon image items, per workspace
+local space_trails = {}     -- trailing pad so the last icon isn't flush to the edge
 
 -- ============================================================================
 -- WORKSPACE COUNT CONFIGURATION
@@ -16,52 +16,89 @@ local space_brackets = {}
 -- ============================================================================
 local WORKSPACE_COUNT = 6
 
--- Single monitor setup
+-- App icons are native macOS images (background.image = "app.<name>"). Unlike a
+-- text label, an image does NOT auto-size its item, so each icon needs an
+-- explicit box width >= the rendered icon (scale * native) or the images
+-- overflow and overlap. One constant size for all states keeps spacing stable.
+local SLOTS_PER_SPACE = 5
+local ICON_SCALE = 0.7
+local ICON_CELL = 29 -- box width per icon; with 0 padding this alone sets icon spacing
+local PILL_HEIGHT = 32 -- a touch taller so the larger icons stay inside the pill
+
 for i = 1, WORKSPACE_COUNT, 1 do
+  -- Space item carries the workspace number; the bracket below is the visible
+  -- pill (so the highlight wraps the number AND the icons as one element).
   local space = sbar.add("space", "space." .. i, {
     space = i,
     ignore_association = "on",
     icon = {
-      font = { family = settings.font.numbers },
+      font = { family = settings.font.numbers, size = 14.0 },
       string = i,
-      padding_left = 15,
-      padding_right = 8,
+      padding_left = 10,
+      padding_right = 5,
       color = colors.white,
       highlight_color = colors.mauve,
     },
-    label = {
-      padding_right = 20,
-      color = colors.grey,
-      highlight_color = colors.white,
-      font = "sketchybar-app-font:Regular:16.0",
-      y_offset = -1,
-    },
-    padding_right = 1,
-    padding_left = 1,
-    background = {
-      color = colors.bg1,
-      border_width = 1,
-      height = 26,
-      border_color = colors.black,
-    },
+    label = { drawing = false },
+    background = { color = colors.transparent, border_width = 0 },
+    padding_left = 2,
+    padding_right = 2,
     popup = { background = { border_width = 5, border_color = colors.black } }
   })
-
   spaces[i] = space
 
-  -- Single item bracket for space items to achieve double border on highlight
-  local space_bracket = sbar.add("bracket", { space.name }, {
+  -- one fixed-width image slot per app (drawn on demand)
+  local slots = {}
+  local bracket_members = { space.name }
+  for s = 1, SLOTS_PER_SPACE do
+    local slot = sbar.add("item", "space." .. i .. ".icon." .. s, {
+      position = "left",
+      drawing = false,
+      width = ICON_CELL,
+      padding_left = 0,  -- explicit: don't inherit the global 5/5 item padding
+      padding_right = 0, -- so ICON_CELL is the ONLY thing setting icon spacing
+      icon = { drawing = false },
+      label = { drawing = false },
+      background = {
+        drawing = true,
+        color = colors.transparent,
+        border_width = 0,
+        height = 24,
+        image = { scale = ICON_SCALE, corner_radius = 5, drawing = true },
+      },
+    })
+    slots[s] = slot
+    bracket_members[#bracket_members + 1] = slot.name
+  end
+  space_icon_slots[i] = slots
+
+  -- trailing pad so the last icon isn't flush against the pill's right edge
+  local trail = sbar.add("item", "space." .. i .. ".trail", {
+    position = "left",
+    drawing = false,
+    width = 8,
+    padding_left = 0,
+    padding_right = 0,
+    icon = { drawing = false },
+    label = { drawing = false },
+    background = { drawing = false },
+  })
+  space_trails[i] = trail
+  bracket_members[#bracket_members + 1] = trail.name
+
+  -- The bracket IS the pill: fill + border + focus highlight
+  local space_bracket = sbar.add("bracket", bracket_members, {
     background = {
-      color = colors.transparent,
-      border_color = colors.bg2,
-      height = 28,
-      border_width = 2
+      color = colors.bg1,
+      border_color = colors.black,
+      border_width = 1,
+      height = PILL_HEIGHT,
+      corner_radius = 9,
     }
   })
-
   space_brackets[i] = space_bracket
 
-  -- Padding space
+  -- Padding space between pills
   sbar.add("space", "space.padding." .. i, {
     space = i,
     ignore_association = "on",
@@ -71,122 +108,96 @@ for i = 1, WORKSPACE_COUNT, 1 do
 
   local space_popup = sbar.add("item", {
     position = "popup." .. space.name,
-    padding_left= 5,
-    padding_right= 0,
-    background = {
-      drawing = true,
-      image = {
-        corner_radius = 9,
-        scale = 0.2
-      }
-    }
+    padding_left = 5,
+    padding_right = 0,
+    background = { drawing = true, image = { corner_radius = 9, scale = 0.2 } }
   })
 
-  space:subscribe("mouse.clicked", function(env)
+  -- Click anywhere on the pill (number or any icon) acts on the space
+  local function on_click(env)
     if env.BUTTON == "other" then
       space_popup:set({ background = { image = "space." .. env.SID } })
       space:set({ popup = { drawing = "toggle" } })
+    elseif env.BUTTON == "right" then
+      sbar.exec("aerospace workspace " .. i .. " && aerospace close-all-windows-but-current")
     else
-      -- Use aerospace instead of yabai
-      if env.BUTTON == "right" then
-        -- Right click: close all windows in workspace
-        sbar.exec("aerospace workspace " .. i .. " && aerospace close-all-windows-but-current")
-      else
-        -- Left click: focus workspace
-        sbar.exec("aerospace workspace " .. i)
-      end
+      sbar.exec("aerospace workspace " .. i)
     end
-  end)
+  end
+  space:subscribe("mouse.clicked", on_click)
+  for _, slot in ipairs(slots) do
+    slot:subscribe("mouse.clicked", on_click)
+  end
 
   space:subscribe("mouse.exited", function(_)
     space:set({ popup = { drawing = false } })
   end)
 end
 
--- Global event handler for aerospace workspace changes
-local workspace_handler = sbar.add("item", {
-  drawing = false,
-  updates = true,
-})
-
-workspace_handler:subscribe("aerospace_workspace_change", function(env)
-  local focused_workspace = tonumber(env.FOCUSED_WORKSPACE)
-
-  -- Update all workspaces
+-- Highlight the focused workspace (number + pill); icons stay one constant size
+local function set_focus(focused)
   for i = 1, WORKSPACE_COUNT do
-    local is_focused = (focused_workspace == i)
-
+    local is_focused = (focused == i)
     if spaces[i] then
-      spaces[i]:set({
-        icon = {
-          highlight = is_focused,
-          padding_left = is_focused and 19 or 15,
-          padding_right = is_focused and 12 or 8
-        },
-        label = {
-          highlight = is_focused,
-          padding_right = is_focused and 24 or 20
-        },
-        padding_left = is_focused and 2 or 1,
-        padding_right = is_focused and 2 or 1,
-        background = {
-          border_color = is_focused and colors.mauve or colors.black,
-          border_width = is_focused and 2 or 1,
-          color = is_focused and colors.bg2 or colors.bg1
-        }
-      })
+      spaces[i]:set({ icon = { highlight = is_focused } })
     end
-
     if space_brackets[i] then
       space_brackets[i]:set({
         background = {
-          border_color = colors.transparent,
-          border_width = 0
+          color = is_focused and colors.bg2 or colors.bg1,
+          border_color = is_focused and colors.mauve or colors.black,
+          border_width = is_focused and 2 or 1,
         }
       })
     end
   end
+end
+
+local workspace_handler = sbar.add("item", { drawing = false, updates = true })
+workspace_handler:subscribe("aerospace_workspace_change", function(env)
+  set_focus(tonumber(env.FOCUSED_WORKSPACE))
 end)
 
-local space_window_observer = sbar.add("item", {
-  drawing = false,
-  updates = true,
-})
+-- seed the focus highlight on load (the event only fires on change)
+sbar.exec("aerospace list-workspaces --focused", function(result)
+  set_focus(tonumber((result or ""):gsub("%s+", "")))
+end)
 
--- Function to update workspace icons using aerospace
+-- Replace the glyph label with native app icons, one per app (deduped, capped)
+local space_window_observer = sbar.add("item", { drawing = false, updates = true })
 local function update_workspace_icons()
   for i = 1, WORKSPACE_COUNT do
     sbar.exec("aerospace list-windows --workspace " .. i .. " --format '%{app-name}'", function(result)
-      local icon_line = ""
-      local has_windows = false
-
-      -- Parse the result line by line
+      local slots = space_icon_slots[i]
+      local idx = 0
+      local seen = {}
       for app_name in result:gmatch("[^\r\n]+") do
-        if app_name and app_name ~= "" then
-          has_windows = true
-          local lookup = app_icons[app_name]
-          local icon = lookup or app_icons["Default"] or "●"
-          icon_line = icon_line .. icon
+        if app_name and app_name ~= "" and not seen[app_name] then
+          seen[app_name] = true
+          if idx < #slots then
+            idx = idx + 1
+            slots[idx]:set({ drawing = true, background = { image = "app." .. app_name } })
+          end
         end
       end
-
-      if not has_windows then
-        icon_line = " —"
+      for s = idx + 1, #slots do
+        slots[s]:set({ drawing = false })
       end
-
+      if space_trails[i] then
+        space_trails[i]:set({ drawing = idx > 0 })
+      end
+      -- empty space: center the number; occupied: left-bias it so icons follow
       if spaces[i] then
-        sbar.animate("tanh", 10, function()
-          spaces[i]:set({ label = icon_line })
-        end)
+        if idx == 0 then
+          spaces[i]:set({ icon = { padding_left = 12, padding_right = 12 } })
+        else
+          spaces[i]:set({ icon = { padding_left = 10, padding_right = 5 } })
+        end
       end
     end)
   end
 end
-
--- Update icons when workspace changes
 space_window_observer:subscribe("aerospace_workspace_change", function(env)
   update_workspace_icons()
 end)
-
--- Initial icon update
 update_workspace_icons()
