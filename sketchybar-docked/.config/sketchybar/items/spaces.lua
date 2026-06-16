@@ -16,6 +16,56 @@ local space_trails = {}     -- trailing pad so the last icon isn't flush to the 
 -- ============================================================================
 local WORKSPACE_COUNT = 6
 
+-- ============================================================================
+-- MULTI-MONITOR WORKSPACE ASSIGNMENT
+-- ============================================================================
+-- Mirror aerospace.toml's [workspace-to-monitor-force-assignment]:
+--   odd workspaces (1, 3, 5) -> main monitor (display 1)
+--   even workspaces (2, 4, 6) -> secondary monitor (display 2)
+-- Each space item is pinned to its monitor via `display`, so a monitor's bar
+-- only shows the workspaces that live on it (not all 1-6 on every screen).
+--
+-- Computed dynamically from aerospace itself: ask each monitor which
+-- workspaces live on it and pin those pills to that display. aerospace's
+-- monitor index lines up with sketchybar's display index (monitor 1 = the
+-- left screen = display 1, etc.). With a single display (laptop alone) every
+-- workspace collapses onto display 1 so nothing is orphaned.
+--
+-- NOTE: the pills are plain `item`s, not `space`s. A `space` item carries a
+-- native mission-control-space association whose display mask overrides the
+-- `display` property, so it always renders on every monitor. Plain items
+-- honor `display`, which is what makes per-monitor pinning actually work.
+local function get_display_count()
+  local handle = io.popen("aerospace list-monitors 2>/dev/null | wc -l")
+  if not handle then return 1 end
+  local result = handle:read("*a") or ""
+  handle:close()
+  local count = tonumber((result:gsub("%s+", ""))) or 1
+  return math.max(count, 1)
+end
+
+local display_count = get_display_count()
+
+local workspace_to_display = {}
+for i = 1, WORKSPACE_COUNT do
+  workspace_to_display[i] = 1 -- default: single-display / laptop-alone
+end
+if display_count >= 2 then
+  for mon = 1, display_count do
+    local handle = io.popen("aerospace list-workspaces --monitor " .. mon .. " 2>/dev/null")
+    if handle then
+      local result = handle:read("*a") or ""
+      handle:close()
+      for ws in result:gmatch("%d+") do
+        local n = tonumber(ws)
+        if n and n >= 1 and n <= WORKSPACE_COUNT then
+          workspace_to_display[n] = mon
+        end
+      end
+    end
+  end
+end
+
 -- App icons are native macOS images (background.image = "app.<name>"). Unlike a
 -- text label, an image does NOT auto-size its item, so each icon needs an
 -- explicit box width >= the rendered icon (scale * native) or the images
@@ -33,9 +83,8 @@ local NUMBER_SIZE_FOCUSED = 18.0 -- focused workspace number grows with the pill
 for i = 1, WORKSPACE_COUNT, 1 do
   -- Space item carries the workspace number; the bracket below is the visible
   -- pill (so the highlight wraps the number AND the icons as one element).
-  local space = sbar.add("space", "space." .. i, {
-    space = i,
-    ignore_association = "on",
+  local space = sbar.add("item", "space." .. i, {
+    display = workspace_to_display[i],
     icon = {
       font = { family = settings.font.numbers, size = 14.0 },
       string = i,
@@ -58,6 +107,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
   for s = 1, SLOTS_PER_SPACE do
     local slot = sbar.add("item", "space." .. i .. ".icon." .. s, {
       position = "left",
+      display = workspace_to_display[i],
       drawing = false,
       width = ICON_CELL,
       padding_left = 0,  -- explicit: don't inherit the global 5/5 item padding
@@ -81,6 +131,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
   -- (kept small so the right gap matches the spacing between icons)
   local trail = sbar.add("item", "space." .. i .. ".trail", {
     position = "left",
+    display = workspace_to_display[i],
     drawing = false,
     width = 4,
     padding_left = 0,
@@ -94,7 +145,8 @@ for i = 1, WORKSPACE_COUNT, 1 do
 
   -- The bracket IS the pill: fill + border + focus highlight. Matches the
   -- right-side widget pills (default.lua): bg1 fill + soft bg2 2px border.
-  local space_bracket = sbar.add("bracket", bracket_members, {
+  local space_bracket = sbar.add("bracket", "space.bracket." .. i, bracket_members, {
+    display = workspace_to_display[i],
     background = {
       color = colors.bg1,
       border_color = colors.bg2,
@@ -106,9 +158,8 @@ for i = 1, WORKSPACE_COUNT, 1 do
   space_brackets[i] = space_bracket
 
   -- Padding space between pills
-  sbar.add("space", "space.padding." .. i, {
-    space = i,
-    ignore_association = "on",
+  sbar.add("item", "space.padding." .. i, {
+    display = workspace_to_display[i],
     script = "",
     width = settings.group_paddings,
   })
