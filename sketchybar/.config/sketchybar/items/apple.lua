@@ -1,53 +1,39 @@
 local colors = require("colors")
-local settings = require("settings")
 
--- Padding item required because of bracket
-sbar.add("item", { width = 5 })
+-- Leading padding
+sbar.add("item", { width = 6 })
 
--- [PROTO] far-left indicator: the currently focused aerospace workspace number
-local focused_space = sbar.add("item", "focused_space", {
-  icon = {
-    font = { family = settings.font.numbers, size = 16.0 },
-    string = "1",
-    padding_right = 11,
-    padding_left = 11,
-    color = colors.white,
-  },
+-- Far-left standalone pill: the focused app's native macOS icon (this replaces
+-- the old focused-workspace-number indicator that used to live here).
+local front_icon = sbar.add("item", "front_app.icon", {
+  display = "active",
+  icon = { drawing = false },
   label = { drawing = false },
+  width = 30, -- background.image does NOT auto-size; pin a box so it can't overflow
+  padding_left = 6, -- breathing room inside the pill so the icon isn't cramped
+  padding_right = 6,
   background = {
-    color = colors.bg2,
-    border_color = colors.black,
-    border_width = 1
+    color = colors.transparent,
+    border_width = 0,
+    image = { scale = 0.7, corner_radius = 6, drawing = true },
   },
-  padding_left = 1,
-  padding_right = 1,
   updates = true,
 })
 
--- Double border using a single item bracket
-sbar.add("bracket", { focused_space.name }, {
-  background = {
-    color = colors.transparent,
-    height = 30,
-    border_color = colors.grey,
-  }
-})
-
--- Padding item required because of bracket
+-- Padding after the icon (no pill/bracket behind the selected-app icon)
 sbar.add("item", { width = 7 })
 
-local function set_focused(n)
-  n = (n or ""):gsub("%s+", "")
-  if n ~= "" then
-    focused_space:set({ icon = { string = n } })
+front_icon:subscribe("front_app_switched", function(env)
+  front_icon:set({ background = { image = "app." .. env.INFO } })
+end)
+
+-- Seed the current front app on load (the event only fires on change)
+sbar.exec(
+  "osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true'",
+  function(result)
+    local app = (result or ""):gsub("%s+$", "")
+    if app ~= "" then
+      front_icon:set({ background = { image = "app." .. app } })
+    end
   end
-end
-
-focused_space:subscribe("aerospace_workspace_change", function(env)
-  set_focused(env.FOCUSED_WORKSPACE)
-end)
-
--- Seed the initial value on load (event only fires on change)
-sbar.exec("aerospace list-workspaces --focused", function(result)
-  set_focused(result)
-end)
+)

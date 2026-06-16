@@ -23,7 +23,12 @@ local WORKSPACE_COUNT = 6
 local SLOTS_PER_SPACE = 5
 local ICON_SCALE = 0.7
 local ICON_CELL = 29 -- box width per icon; with 0 padding this alone sets icon spacing
-local PILL_HEIGHT = 32 -- a touch taller so the larger icons stay inside the pill
+local PILL_HEIGHT = 30 -- resting pill height
+local PILL_HEIGHT_FOCUSED = 36 -- focused pill grows taller so it stands out (bar is 40)
+local PILL_RADIUS = 9
+local PILL_RADIUS_FOCUSED = 11
+local NUMBER_SIZE = 14.0
+local NUMBER_SIZE_FOCUSED = 18.0 -- focused workspace number grows with the pill
 
 for i = 1, WORKSPACE_COUNT, 1 do
   -- Space item carries the workspace number; the bracket below is the visible
@@ -73,10 +78,11 @@ for i = 1, WORKSPACE_COUNT, 1 do
   space_icon_slots[i] = slots
 
   -- trailing pad so the last icon isn't flush against the pill's right edge
+  -- (kept small so the right gap matches the spacing between icons)
   local trail = sbar.add("item", "space." .. i .. ".trail", {
     position = "left",
     drawing = false,
-    width = 8,
+    width = 4,
     padding_left = 0,
     padding_right = 0,
     icon = { drawing = false },
@@ -93,7 +99,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
       border_color = colors.black,
       border_width = 1,
       height = PILL_HEIGHT,
-      corner_radius = 9,
+      corner_radius = PILL_RADIUS,
     }
   })
   space_brackets[i] = space_bracket
@@ -134,23 +140,33 @@ for i = 1, WORKSPACE_COUNT, 1 do
   end)
 end
 
--- Highlight the focused workspace (number + pill); icons stay one constant size
+-- Highlight the focused workspace (number + pill); the focused pill grows
+-- taller and the whole transition is animated so it visibly "pops" on switch.
 local function set_focus(focused)
-  for i = 1, WORKSPACE_COUNT do
-    local is_focused = (focused == i)
-    if spaces[i] then
-      spaces[i]:set({ icon = { highlight = is_focused } })
+  sbar.animate("sin", 14, function()
+    for i = 1, WORKSPACE_COUNT do
+      local is_focused = (focused == i)
+      if spaces[i] then
+        spaces[i]:set({
+          icon = {
+            highlight = is_focused,
+            font = { size = is_focused and NUMBER_SIZE_FOCUSED or NUMBER_SIZE },
+          },
+        })
+      end
+      if space_brackets[i] then
+        space_brackets[i]:set({
+          background = {
+            color = is_focused and colors.bg2 or colors.bg1,
+            border_color = is_focused and colors.mauve or colors.black,
+            border_width = is_focused and 2 or 1,
+            height = is_focused and PILL_HEIGHT_FOCUSED or PILL_HEIGHT,
+            corner_radius = is_focused and PILL_RADIUS_FOCUSED or PILL_RADIUS,
+          }
+        })
+      end
     end
-    if space_brackets[i] then
-      space_brackets[i]:set({
-        background = {
-          color = is_focused and colors.bg2 or colors.bg1,
-          border_color = is_focused and colors.mauve or colors.black,
-          border_width = is_focused and 2 or 1,
-        }
-      })
-    end
-  end
+  end)
 end
 
 local workspace_handler = sbar.add("item", { drawing = false, updates = true })
