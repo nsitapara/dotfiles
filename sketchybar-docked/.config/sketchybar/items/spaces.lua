@@ -92,12 +92,13 @@ for i = 1, WORKSPACE_COUNT, 1 do
   space_trails[i] = trail
   bracket_members[#bracket_members + 1] = trail.name
 
-  -- The bracket IS the pill: fill + border + focus highlight
+  -- The bracket IS the pill: fill + border + focus highlight. Matches the
+  -- right-side widget pills (default.lua): bg1 fill + soft bg2 2px border.
   local space_bracket = sbar.add("bracket", bracket_members, {
     background = {
       color = colors.bg1,
-      border_color = colors.black,
-      border_width = 1,
+      border_color = colors.bg2,
+      border_width = 2,
       height = PILL_HEIGHT,
       corner_radius = PILL_RADIUS,
     }
@@ -158,8 +159,8 @@ local function set_focus(focused)
         space_brackets[i]:set({
           background = {
             color = is_focused and colors.bg2 or colors.bg1,
-            border_color = is_focused and colors.mauve or colors.black,
-            border_width = is_focused and 2 or 1,
+            border_color = is_focused and colors.mauve or colors.bg2,
+            border_width = 2,
             height = is_focused and PILL_HEIGHT_FOCUSED or PILL_HEIGHT,
             corner_radius = is_focused and PILL_RADIUS_FOCUSED or PILL_RADIUS,
           }

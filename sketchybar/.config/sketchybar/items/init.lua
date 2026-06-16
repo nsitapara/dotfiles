@@ -1,5 +1,6 @@
 require("items.apple")
 require("items.spaces")
+require("items.center_app")
 require("items.calendar")
 require("items.widgets")
 require("items.media")
