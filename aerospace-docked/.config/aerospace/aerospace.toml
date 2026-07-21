@@ -139,7 +139,9 @@ outer.right =      10
     cmd-ctrl-alt-shift-d = 'flatten-workspace-tree'
 
     # Floating window
-    cmd-ctrl-alt-shift-f = 'layout floating tiling'
+    # Float toggle: when a window BECOMES floating, shrink it to 1600x1000 so it
+    # visibly pops out of the layout (AeroSpace has no float-size memory).
+    cmd-ctrl-alt-shift-f = 'exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh'
 
     # Modes
     cmd-ctrl-alt-shift-m = 'mode merge'
@@ -150,7 +152,7 @@ outer.right =      10
     esc = ['reload-config', 'mode main']
     f15 = 'mode main'
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
-    f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
+    f = ['exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh', 'mode main'] # Float toggle, shrinks on float
     backspace = ['close-all-windows-but-current', 'mode main']
 
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
