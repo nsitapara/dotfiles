@@ -12,13 +12,16 @@ after-startup-command = [
     # so it won't be run twice on AeroSpace restart
     # Catppuccin Mocha: Mauve (active) & Surface 2 (inactive)
     'exec-and-forget borders active_color=0xffcba6f7 inactive_color=0xff585b70 width=8.0',
-    'exec-and-forget sketchybar'
+    'exec-and-forget sketchybar',
+    # 1s refresh poller — covers same-app window closes, which AeroSpace's async
+    # pipeline never notices on its own (#1615). See comments in the script.
+    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh'
 ]
 
 # Notify Sketchybar about workspace change; re-poll aerospace so windows closed while
 # this workspace was in the background get re-tiled on arrival (see #1615 workaround below)
 exec-on-workspace-change = ['/bin/bash', '-c',
-    'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; (for d in 0.2 0.3; do sleep $d; /opt/homebrew/bin/aerospace list-windows --all >/dev/null; done) &'
+    'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; $HOME/dotfiles/aerospace-retile.sh &'
 ]
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
@@ -44,11 +47,8 @@ key-mapping.preset = 'qwerty'
 # on-focus-changed = "move-mouse window-lazy-center"
 
 # Workaround for delayed re-tiling on window open/close since 0.20/0.21 async rewrite.
-# Any CLI call forces a model refresh + re-layout; list-windows is read-only so it can't loop.
-# Re-poll over ~1.5s: the first calls race async window detection/destruction, so keep
-# re-polling until the app thread has reported. Destruction is reported slower than creation.
-# See https://github.com/nikitabobko/AeroSpace/issues/1615
-on-focus-changed = ['exec-and-forget /bin/sh -c "for d in 0 0.2 0.3 0.5 0.5; do sleep $d; /opt/homebrew/bin/aerospace list-windows --all >/dev/null; done"']
+# Single-flight re-poll script — see comments in ~/dotfiles/aerospace-retile.sh.
+on-focus-changed = ['exec-and-forget $HOME/dotfiles/aerospace-retile.sh']
 
 [gaps]
 inner.horizontal = 15
@@ -234,6 +234,12 @@ outer.right =      10
 # run = ['layout tiling', 'move-node-to-workspace 3']
 
 
+# Float Nuvio: tiled video stutters because forced refreshes (aerospace-retile.sh
+# workaround for #1615) re-apply layout to tiled windows; floating windows are exempt.
+[[on-window-detected]]
+if.app-id = 'com.nuvio.media.desktop'
+run = 'layout floating'
+
 [[on-window-detected]]
 if.app-id = 'com.apple.ActivityMonitor'
 run = 'layout floating'
@@ -268,6 +274,8 @@ if.app-id = 'com.tinyspeck.slackmacgap'
 run = ['move-node-to-workspace 2']
 
 
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-run = "move-node-to-workspace 3"
+# Disabled: with 0.20/0.21's delayed window detection, move-on-detect makes new
+# Chrome windows appear in place, then visibly teleport to ws 3 — reads as a bug.
+# [[on-window-detected]]
+# if.app-id = 'com.google.Chrome'
+# run = "move-node-to-workspace 3"
