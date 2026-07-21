@@ -26,3 +26,12 @@ Remove, in BOTH `aerospace/` and `aerospace-docked/` variants of
    windows visibly teleport) and the Nuvio float rule if tiled video works again
 
 `pkill -f aerospace-poll.sh` after removing, or just restart AeroSpace.
+
+## Related symptom to retest after the upstream fix (no workaround applied)
+
+Closing a Chrome window sometimes teleports focus to a Chrome window on
+another workspace instead of the neighboring window on the current one.
+macOS picks the same app's next window (AeroSpace's hidden-corner windows are
+valid focus targets) and AeroSpace follows the focus. No config option exists;
+tracked upstream: <https://github.com/nikitabobko/AeroSpace/discussions/2183>.
+
