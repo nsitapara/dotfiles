@@ -177,13 +177,17 @@ outer.right =      10
 # 5 = 'main'
 # 6 = 'secondary'
 
-# Layout B (active): 1-3 -> main, 4-6 -> secondary.
-1 = 'main'
-2 = 'main'
-3 = 'main'
-4 = 'secondary'
-5 = 'secondary'
-6 = 'secondary'
+# Layout B (active): 1-3 -> left screen, 4-6 -> right screen.
+# Pinned by monitor NAME, with main/secondary as the fallback for when that
+# monitor is absent. Bare 'secondary' means "any non-main monitor", so a third
+# display — Screen Sharing's virtual one — matches it and steals workspaces 4-6
+# onto a screen that isn't physically there.
+1 = ['LG HDR QHD', 'main']
+2 = ['LG HDR QHD', 'main']
+3 = ['LG HDR QHD', 'main']
+4 = ['PA278QV', 'secondary']
+5 = ['PA278QV', 'secondary']
+6 = ['PA278QV', 'secondary']
 
 
 [mode.merge.binding]
