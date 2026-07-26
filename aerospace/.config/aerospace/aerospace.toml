@@ -49,8 +49,11 @@ inner.horizontal = 15
 inner.vertical =   15
 outer.left =       10
 outer.bottom =     8
-# Single display (laptop): top gap just clears the sketchybar with a small margin.
-outer.top =        16
+# Per-monitor top gap. The built-in display needs only 16 because the notch makes
+# the native menu bar taller, so windows already start below the 40pt sketchybar.
+# Any other single display has no notch — Screen Sharing's virtual display is
+# 1440x900 logical — so 16 puts windows *under* the bar. Last bare value = default.
+outer.top =        [{ monitor.'built-in' = 16 }, 50]
 outer.right =      10
 
 
