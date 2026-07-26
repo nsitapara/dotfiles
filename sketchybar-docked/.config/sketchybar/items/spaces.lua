@@ -25,45 +25,58 @@ local WORKSPACE_COUNT = 6
 -- Each space item is pinned to its monitor via `display`, so a monitor's bar
 -- only shows the workspaces that live on it (not all 1-6 on every screen).
 --
--- Computed dynamically from aerospace itself: ask each monitor which
--- workspaces live on it and pin those pills to that display. aerospace's
--- monitor index lines up with sketchybar's display index (monitor 1 = the
--- left screen = display 1, etc.). With a single display (laptop alone) every
--- workspace collapses onto display 1 so nothing is orphaned.
+-- Computed dynamically from aerospace itself: ask which display each workspace
+-- lives on and pin its pill there.
+--
+-- Join on the NSScreen id, NOT aerospace's monitor index. Those are different
+-- orderings and mistaking one for the other puts every pill on the wrong bar:
+-- aerospace numbers monitors by its own left-to-right sweep, while sketchybar's
+-- `display` is the macOS arrangement index. With the lid open and one monitor
+-- stacked above the others, aerospace ordered LG,built-in,PA278QV (1,2,3) while
+-- macOS's arrangement was built-in,PA278QV,LG — no overlap at all. aerospace
+-- reports the NSScreen id, and it matches sketchybar's `arrangement-id`
+-- (verified against `sketchybar --query displays`), so it is the safe key.
 --
 -- NOTE: the pills are plain `item`s, not `space`s. A `space` item carries a
 -- native mission-control-space association whose display mask overrides the
 -- `display` property, so it always renders on every monitor. Plain items
 -- honor `display`, which is what makes per-monitor pinning actually work.
-local function get_display_count()
-  local handle = io.popen("aerospace list-monitors 2>/dev/null | wc -l")
-  if not handle then return 1 end
-  local result = handle:read("*a") or ""
-  handle:close()
-  local count = tonumber((result:gsub("%s+", ""))) or 1
-  return math.max(count, 1)
-end
-
-local display_count = get_display_count()
-
 local workspace_to_display = {}
 for i = 1, WORKSPACE_COUNT do
-  workspace_to_display[i] = 1 -- default: single-display / laptop-alone
+  workspace_to_display[i] = 1 -- fallback if aerospace can't be reached
 end
-if display_count >= 2 then
-  for mon = 1, display_count do
-    local handle = io.popen("aerospace list-workspaces --monitor " .. mon .. " 2>/dev/null")
-    if handle then
-      local result = handle:read("*a") or ""
-      handle:close()
-      for ws in result:gmatch("%d+") do
-        local n = tonumber(ws)
-        if n and n >= 1 and n <= WORKSPACE_COUNT then
-          workspace_to_display[n] = mon
-        end
-      end
+
+-- Two hops, because neither tool speaks the other's display index:
+--   aerospace's monitor-appkit-nsscreen-screens-id == sketchybar's DirectDisplayID
+--   sketchybar's `display` property            == sketchybar's arrangement-id
+-- Those last two are NOT the same number. Verified: a window aerospace reports on
+-- monitor 1 (NSScreen id 3) sits at (-484,-1390), which is the frame sketchybar
+-- lists as arrangement-id 2 — so DirectDisplayID 3 is arrangement 2, and using the
+-- NSScreen id directly as `display` puts the pills on the wrong monitor.
+local arrangement_of = {}
+local dh = io.popen("/opt/homebrew/bin/sketchybar --query displays 2>/dev/null")
+if dh then
+  local json = dh:read("*a") or ""
+  dh:close()
+  for arr, did in json:gmatch('"arrangement%-id":(%d+),%s*"DirectDisplayID":(%d+)') do
+    arrangement_of[tonumber(did)] = tonumber(arr)
+  end
+end
+
+-- Absolute path: this runs in sketchybar's launchd environment, not a login shell.
+local handle = io.popen(
+  "/opt/homebrew/bin/aerospace list-workspaces --all " ..
+  "--format '%{workspace}|%{monitor-appkit-nsscreen-screens-id}' 2>/dev/null"
+)
+if handle then
+  for line in handle:lines() do
+    local ws, nsscreen = line:match("^(%d+)|(%d+)$")
+    ws, nsscreen = tonumber(ws), tonumber(nsscreen)
+    if ws and nsscreen and ws >= 1 and ws <= WORKSPACE_COUNT then
+      workspace_to_display[ws] = arrangement_of[nsscreen] or nsscreen
     end
   end
+  handle:close()
 end
 
 -- App icons are native macOS images (background.image = "app.<name>"). Unlike a
@@ -268,4 +281,13 @@ end
 space_window_observer:subscribe("aerospace_workspace_change", function(env)
   update_workspace_icons()
 end)
+
+-- workspace_to_display above is resolved once at load, so a display appearing or
+-- disappearing (monitor hotplug, or Screen Sharing's virtual display) leaves
+-- these pills pinned to a stale display index. The script diffs the monitor list
+-- and only reloads when it really changed — see aerospace-monitor-sync.sh.
+space_window_observer:subscribe("display_change", function(env)
+  sbar.exec(os.getenv("HOME") .. "/dotfiles/aerospace-monitor-sync.sh")
+end)
+
 update_workspace_icons()

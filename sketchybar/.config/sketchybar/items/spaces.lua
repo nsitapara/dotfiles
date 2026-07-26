@@ -217,4 +217,15 @@ end
 space_window_observer:subscribe("aerospace_workspace_change", function(env)
   update_workspace_icons()
 end)
+
+-- A display appearing or disappearing (monitor hotplug, or Screen Sharing
+-- swapping the physical monitors for its virtual one) means the OTHER profile
+-- should be stowed — this laptop variant and the docked one differ in gaps and
+-- in whether spaces are pinned per-display. switch-display-mode.sh handles that,
+-- but only on a 30s launchd interval; this makes it immediate.
+-- See aerospace-monitor-sync.sh.
+space_window_observer:subscribe("display_change", function(env)
+  sbar.exec(os.getenv("HOME") .. "/dotfiles/aerospace-monitor-sync.sh")
+end)
+
 update_workspace_icons()
