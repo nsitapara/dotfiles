@@ -246,6 +246,13 @@ outer.right =      10
 if.app-id = 'com.nuvio.media.desktop'
 run = 'layout floating'
 
+# The development build uses Electron's generic bundle ID, so also match the
+# window title to avoid floating every unpackaged Electron application.
+[[on-window-detected]]
+if.app-id = 'com.github.Electron'
+if.window-title-regex-substring = '^Worktree & Stack Manager$'
+run = 'layout floating'
+
 [[on-window-detected]]
 if.app-id = 'com.apple.ActivityMonitor'
 run = 'layout floating'
