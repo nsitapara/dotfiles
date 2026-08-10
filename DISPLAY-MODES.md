@@ -35,27 +35,26 @@ puts every pill on the wrong bar:
 | Number | Whose | Ordering |
 |---|---|---|
 | monitor index | AeroSpace (`list-monitors`) | its own left-to-right sweep by x |
-| `monitor-appkit-nsscreen-screens-id` | AeroSpace | == sketchybar's `DirectDisplayID` |
-| `DirectDisplayID` | sketchybar (`--query displays`) | CoreGraphics id, arbitrary |
+| `monitor-appkit-nsscreen-screens-id` | AeroSpace | NSScreen enumeration position — **not stable across reboots** |
+| `DirectDisplayID` | sketchybar (`--query displays`) | CoreGraphics id — **re-assigned across reboots** |
 | `arrangement-id` | sketchybar | System Settings → Displays arrangement order. **This is what the `display` property takes.** |
 
-Measured on this machine with the lid open and one monitor stacked above:
+An earlier version of `spaces.lua` joined AeroSpace → sketchybar on
+`monitor-appkit-nsscreen-screens-id == DirectDisplayID`. That equality was a
+coincidence of one boot's enumeration, not an invariant: after a restart
+AeroSpace reported nsscreen ids {1, 2} while sketchybar reported
+DirectDisplayIDs {2, 3}, the join produced garbage, and every pill landed on
+one bar.
 
-| monitor | AeroSpace idx | NSScreen id / DirectDisplayID | arrangement-id |
-|---|---|---|---|
-| Built-in Retina | 2 | 1 | 1 |
-| LG HDR QHD | 1 | 3 | **2** |
-| PA278QV | 3 | 2 | **3** |
+`spaces.lua` now joins on **monitor name** (`%{monitor-name}`), the only
+identifier that survives reboots, with a static name → arrangement-id map
+(`LG HDR QHD` → 1, `PA278QV` → 2). The map can be static because
+`aerospace-monitor-sync.sh` enforces the golden arrangement below — LG at
+`(0,0)` is arrangement 1, PA278QV to its right is arrangement 2.
 
-All three disagree. `spaces.lua` therefore joins AeroSpace → sketchybar via
-`DirectDisplayID`, then translates that to `arrangement-id` before setting
-`display`. Ground truth for the mapping came from window coordinates, not
-inference: a window AeroSpace reported on monitor 1 sat at `(-484,-1390)`, inside
-the frame sketchybar listed as `arrangement-id 2`.
-
-Do not "simplify" that to the AeroSpace monitor index. It only appears to work
-when the arrangement happens to be strictly left-to-right with the leftmost
-display also being arrangement 1.
+Do not "simplify" that to the AeroSpace monitor index either. It only appears
+to work when the arrangement happens to be strictly left-to-right with the
+leftmost display also being arrangement 1.
 
 ## Trap: macOS scrambles the arrangement after Screen Sharing
 

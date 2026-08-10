@@ -19,23 +19,20 @@ local WORKSPACE_COUNT = 6
 -- ============================================================================
 -- MULTI-MONITOR WORKSPACE ASSIGNMENT
 -- ============================================================================
--- Mirror aerospace.toml's [workspace-to-monitor-force-assignment]:
---   odd workspaces (1, 3, 5) -> main monitor (display 1)
---   even workspaces (2, 4, 6) -> secondary monitor (display 2)
--- Each space item is pinned to its monitor via `display`, so a monitor's bar
--- only shows the workspaces that live on it (not all 1-6 on every screen).
+-- Each space item is pinned to the monitor its windows live on via `display`,
+-- so a monitor's bar only shows the workspaces that live on it (not all 1-6 on
+-- every screen). Computed dynamically from aerospace itself.
 --
--- Computed dynamically from aerospace itself: ask which display each workspace
--- lives on and pin its pill there.
+-- Join on the monitor NAME, not on any display id. Every id-based join here has
+-- broken at least once: sketchybar's DirectDisplayID is re-assigned by
+-- CoreGraphics across reboots, and aerospace's
+-- monitor-appkit-nsscreen-screens-id is an enumeration position, not a stable
+-- id — after one reboot they disagreed entirely ({1,2} vs {2,3}) and every pill
+-- landed on one bar. Names survive reboots.
 --
--- Join on the NSScreen id, NOT aerospace's monitor index. Those are different
--- orderings and mistaking one for the other puts every pill on the wrong bar:
--- aerospace numbers monitors by its own left-to-right sweep, while sketchybar's
--- `display` is the macOS arrangement index. With the lid open and one monitor
--- stacked above the others, aerospace ordered LG,built-in,PA278QV (1,2,3) while
--- macOS's arrangement was built-in,PA278QV,LG — no overlap at all. aerospace
--- reports the NSScreen id, and it matches sketchybar's `arrangement-id`
--- (verified against `sketchybar --query displays`), so it is the safe key.
+-- The name -> `display` (arrangement-id) map can be static because
+-- aerospace-monitor-sync.sh enforces the golden arrangement: LG at (0,0) is
+-- arrangement 1, PA278QV to its right is arrangement 2.
 --
 -- NOTE: the pills are plain `item`s, not `space`s. A `space` item carries a
 -- native mission-control-space association whose display mask overrides the
@@ -46,34 +43,22 @@ for i = 1, WORKSPACE_COUNT do
   workspace_to_display[i] = 1 -- fallback if aerospace can't be reached
 end
 
--- Two hops, because neither tool speaks the other's display index:
---   aerospace's monitor-appkit-nsscreen-screens-id == sketchybar's DirectDisplayID
---   sketchybar's `display` property            == sketchybar's arrangement-id
--- Those last two are NOT the same number. Verified: a window aerospace reports on
--- monitor 1 (NSScreen id 3) sits at (-484,-1390), which is the frame sketchybar
--- lists as arrangement-id 2 — so DirectDisplayID 3 is arrangement 2, and using the
--- NSScreen id directly as `display` puts the pills on the wrong monitor.
-local arrangement_of = {}
-local dh = io.popen("/opt/homebrew/bin/sketchybar --query displays 2>/dev/null")
-if dh then
-  local json = dh:read("*a") or ""
-  dh:close()
-  for arr, did in json:gmatch('"arrangement%-id":(%d+),%s*"DirectDisplayID":(%d+)') do
-    arrangement_of[tonumber(did)] = tonumber(arr)
-  end
-end
+local display_of_monitor = {
+  ["LG HDR QHD"] = 1,
+  ["PA278QV"] = 2,
+}
 
 -- Absolute path: this runs in sketchybar's launchd environment, not a login shell.
 local handle = io.popen(
   "/opt/homebrew/bin/aerospace list-workspaces --all " ..
-  "--format '%{workspace}|%{monitor-appkit-nsscreen-screens-id}' 2>/dev/null"
+  "--format '%{workspace}|%{monitor-name}' 2>/dev/null"
 )
 if handle then
   for line in handle:lines() do
-    local ws, nsscreen = line:match("^(%d+)|(%d+)$")
-    ws, nsscreen = tonumber(ws), tonumber(nsscreen)
-    if ws and nsscreen and ws >= 1 and ws <= WORKSPACE_COUNT then
-      workspace_to_display[ws] = arrangement_of[nsscreen] or nsscreen
+    local ws, mon = line:match("^(%d+)|(.+)$")
+    ws = tonumber(ws)
+    if ws and mon and ws >= 1 and ws <= WORKSPACE_COUNT then
+      workspace_to_display[ws] = display_of_monitor[mon] or 1
     end
   end
   handle:close()
