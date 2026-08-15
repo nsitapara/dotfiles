@@ -29,6 +29,11 @@ o.bind("SUPER + SHIFT + P", "PyCharm", { launch = "pycharm" })
 -- Omarchy puts Activity on SUPER + CTRL + T; keep it on SUPER + SHIFT + T too.
 o.bind("SUPER + SHIFT + T", "Activity", { tui = "btop" })
 
+-- macOS-style drag-a-box screenshot (like Shift + Cmd + 4). Saves a PNG to
+-- Pictures, copies it to the clipboard, and shows a notification you can click
+-- to open the editor. Press again mid-selection to cancel.
+o.bind("SHIFT + ALT + 4", "Screenshot (region)", "omarchy-capture-screenshot region")
+
 -- ── Already covered by Omarchy's defaults (kept here as a record) ───────────
 --
 -- These were in the old bindings.conf and are NOT lost -- Omarchy Quattro now
