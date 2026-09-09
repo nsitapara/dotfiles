@@ -7,6 +7,7 @@ local icons = {
     apple = "􀣺",
     gear = "􀍟",
     cpu = "􀫥",
+    disk = "􀤃",
     clipboard = "􀉄",
 
     switch = {
@@ -49,6 +50,7 @@ local icons = {
     apple = "",
     gear = "",
     cpu = "",
+    disk = "",
     clipboard = "Missing Icon",
 
     switch = {

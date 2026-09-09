@@ -4,20 +4,15 @@ local colors = require("colors")
 -- Padding item required because of bracket
 sbar.add("item", { position = "right", width = settings.group_paddings })
 
-local cal = sbar.add("item", {
-  icon = {
+local cal = sbar.add("item", "calendar", {
+  icon = { drawing = false },
+  label = {
+    string = os.date("%I:%M %p"),
     color = colors.white,
     padding_left = 8,
-    font = {
-      style = settings.font.style_map["Black"],
-      size = 12.0,
-    },
-  },
-  label = {
-    color = colors.white,
     padding_right = 8,
-    width = 49,
-    align = "right",
+    width = "dynamic",
+    align = "center",
     font = { family = settings.font.numbers },
   },
   position = "right",
@@ -45,5 +40,5 @@ sbar.add("bracket", { cal.name }, {
 sbar.add("item", { position = "right", width = settings.group_paddings })
 
 cal:subscribe({ "forced", "routine", "system_woke" }, function(env)
-  cal:set({ icon = os.date("%a. %d %b."), label = os.date("%H:%M") })
+  cal:set({ label = os.date("%I:%M %p") })
 end)
