@@ -12,6 +12,7 @@ sbar.begin_config()
 require("bar")
 require("default")
 require("items")
+sbar.add("item", "display_mode", { drawing = false, label = { string = "docked" } })
 sbar.end_config()
 
 -- Run the event loop of the sketchybar module (without this there will be no

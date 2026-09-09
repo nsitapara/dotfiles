@@ -18,27 +18,29 @@
 # backstop. Ordering matters: repair the arrangement first, so the profile switch
 # and sketchybar's per-display pinning both read the corrected layout.
 #
-# Restart semantics: a new invocation kills the pending one, so the burst of
-# display_change events macOS emits while an arrangement settles collapses into a
-# single run. display_change also fires on focused-monitor changes;
+# Concurrent events share a lock and leave the pending run to finish. Never kill
+# it: it may already be changing symlinks or reloading the apps.
+# display_change also fires on focused-monitor changes;
 # switch-display-mode.sh already exits early when the mode and stowed config match.
 
-LOCK="${TMPDIR:-/tmp}/aerospace-monitor-sync.pid"
+LOCK="${TMPDIR:-/tmp}/aerospace-monitor-sync.lock"
 BIN=/opt/homebrew/bin
 
 # --- golden clamshell arrangement --------------------------------------------
 # Re-snapshot with `displayplacer list | tail -1` if the desk setup changes.
-LG=98C1FB25-A9D8-4BF1-A6FB-B5F43EFF2313        # LG HDR QHD — left,  workspaces 1-3
-PA=72BE38E4-ED54-416E-A1C5-004D9725F0C7        # PA278QV    — right, workspaces 4-6
+LG=98C1FB25-A9D8-4BF1-A6FB-B5F43EFF2313        # LG HDR QHD — left,  workspaces 1,3,5
+PA=72BE38E4-ED54-416E-A1C5-004D9725F0C7        # PA278QV    — right, workspaces 2,4,6
 BUILTIN=37D8832A-2D66-02CA-B9F7-8F30A301B230   # Built-in Retina Display
 LG_ORIGIN="origin:(0,0)"
 PA_ORIGIN="origin:(2560,0)"
 
-[ -f "$LOCK" ] && kill "$(cat "$LOCK")" 2>/dev/null
-echo $$ > "$LOCK"
+# Keep output independent of the Lua callback, which exits when the bar reloads.
+exec >>/tmp/display-mode-switcher.log 2>>/tmp/display-mode-switcher.err
+exec 8>"$LOCK"
+lockf -s -t 0 8 || exit 0
 
 # macOS reports a new arrangement in stages; acting too early reads a
-# half-applied layout. ponytail: fixed delay, make it adaptive if 1.5s ever races.
+# half-applied layout. The switcher also checks for a stable display snapshot.
 sleep 1.5
 
 # Only repair in clamshell with both externals back. Every other state — laptop

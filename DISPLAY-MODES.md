@@ -20,6 +20,32 @@ per-monitor split" is exactly right. No third profile exists.
 | `com.user.display-mode-switcher` (launchd) | Runs the above every 30s. The backstop. |
 | `aerospace-monitor-sync.sh` | Runs it *immediately*, off sketchybar's built-in `display_change` event, and repairs the arrangement first. |
 
+The switcher waits for two matching display snapshots before applying a profile.
+It tracks display identities and geometry as well as the count, so changing a
+monitor without changing the number of screens also refreshes the assignments.
+Failed or zero-display detection leaves the existing profile alone for the next
+event or 30-second check to retry.
+
+Both scripts use macOS `lockf` to prevent overlapping runs. Display events no
+longer kill a pending switch while it is changing symlinks. The event handler
+writes directly to the switcher logs so reloading its parent Lua config cannot
+close its output pipe halfway through the switch.
+
+SketchyBar must be reloaded with an explicit config path:
+`sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc"`. A bare `--reload`
+reuses the previously resolved path, which can leave the docked profile running
+after Stow has selected the laptop profile. That caused only 1, 3, and 5 to show
+on the laptop while 2, 4, and 6 remained assigned to the disconnected monitor.
+Each Lua config now adds a hidden `display_mode` item after loading its items.
+The switcher verifies that item before recording success, and checks it on later
+runs to recover if the running profile and symlinks disagree.
+
+Mode and display snapshots are stored in `${TMPDIR:-/tmp}/.display-mode-state`
+and its `.displays` companion. Run the isolated regression tests on macOS with
+`python3 tests/test_display_mode_switcher.py`. They simulate repeated docking,
+unplugging, config desynchronization, failed detection/reloads, and concurrent
+invocations without changing the live desktop.
+
 Without the event hook there is a window of up to 30s where the wrong profile is
 stowed: workspaces force-assigned to a monitor that isn't there, space pills
 pinned to a dead display index. That window is what made sketchybar look "cut

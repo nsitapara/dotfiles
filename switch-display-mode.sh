@@ -8,10 +8,40 @@ set -e
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DOTFILES_DIR"
 
-STATE_FILE="/tmp/.display-mode-state"
+STATE_FILE="${TMPDIR:-/tmp}/.display-mode-state"
+DISPLAY_STATE_FILE="${STATE_FILE}.displays"
 
-# Detect number of displays
-DISPLAY_COUNT=$(system_profiler SPDisplaysDataType | grep -c "Resolution:" || echo "0")
+# Serialize launchd and display-change runs without killing a switch midway.
+# macOS releases this descriptor lock even if the process exits unexpectedly.
+exec 9>"${STATE_FILE}.lock"
+lockf -s -t 10 9 || exit 1
+
+# Require two matching, nonzero readings while macOS settles after hotplug.
+# Missing/failed detection must never be interpreted as a laptop-only layout.
+PREVIOUS_SIGNATURE=""
+DISPLAY_COUNT=0
+for attempt in 1 2 3 4 5; do
+    DISPLAY_INFO=$(system_profiler SPDisplaysDataType) || exit 1
+    COUNT=$(printf '%s\n' "$DISPLAY_INFO" | awk '/Resolution:/ { n++ } END { print n+0 }')
+    DISPLAY_LAYOUT=""
+    if pgrep -x "sketchybar" > /dev/null; then
+        DISPLAY_LAYOUT=$(sketchybar --query displays) || exit 1
+        [ -n "$DISPLAY_LAYOUT" ] || exit 1
+    fi
+    # Include display identities and geometry, not just the count: replacing a
+    # monitor or rearranging two monitors must refresh the docked assignments.
+    DISPLAY_SIGNATURE=$(printf '%s\n%s\n' "$DISPLAY_INFO" "$DISPLAY_LAYOUT" | cksum)
+    if [ "$COUNT" -gt 0 ] && [ "$DISPLAY_SIGNATURE" = "$PREVIOUS_SIGNATURE" ]; then
+        DISPLAY_COUNT=$COUNT
+        break
+    fi
+    PREVIOUS_SIGNATURE=$DISPLAY_SIGNATURE
+    sleep 0.5
+done
+if [ "$DISPLAY_COUNT" -eq 0 ]; then
+    echo "Display detection did not settle; leaving the current profile unchanged" >&2
+    exit 1
+fi
 
 # Determine if docked (2+ displays) or not (1 display)
 if [ "$DISPLAY_COUNT" -ge 2 ]; then
@@ -29,17 +59,28 @@ fi
 # docked packages are still stowed (a desync), the old early-exit would never
 # correct it. This checks where the live config symlink really points.
 live_config_matches() {
-    local live
+    local live live_bar
     live=$(readlink -f "$HOME/.config/aerospace/aerospace.toml" 2>/dev/null)
-    [[ "$live" == *"/$AEROSPACE_PKG/.config/"* ]]
+    live_bar=$(readlink -f "$HOME/.config/sketchybar/sketchybarrc" 2>/dev/null)
+    [[ "$live" == *"/$AEROSPACE_PKG/.config/"* ]] &&
+        [[ "$live_bar" == *"/$SKETCHYBAR_PKG/.config/"* ]]
 }
 
-# Check if mode has changed AND the config is already correctly stowed
+# This item is added at the end of each Lua config. Symlinks and the state file
+# alone cannot prove that the running bar successfully loaded the new profile.
+bar_config_matches() {
+    sketchybar --query display_mode 2>/dev/null |
+        grep -q '"value": "'"$MODE"'"'
+}
+
+# Check the files AND the loaded profile before treating a run as a no-op.
 if [ -f "$STATE_FILE" ]; then
     CURRENT_MODE=$(cat "$STATE_FILE")
-    if [ "$CURRENT_MODE" = "$MODE" ] && live_config_matches; then
-        # No change and config already correct, exit silently
-        exit 0
+    CURRENT_DISPLAYS=$(cat "$DISPLAY_STATE_FILE" 2>/dev/null || true)
+    if [ "$CURRENT_MODE" = "$MODE" ] && [ "$CURRENT_DISPLAYS" = "$DISPLAY_SIGNATURE" ] && live_config_matches; then
+        if ! pgrep -x "sketchybar" > /dev/null || bar_config_matches; then
+            exit 0
+        fi
     fi
 fi
 
@@ -50,10 +91,10 @@ echo ""
 echo "Unstowing all display configurations..."
 
 # Unstow all aerospace and sketchybar configs
-stow -D aerospace 2>/dev/null || true
-stow -D aerospace-docked 2>/dev/null || true
-stow -D sketchybar 2>/dev/null || true
-stow -D sketchybar-docked 2>/dev/null || true
+stow -D aerospace
+stow -D aerospace-docked
+stow -D sketchybar
+stow -D sketchybar-docked
 
 echo "Unstowing complete."
 echo ""
@@ -77,9 +118,19 @@ fi
 
 # Reload sketchybar. Note: `brew services restart sketchybar` fails when the
 # felixkratz tap is untrusted, so use the in-process reload which re-runs the
-# (newly stowed) config and rebuilds every item.
+# newly stowed config and rebuilds every item. Pass the path explicitly: a bare
+# --reload reuses the previously resolved config path, even after Stow switches
+# the symlink, leaving the docked display assignments active on the laptop.
 if pgrep -x "sketchybar" > /dev/null; then
-    sketchybar --reload
+    sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc"
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        bar_config_matches && break
+        sleep 0.5
+    done
+    if ! bar_config_matches; then
+        echo "Sketchybar did not load the $MODE profile; the next run will retry" >&2
+        exit 1
+    fi
     echo "Sketchybar reloaded"
 else
     echo "Sketchybar is not running, skipping restart"
@@ -90,3 +141,4 @@ echo "✓ Successfully switched to $MODE mode"
 
 # Save current mode to state file
 echo "$MODE" > "$STATE_FILE"
+echo "$DISPLAY_SIGNATURE" > "$DISPLAY_STATE_FILE"
