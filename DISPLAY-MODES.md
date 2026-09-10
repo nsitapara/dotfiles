@@ -21,8 +21,14 @@ per-monitor split" is exactly right. No third profile exists.
 | `aerospace-monitor-sync.sh` | Runs it *immediately*, off sketchybar's built-in `display_change` event, and repairs the arrangement first. |
 
 The switcher waits for two matching display snapshots before applying a profile.
-It tracks display identities and geometry as well as the count, so changing a
-monitor without changing the number of screens also refreshes the assignments.
+It tracks the display count and SketchyBar display identities/geometry, excluding
+human-readable profiler diagnostics such as refresh-rate text. Changing a monitor
+without changing the number of screens still refreshes the assignments. A layout
+refresh reloads only SketchyBar; it does not restow unchanged files or reload
+AeroSpace. Missing cached state alone does not reset a matching live profile.
+Checks made while the bar is stopped preserve the last running layout, and an
+unavailable profile marker defers action until a later check. Each applied change
+logs its timestamp and reason.
 Failed or zero-display detection leaves the existing profile alone for the next
 event or 30-second check to retry.
 

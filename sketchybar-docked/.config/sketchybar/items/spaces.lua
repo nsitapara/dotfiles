@@ -226,7 +226,7 @@ end)
 
 -- seed the focus highlight on load (the event only fires on change)
 sbar.exec("aerospace list-workspaces --focused", function(result)
-  set_focus(tonumber((result or ""):gsub("%s+", "")))
+  set_focus(tonumber(result))
 end)
 
 -- Replace the glyph label with native app icons, one per app (deduped, capped)

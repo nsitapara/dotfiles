@@ -21,16 +21,16 @@ lockf -s -t 10 9 || exit 1
 PREVIOUS_SIGNATURE=""
 DISPLAY_COUNT=0
 for attempt in 1 2 3 4 5; do
-    DISPLAY_INFO=$(system_profiler SPDisplaysDataType) || exit 1
+    DISPLAY_INFO=$(LC_ALL=C system_profiler SPDisplaysDataType) || exit 1
     COUNT=$(printf '%s\n' "$DISPLAY_INFO" | awk '/Resolution:/ { n++ } END { print n+0 }')
     DISPLAY_LAYOUT=""
     if pgrep -x "sketchybar" > /dev/null; then
         DISPLAY_LAYOUT=$(sketchybar --query displays) || exit 1
         [ -n "$DISPLAY_LAYOUT" ] || exit 1
     fi
-    # Include display identities and geometry, not just the count: replacing a
-    # monitor or rearranging two monitors must refresh the docked assignments.
-    DISPLAY_SIGNATURE=$(printf '%s\n%s\n' "$DISPLAY_INFO" "$DISPLAY_LAYOUT" | cksum)
+    # Human-readable profiler output includes changing refresh-rate/driver data.
+    # Only the display count and SketchyBar's identities/geometry affect pinning.
+    DISPLAY_SIGNATURE=$(printf '%s\n%s\n' "$COUNT" "$DISPLAY_LAYOUT" | cksum)
     if [ "$COUNT" -gt 0 ] && [ "$DISPLAY_SIGNATURE" = "$PREVIOUS_SIGNATURE" ]; then
         DISPLAY_COUNT=$COUNT
         break
@@ -66,54 +66,68 @@ live_config_matches() {
         [[ "$live_bar" == *"/$SKETCHYBAR_PKG/.config/"* ]]
 }
 
-# This item is added at the end of each Lua config. Symlinks and the state file
-# alone cannot prove that the running bar successfully loaded the new profile.
-bar_config_matches() {
+# An unavailable marker can mean the bar is starting or busy. That is not
+# evidence of a different profile; wait for the next check instead of resetting it.
+bar_mode() {
     sketchybar --query display_mode 2>/dev/null |
-        grep -q '"value": "'"$MODE"'"'
+        sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p'
+}
+bar_config_matches() {
+    [ "$(bar_mode)" = "$MODE" ]
 }
 
-# Check the files AND the loaded profile before treating a run as a no-op.
-if [ -f "$STATE_FILE" ]; then
-    CURRENT_MODE=$(cat "$STATE_FILE")
-    CURRENT_DISPLAYS=$(cat "$DISPLAY_STATE_FILE" 2>/dev/null || true)
-    if [ "$CURRENT_MODE" = "$MODE" ] && [ "$CURRENT_DISPLAYS" = "$DISPLAY_SIGNATURE" ] && live_config_matches; then
-        if ! pgrep -x "sketchybar" > /dev/null || bar_config_matches; then
-            exit 0
-        fi
-    fi
+CONFIG_CHANGED=false
+live_config_matches || CONFIG_CHANGED=true
+BAR_RUNNING=false
+LOADED_MODE=""
+if pgrep -x "sketchybar" > /dev/null; then
+    BAR_RUNNING=true
+    [ -n "$DISPLAY_LAYOUT" ] || exit 0
+    LOADED_MODE=$(bar_mode)
+    case "$LOADED_MODE" in
+        docked|non-docked) ;;
+        *) exit 0 ;;
+    esac
 fi
 
-echo "Detected $DISPLAY_COUNT display(s)"
-echo "Switching to $MODE mode"
+CURRENT_DISPLAYS=$(cat "$DISPLAY_STATE_FILE" 2>/dev/null || true)
+REASON=""
+if $CONFIG_CHANGED; then
+    REASON="profile symlinks differ"
+elif $BAR_RUNNING && [ "$LOADED_MODE" != "$MODE" ]; then
+    REASON="loaded profile differs"
+elif $BAR_RUNNING && [ -n "$CURRENT_DISPLAYS" ] && [ "$CURRENT_DISPLAYS" != "$DISPLAY_SIGNATURE" ]; then
+    REASON="display layout changed"
+fi
 
-echo ""
-echo "Unstowing all display configurations..."
+if [ -z "$REASON" ]; then
+    # Missing state alone must not reset a correctly configured desktop. Never
+    # replace the last running layout with a snapshot taken while the bar is down.
+    if [ "$(cat "$STATE_FILE" 2>/dev/null || true)" != "$MODE" ]; then
+        echo "$MODE" > "$STATE_FILE"
+    fi
+    if $BAR_RUNNING && [ "$CURRENT_DISPLAYS" != "$DISPLAY_SIGNATURE" ]; then
+        echo "$DISPLAY_SIGNATURE" > "$DISPLAY_STATE_FILE"
+    fi
+    exit 0
+fi
 
-# Unstow all aerospace and sketchybar configs
-stow -D aerospace
-stow -D aerospace-docked
-stow -D sketchybar
-stow -D sketchybar-docked
+echo "$(date '+%Y-%m-%d %H:%M:%S') Applying $MODE ($DISPLAY_COUNT displays): $REASON"
 
-echo "Unstowing complete."
-echo ""
-echo "Stowing $MODE configurations..."
+# Touch symlinks only for an actual profile change. Restowing identical files
+# triggers SketchyBar's config watcher in addition to our explicit reload.
+if $CONFIG_CHANGED; then
+    stow -D aerospace
+    stow -D aerospace-docked
+    stow -D sketchybar
+    stow -D sketchybar-docked
+    stow "$AEROSPACE_PKG"
+    stow "$SKETCHYBAR_PKG"
 
-# Stow the appropriate configs
-stow "$AEROSPACE_PKG"
-stow "$SKETCHYBAR_PKG"
-
-echo "Stowing complete."
-echo ""
-echo "Restarting aerospace and sketchybar..."
-
-# Restart aerospace
-if pgrep -x "AeroSpace" > /dev/null; then
-    aerospace reload-config
-    echo "Aerospace config reloaded"
-else
-    echo "Aerospace is not running, skipping restart"
+    if pgrep -x "AeroSpace" > /dev/null; then
+        aerospace reload-config
+        echo "Aerospace config reloaded"
+    fi
 fi
 
 # Reload sketchybar. Note: `brew services restart sketchybar` fails when the
@@ -141,4 +155,6 @@ echo "✓ Successfully switched to $MODE mode"
 
 # Save current mode to state file
 echo "$MODE" > "$STATE_FILE"
-echo "$DISPLAY_SIGNATURE" > "$DISPLAY_STATE_FILE"
+if $BAR_RUNNING; then
+    echo "$DISPLAY_SIGNATURE" > "$DISPLAY_STATE_FILE"
+fi

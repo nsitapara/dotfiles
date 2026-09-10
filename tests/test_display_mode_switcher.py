@@ -6,6 +6,7 @@ The macOS lockf command is real; desktop apps and Stow are simulated.
 
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -34,11 +35,12 @@ if name == "system_profiler":
     count = counts.pop(0) if len(counts) > 1 else counts[0]
     save()
     print("Resolution: 2560 x 1440\n" * count)
+    print(state.get("diagnostic_text", ""))
 elif name == "readlink":
     app = "aerospace" if "aerospace.toml" in args[-1] else "sketchybar"
     print(str(root / state[app] / ".config" / app / pathlib.Path(args[-1]).name))
 elif name == "pgrep":
-    sys.exit(0)
+    sys.exit(1 if args[-1] == "sketchybar" and state.get("bar_stopped") else 0)
 elif name == "stow":
     if state.get("stow_failure"):
         sys.exit(1)
@@ -57,7 +59,7 @@ elif name == "sketchybar":
     elif args == ["--query", "displays"]:
         print(json.dumps(state.get("layout", [{"arrangement-id": 1}])))
     elif args == ["--query", "display_mode"]:
-        print(json.dumps({"label": {"value": state["loaded"]}}))
+        print(json.dumps({"icon": {"value": ""}, "label": {"value": state["loaded"], "background": {"image": {"value": "(null)"}}}}, indent=2))
 elif name == "sleep":
     pass
 elif name != "aerospace":
@@ -138,9 +140,10 @@ class DisplayModeTests(unittest.TestCase):
     def test_stale_running_profile_is_repaired(self):
         self.run_switch()
         self.configure(mode="non-docked", loaded="docked")
+        before = self.calls("stow")
         self.run_switch()
         self.assert_profile("non-docked")
-        self.assertTrue(self.calls("stow"))
+        self.assertEqual(self.calls("stow"), before)
 
     def test_no_displays_leaves_current_config_untouched(self):
         self.configure(counts=[0])
@@ -195,8 +198,59 @@ class DisplayModeTests(unittest.TestCase):
         state["layout"] = [{"arrangement-id": 2, "frame": {"x": 2560}}]
         self.mock_file.write_text(json.dumps(state))
         self.run_switch()
-        self.assertGreater(len(self.calls("stow")), before)
+        self.assertEqual(len(self.calls("stow")), before)
+        self.assertEqual(len([c for c in self.calls("sketchybar") if c[1] == "--reload"]), 1)
         self.assert_profile("docked")
+
+    def test_diagnostic_changes_do_not_reload(self):
+        self.configure(counts=[2])
+        self.run_switch()
+        for text in ["UI Looks like: 2560 x 1440 @ 74.99Hz", "UI Looks like: 2560 x 1440 @ 75.00Hz"]:
+            state = json.loads(self.mock_file.read_text())
+            state["diagnostic_text"] = text
+            self.mock_file.write_text(json.dumps(state))
+            self.run_switch()
+        self.assertEqual(self.calls("stow"), [])
+        self.assertFalse(any(c[1] == "--reload" for c in self.calls("sketchybar")))
+
+    def test_bar_temporarily_absent_does_not_invalidate_layout(self):
+        self.configure(counts=[2])
+        self.run_switch()
+        snapshot = Path(str(self.state_file) + ".displays").read_text()
+        for stopped in [True, False, True, False]:
+            state = json.loads(self.mock_file.read_text())
+            state["bar_stopped"] = stopped
+            self.mock_file.write_text(json.dumps(state))
+            self.run_switch()
+            self.assertEqual(Path(str(self.state_file) + ".displays").read_text(), snapshot)
+        self.assertEqual(self.calls("stow"), [])
+        self.assertFalse(any(c[1] == "--reload" for c in self.calls("sketchybar")))
+
+    def test_unavailable_marker_waits_without_reset(self):
+        self.configure(counts=[2], loaded="")
+        self.run_switch()
+        self.assertEqual(self.calls("stow"), [])
+        self.assertFalse(any(c[1] == "--reload" for c in self.calls("sketchybar")))
+
+    def test_missing_state_does_not_reset_matching_profile(self):
+        self.configure(counts=[2])
+        self.state_file.unlink()
+        self.run_switch()
+        self.run_switch()
+        self.assertEqual(self.calls("stow"), [])
+        self.assertFalse(any(c[1] == "--reload" for c in self.calls("sketchybar")))
+
+    def test_focus_callback_accepts_aerospace_trailing_newline(self):
+        lua = "/opt/homebrew/opt/lua@5.4/bin/lua5.4"
+        for profile in ["sketchybar", "sketchybar-docked"]:
+            source = (ROOT / profile / ".config/sketchybar/items/spaces.lua").read_text()
+            body = re.search(r'-- seed the focus highlight.*?function\(result\)(.*?)\nend\)',
+                             source, re.S).group(1)
+            program = "local focused; function set_focus(n) focused = n end\n"
+            program += "local function callback(result)\n" + body + "\nend\n"
+            program += 'callback("3\\n"); assert(focused == 3); callback(""); assert(focused == nil)'
+            result = subprocess.run([lua, "-"], input=program, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_overlapping_invocations_only_switch_once(self):
         self.configure(stow_delay=0.1)
