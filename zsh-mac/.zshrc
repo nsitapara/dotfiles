@@ -193,3 +193,6 @@ esac
 # >>> headroom docker-native >>>
 export PATH="/Users/nishsitapara/.local/bin:$PATH"
 # <<< headroom docker-native <<<
+
+# Local HeraSight database helpers.
+source "$HOME/.config/herasight/db_snapshot.zsh"
