@@ -91,6 +91,11 @@ sbar.add("bracket", "widgets.ssd.bracket", { ssd.name }, {
   background = { color = colors.bg1 },
 })
 
+sbar.add("item", "widgets.ssd.padding", {
+  position = "right",
+  width = settings.group_paddings,
+})
+
 ssd:subscribe({ "routine", "system_woke" }, function(env)
   if env.SENDER == "system_woke" or os.time() - last_storage_update >= 60 then
     update_storage()
