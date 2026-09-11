@@ -11,6 +11,7 @@ import time
 
 STATE_DIR = Path.home() / ".local/state/sketchybar"
 PAUSE_FILE = STATE_DIR / "amphetamine-pause.json"
+POWER_FILE = STATE_DIR / "amphetamine-power.json"
 
 
 def pointer_inside(rectangles, point):
@@ -90,16 +91,37 @@ def clear_pause():
 
 def sync_power(power=None):
     pause = read_pause()
-    if pause is None:
-        return
     power = power or power_source()
     if power not in ("AC", "BATTERY"):
         raise ValueError("Unknown power source")
-    if power == "AC" and pause["last_power"] == "BATTERY":
+    previous = (
+        json.loads(POWER_FILE.read_text())["last_power"]
+        if POWER_FILE.exists()
+        else pause["last_power"] if pause else None
+    )
+    connected = power == "AC" and previous == "BATTERY"
+    resume = pause is not None and power == "AC" and pause["last_power"] == "BATTERY"
+    if connected or resume:
+        # A manual session takes priority over triggers until it ends. Only
+        # hand off on connection, so a manual session started on AC survives.
+        applescript('''
+if application "Amphetamine" is running then
+  tell application "Amphetamine"
+    if (Triggers are enabled) or ''' + str(resume).lower() + ''' then
+      if (session is active) and not (session is Trigger) then end session
+    end if
+  end tell
+end if
+''')
+    if resume:
         applescript('tell application "Amphetamine" to enable Triggers')
         clear_pause()
-    elif power != pause["last_power"]:
+    elif pause is not None and power != pause["last_power"]:
         write_pause(power)
+    if previous != power:
+        temp = POWER_FILE.with_suffix(".tmp")
+        temp.write_text(json.dumps({"last_power": power}))
+        os.replace(temp, POWER_FILE)
 
 
 def status():
