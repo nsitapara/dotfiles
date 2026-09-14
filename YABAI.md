@@ -17,7 +17,9 @@ Run these commands from this checkout:
 ```
 
 `install` uses `Brewfile.yabai` to install yabai, skhd, jq, and Stow, then links
-the two configuration packages into `~/.config`. It starts neither daemon.
+the two configuration packages into `~/.config`. On Homebrew versions with
+package trust, it trusts only the yabai and skhd formulae from `asmvik/formulae`.
+It starts neither daemon.
 Stow checks conflicts before linking and never adopts or overwrites existing
 configuration files. Resolve any reported conflict before retrying.
 

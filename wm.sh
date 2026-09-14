@@ -85,6 +85,11 @@ lockf -s -t 10 9 || die "Another desktop configuration change is running."
 case "$1" in
     install)
         need brew
+        # Recent Homebrew versions require trust before loading third-party
+        # formulae. Scope it to the two packages this installer requests.
+        if brew help trust >/dev/null 2>&1; then
+            brew trust --formula asmvik/formulae/yabai asmvik/formulae/skhd
+        fi
         brew bundle --file="$ROOT/Brewfile.yabai"
         mkdir -p "$HOME/.config"
         # A conflict aborts before Stow changes anything. Never adopt user files.
