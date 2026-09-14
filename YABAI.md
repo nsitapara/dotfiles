@@ -19,6 +19,8 @@ Run these commands from this checkout:
 `install` uses `Brewfile.yabai` to install yabai, skhd, jq, and Stow, then links
 the two configuration packages into `~/.config`. On Homebrew versions with
 package trust, it trusts only the yabai and skhd formulae from `asmvik/formulae`.
+It also builds `~/Applications/Dotfiles Spaces.app` using Xcode Command Line
+Tools. This short-lived helper creates missing desktops through Mission Control.
 It starts neither daemon.
 Stow checks conflicts before linking and never adopts or overwrites existing
 configuration files. Resolve any reported conflict before retrying.
@@ -74,29 +76,36 @@ Use `wm.sh` for switching instead of opening both window managers manually.
 
 ### Set up the six desktops
 
-With SIP enabled, this config cannot create or move native Spaces between
-monitors. Open Mission Control and use its `+` button to create:
+`./wm.sh yabai` creates missing desktops automatically, then assigns the
+workspace shortcuts. It keeps six ordinary desktops on one monitor, or three
+on each of two monitors. Existing desktops and windows are preserved; extra
+desktops are never deleted. Fullscreen app Spaces do not count.
 
-- One monitor: six ordinary desktops.
-- Two monitors: three ordinary desktops on each monitor.
+**One-time permission:** enable **Dotfiles Spaces** in System Settings > Privacy
+& Security > Accessibility. If needed, add `~/Applications/Dotfiles Spaces.app`
+with the `+` button. This is separate from yabai and skhd's permissions. macOS
+may ask again if the locally built helper changes or you reinstall it.
 
-Then run:
+The helper keeps SIP enabled. When desktops are missing, it briefly opens Mission
+Control and presses the Add Desktop button on the appropriate physical display,
+then checks yabai's desktop count after each click. If all desktops already exist,
+it does not open Mission Control. Startup stops and reports an error if setup
+fails; it restores AeroSpace if AeroSpace was running before the attempt.
 
-```sh
-./wm.sh spaces
-```
+After granting permission, retry `./wm.sh yabai`. While the trial is already
+running, retry desktop setup with `./wm.sh spaces` or click a gray bar slot.
+`./wm.sh reload` also repairs missing desktops.
 
-On one monitor, this labels desktops `ws1` through `ws6` in native order. On
+On one monitor, desktops are labelled `ws1` through `ws6` in native order. On
 two monitors, left-to-right display positions determine the mapping: `1,3,5`
-on the left and `2,4,6` on the right, matching your docked AeroSpace profile.
-Native fullscreen Spaces are excluded. Existing conflicting labels are not
-overwritten. More than two displays need a custom initial mapping.
+on the left and `2,4,6` on the right, matching the docked AeroSpace profile.
+Conflicting existing labels are not overwritten. More than two displays need a
+custom mapping. Fully established labels are retained across monitor changes;
+the helper adds desktops but does not relocate labelled Spaces after hotplug.
 
-Labels already present are retained across monitor changes during the session.
-The script does not move entire native Spaces back to their original monitors
-after hotplug. Use Mission Control if you want to restore that arrangement.
-Labels are recreated on a later yabai launch. With fewer desktops, available
-ones are labelled immediately; add the rest and run `./wm.sh spaces` again.
+The helper uses Mission Control's Accessibility identifiers, which Apple can
+change between macOS releases. Its Swift source and build script are tracked in
+the dotfiles; the compiled app stays outside Git.
 
 Warp and PyCharm route to `ws1`; GitHub Desktop and Slack route to `ws2`.
 These rules apply to newly opened windows after the desktops are labelled.
@@ -185,9 +194,8 @@ The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,
 and the active skhd mode. All six slots stay visible, with `1,3,5` on the left
 and `2,4,6` on the right when using two monitors. Gray slots mean the native
-desktop does not exist yet: clicking one opens Mission Control. Add ordinary
-desktops with its `+` button (fullscreen app Spaces do not count), then run
-`./wm.sh spaces`. Clicking an existing desktop selects it. Native desktop/window
+desktop does not exist yet: clicking one retries automatic desktop setup.
+Clicking an existing desktop selects it. Native desktop/window
 events and yabai signals update the bar without the AeroSpace polling workaround.
 
 Right-side widgets and the center app indicator use the existing theme. The
@@ -216,7 +224,8 @@ Tracked files:
 - `Brewfile.yabai`: optional package dependencies.
 - `wm.sh`: installation, preferences, switching, rollback, and diagnostics.
 - `yabai/.config/yabai/yabairc`: tiling, gaps, floating rules, and event signals.
-- `yabai/.config/yabai/scripts/`: workspace labels and window helpers.
+- `yabai/.config/yabai/scripts/`: desktop setup, workspace labels, and window helpers.
+- `yabai/.config/yabai/helpers/Spaces.swift`: SIP-enabled desktop creation helper.
 - `yabai/.config/yabai/sketchybar.lua`: shared native Space bar items.
 - `skhd/.config/skhd/skhdrc`: keyboard shortcuts and modes.
 

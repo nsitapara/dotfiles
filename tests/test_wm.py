@@ -138,6 +138,12 @@ class WmTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
         shutil.copy2(ROOT / "wm.sh", self.path / "wm.sh")
+        helpers = self.path / "yabai/.config/yabai/scripts"
+        helpers.mkdir(parents=True)
+        for name in ("ensure-spaces.sh", "build-spaces-helper.sh"):
+            helper = helpers / name
+            helper.write_text('#!/bin/bash\nexit "${WM_TEST_SETUP_EXIT:-0}"\n')
+            helper.chmod(0o755)
         (self.path / "switch-display-mode.sh").write_text("#!/bin/bash\nexit 0\n")
         (self.path / "switch-display-mode.sh").chmod(0o755)
         self.bin = self.path / "bin"
@@ -201,6 +207,12 @@ class WmTests(unittest.TestCase):
         self.run_wm("yabai", success=False)
         self.assertEqual(self.state["jobs"], [])
         self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
+
+    def test_desktop_setup_failure_restores_aerospace(self):
+        self.env["WM_TEST_SETUP_EXIT"] = "1"
+        self.run_wm("yabai", success=False)
+        self.assertEqual(self.state["jobs"], [])
+        self.assertIn("AeroSpace", self.state["running"])
 
     def test_skhd_parser_failure_restores_aerospace_even_while_process_runs(self):
         self.state["skhd_parse_failure"] = True

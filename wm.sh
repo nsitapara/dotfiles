@@ -79,7 +79,7 @@ Usage: ./wm.sh COMMAND
   prepare              Save/set native Spaces preferences; then log out and in
   yabai                Quit AeroSpace, start yabai + skhd, reload SketchyBar
   aerospace            Stop the trial, open AeroSpace, reload SketchyBar
-  spaces               Label existing desktops, preserving odd/even monitors
+  spaces               Create missing desktops and label odd/even monitors
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in
   status               Show running apps and trial jobs
@@ -109,6 +109,7 @@ case "$1" in
         # A conflict aborts before Stow changes anything. Never adopt user files.
         stow --simulate --dir="$ROOT" --target="$HOME" yabai skhd
         stow --dir="$ROOT" --target="$HOME" yabai skhd
+        "$ROOT/yabai/.config/yabai/scripts/build-spaces-helper.sh"
         echo "Installed and linked. Nothing started. Next: ./wm.sh doctor" ;;
     doctor|status)
         for app in AeroSpace yabai skhd sketchybar; do
@@ -198,9 +199,10 @@ case "$1" in
             skhd --reload
         fi
         check_skhd "$skhd_offset"
+        "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"
         reload_bar
         echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
-        echo "Create six desktops in Mission Control, then run ./wm.sh spaces."
+        echo "All six desktop slots are ready."
         trap - EXIT ;;
     aerospace)
         check_external_services
@@ -219,9 +221,10 @@ case "$1" in
     spaces|reload)
         loaded "$YABAI_JOB" || die "Start the trial with ./wm.sh yabai first."
         if [ "$1" = spaces ]; then
-            "$HOME/.config/yabai/scripts/spaces.sh"
+            "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"
         else
             /bin/bash "$HOME/.config/yabai/yabairc"
+            "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"
             skhd_offset=$(skhd_log_offset)
             skhd --reload
             check_skhd "$skhd_offset"

@@ -60,7 +60,7 @@ for _, i in ipairs({1,4,5,6}) do
   assert(props.display == (i % 2 == 0 and 1 or 2), "Odd/even display mapping")
 end
 events["yabai.space.5:mouse.clicked"]({BUTTON="left"})
-assert(commands[#commands]:match("Mission Control"), "Missing desktop opens Mission Control")
+assert(commands[#commands]:match("ensure%-spaces.sh"), "Missing desktop retries setup")
 events["yabai.space.3:mouse.clicked"]({BUTTON="left"})
 assert(commands[#commands]:match("space %-%-focus 1$"), "Click must use native index, not label digit")
 events["yabai.mode:yabai_mode_changed"]({MODE="resize"})

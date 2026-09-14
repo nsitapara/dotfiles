@@ -31,8 +31,8 @@ for event in window_created window_destroyed window_focused window_title_changed
 done
 
 # Label available native desktops; missing slots stay dimmed in the bar.
-# Missing desktops do not prevent a basic trial. Create them in Mission Control.
-"$HOME/.config/yabai/scripts/spaces.sh" || echo 'Run ./wm.sh spaces after creating your six desktops.' >&2
+# wm.sh creates missing desktops after the daemon becomes ready.
+"$HOME/.config/yabai/scripts/spaces.sh" || echo 'Run ./wm.sh spaces to finish desktop setup.' >&2
 if [ -n "${DOTFILES_YABAI_READY:-}" ]; then
     touch "$DOTFILES_YABAI_READY"
 fi

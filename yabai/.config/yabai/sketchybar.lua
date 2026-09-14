@@ -38,7 +38,7 @@ local function create_pill(index)
     if pill.index then
       sbar.exec(prefix .. "yabai -m space --focus " .. pill.index)
     else
-      sbar.exec('/usr/bin/open -a "Mission Control"')
+      sbar.exec(prefix .. '"$HOME/.config/yabai/scripts/ensure-spaces.sh" && sketchybar --trigger yabai_windows_changed')
     end
   end
   item:subscribe("mouse.clicked", clicked)
@@ -149,7 +149,7 @@ local function render(spaces, windows, displays, bar_displays)
   for index, pill in pairs(pills) do
     if not seen[index] then
       -- Match AeroSpace's persistent six-workspace bar. Missing native Spaces
-      -- are dimmed; clicking one opens Mission Control to add the desktop.
+      -- are dimmed; clicking one retries automatic desktop setup.
       local target = type(index) == "number" and ordered[(#ordered >= 2 and index % 2 == 0) and 2 or 1] or nil
       local display = target and display_map[target.index]
       local visible = display ~= nil
