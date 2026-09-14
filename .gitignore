@@ -10,3 +10,6 @@ nvim/.config/nvim/lua/plugins/theme.lua
 # Local production-data helper runtime files.
 /zsh-mac/.config/herasight/__pycache__/
 /zsh-mac/.config/herasight/*.log
+
+# Python script bytecode
+__pycache__/
