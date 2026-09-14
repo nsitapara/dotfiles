@@ -43,6 +43,14 @@ lockf -s -t 0 8 || exit 0
 # half-applied layout. The switcher also checks for a stable display snapshot.
 sleep 1.5
 
+# Serialize with wm.sh before repairing displays. During a yabai trial, native
+# Spaces own monitor placement; leave the AeroSpace-specific repair suspended.
+exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
+lockf -s -t 10 9 || exit 1
+if launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
+    exit 0
+fi
+
 # Only repair in clamshell with both externals back. Every other state — laptop
 # alone, Screen Sharing's single virtual display, or the lid genuinely open — is a
 # legitimate layout that must not be fought.
@@ -74,4 +82,5 @@ if lid_closed && [ -n "$lg_seg" ] && [ -n "$pa_seg" ]; then
     fi
 fi
 
+exec 9>&-
 exec "$HOME/dotfiles/switch-display-mode.sh"

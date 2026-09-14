@@ -16,6 +16,12 @@ DISPLAY_STATE_FILE="${STATE_FILE}.displays"
 exec 9>"${STATE_FILE}.lock"
 lockf -s -t 10 9 || exit 1
 
+# The optional yabai trial uses native Spaces and its own SketchyBar items.
+# The launchd job is session-only, so this guard clears automatically at logout.
+if launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
+    exit 0
+fi
+
 # Require two matching, nonzero readings while macOS settles after hotplug.
 # Missing/failed detection must never be interpreted as a laptop-only layout.
 PREVIOUS_SIGNATURE=""

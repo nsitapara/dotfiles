@@ -1,0 +1,246 @@
+# Try yabai and skhd
+
+This is an optional macOS setup alongside AeroSpace. Yabai manages windows;
+skhd handles shortcuts. Raycast continues to launch apps.
+
+The trial keeps SIP enabled. It uses transient launchd jobs for this login,
+without installing yabai/skhd login services. AeroSpace's existing login setting
+is unchanged. At the next login, use `./wm.sh yabai` to start another trial.
+
+## Plan and first installation
+
+Run these commands from this checkout:
+
+```sh
+./wm.sh install
+./wm.sh doctor
+```
+
+`install` uses `Brewfile.yabai` to install yabai, skhd, jq, and Stow, then links
+the two configuration packages into `~/.config`. It starts neither daemon.
+Stow checks conflicts before linking and never adopts or overwrites existing
+configuration files. Resolve any reported conflict before retrying.
+
+Yabai must be **7.1.25 or newer** for the SIP-enabled Space operations used here.
+The script checks the installed version before quitting AeroSpace.
+
+### One-time macOS preferences
+
+Yabai requires **Displays have separate Spaces** to be enabled. Your existing
+AeroSpace setup had it disabled when this configuration was prepared.
+
+```sh
+./wm.sh prepare
+```
+
+This saves the old values, enables separate Spaces, and disables automatic
+Space rearrangement. **Log out and log back in before starting yabai.** The
+script never logs you out. A preference read cannot establish whether the
+logout has happened, so do not skip this step just because `doctor` shows 0.
+
+Both managers can use the enabled setting, so later switches do not each need
+a logout. The preference is retained when switching to AeroSpace. To return to
+the original macOS preferences after the trial:
+
+```sh
+./wm.sh aerospace
+./wm.sh restore-preferences
+# Log out and log back in to apply the restored Spaces setting.
+```
+
+### Start the trial
+
+```sh
+./wm.sh yabai
+```
+
+This quits AeroSpace, waits for it to exit, starts yabai and skhd, then reloads
+SketchyBar with native Space indicators. Your existing AeroSpace poller exits
+when AeroSpace quits. The display-profile switcher and monitor-repair script
+pause while the trial job is loaded.
+
+On the first attempt, macOS may request Accessibility access. Grant **both**
+yabai and skhd access in System Settings > Privacy & Security > Accessibility.
+If needed, add their executables using the paths from `command -v yabai` and
+`command -v skhd`. Restart with `./wm.sh yabai` after granting access. A failed
+startup stops the trial and reopens AeroSpace if it was previously running.
+
+The trial uses jobs named `local.dotfiles.yabai` and `local.dotfiles.skhd`.
+Do not also run `brew services start`, `yabai --start-service`, or
+`skhd --start-service`; the switcher refuses independently managed instances.
+Use `wm.sh` for switching instead of opening both window managers manually.
+
+### Set up the six desktops
+
+With SIP enabled, this config cannot create or move native Spaces between
+monitors. Open Mission Control and use its `+` button to create:
+
+- One monitor: six ordinary desktops.
+- Two monitors: three ordinary desktops on each monitor.
+
+Then run:
+
+```sh
+./wm.sh spaces
+```
+
+On one monitor, this labels desktops `ws1` through `ws6` in native order. On
+two monitors, left-to-right display positions determine the mapping: `1,3,5`
+on the left and `2,4,6` on the right, matching your docked AeroSpace profile.
+Native fullscreen Spaces are excluded. Existing conflicting labels are not
+overwritten. More than two displays need a custom initial mapping.
+
+Labels already present are retained across monitor changes during the session.
+The script does not move entire native Spaces back to their original monitors
+after hotplug. Use Mission Control if you want to restore that arrangement.
+Labels are recreated on a later yabai launch once the desktop counts fit.
+
+Warp and PyCharm route to `ws1`; GitHub Desktop and Slack route to `ws2`.
+These rules apply to newly opened windows after the desktops are labelled.
+Existing windows are not automatically moved into those workspaces.
+
+## Switch back
+
+```sh
+./wm.sh aerospace
+```
+
+This stops the trial jobs, verifies yabai/skhd have exited, opens AeroSpace,
+reloads the AeroSpace SketchyBar items, and resumes the display profile switcher.
+The AeroSpace configuration is preserved. Extra native desktops remain, and
+the previous window positions and AeroSpace workspace assignments are not
+restored from a snapshot. Use Mission Control to gather windows into your usual
+desktop on each display and remove unneeded empty desktops yourself.
+
+## Shortcuts
+
+The baseline follows the currently active **docked** AeroSpace configuration.
+
+| Shortcut | yabai action |
+|---|---|
+| Cmd + arrow | Focus neighboring window |
+| Cmd + Shift + arrow | Reinsert window beside its neighbor |
+| Cmd + 1–6, including keypad | Focus labelled desktop |
+| Cmd + Shift + 1–6 | Send window to desktop and follow it |
+| Cmd + Page Up / Page Down | Previous / next native Space |
+| Cmd + Home / End | Workspace 1 / 6 |
+| Alt + Tab | Previous focused Space |
+| Cmd + Ctrl + left / right | Send window to previous / next display, wrapping |
+| Cmd + equals / minus | Resize width |
+| Cmd + Shift + equals / minus | Resize height |
+| Alt + F | Fill the tiling area without native fullscreen |
+| Cmd + J | Toggle the focused window's split direction |
+| Cmd + comma | Toggle whole-Space BSP / stack layout |
+| Cmd + Ctrl + Alt + Shift + F | Float / tile; center a newly floated window |
+| Cmd + Ctrl + Alt + Shift + D | Restore BSP layout and balance windows |
+| Cmd + Ctrl + Alt + Shift + R | Resize mode; arrows resize, Shift uses larger steps |
+| Cmd + Ctrl + Alt + Shift + W | Workspace/display navigation mode |
+| Cmd + Ctrl + Alt + Shift + M | Insertion mode; arrows choose where the next window goes |
+| Cmd + Alt + S or F14 | Service mode; F floats, R balances, up/down changes volume |
+| Escape / Space in a mode | Return to normal shortcuts |
+| Alt + Shift + C | Reload yabai rules and skhd shortcuts |
+
+BSP is yabai's binary split layout. Stack is not AeroSpace accordion, and
+insertion is not AeroSpace container merging. Directional focus and previous/next
+Space navigation stop at boundaries; only the display-send helper wraps.
+Modes stay active until Escape/Space, or F15 in service mode. The old
+close-all-other-windows action is not bound in this trial.
+
+### Raycast
+
+Cmd+Space, your main Raycast shortcut, is left unbound. The screenshot supplied
+during setup confirms these existing Raycast shortcuts; none conflicts with skhd:
+
+| Raycast action | Reserved shortcut |
+|---|---|
+| Cursor | Cmd + Shift + C |
+| Finder | Cmd + Shift + E |
+| GitHub Desktop | Cmd + Shift + G |
+| Google Chrome | Cmd + Shift + B |
+| PyCharm | Cmd + Shift + P |
+| Slack | Cmd + Shift + S |
+| VLC | Cmd + Shift + V |
+| Warp | Cmd + Return |
+| Zen | Cmd + Shift + Z |
+| Open Docker Desktop | Cmd + Shift + D |
+| MRS quicklink | Alt + Shift + M |
+| Search Emoji & Symbols | Ctrl + Cmd + Space |
+
+Automated checks reserve these combinations in all skhd modes and ensure its
+global combinations are a subset of the existing docked AeroSpace bindings.
+Modes do not capture unbound keys. Raycast keeps app launching; skhd adds no
+app-launch shortcuts. When adding shortcuts later, keep each combination assigned
+in only one app, including Hyper combinations generated by your keyboard.
+
+If skhd stops receiving keys inside a terminal, check its Secure Keyboard Entry
+setting. That macOS feature prevents global keyboard listeners from receiving
+the events; changing Raycast's shortcuts will not fix it.
+
+## SketchyBar and borders
+
+The existing regular and docked Lua themes select yabai items while the trial
+job exists. The replacement shows desktop numbers, app icons, focused desktop,
+and the active skhd mode. Clicking a desktop selects it. Native desktop/window
+events and yabai signals update the bar without the AeroSpace polling workaround.
+
+Right-side widgets and the center app indicator use the existing theme. The
+shared module joins yabai and SketchyBar displays by their physical display IDs,
+so their differing arrangement indices do not pin the indicators to the wrong
+screen. Missing displays hide affected items until a complete update arrives.
+
+The trial leaves any running JankyBorders instance alone. Initial top padding is
+50 points on every display; adjust `yabairc` if the laptop notch leaves too much
+space. The separate `sketchybar-light` profile is not integrated by this setup.
+
+## Reinstall or move to another Mac
+
+Clone this repository wherever you prefer, then run `./wm.sh install` there.
+The new packages and helpers use the current home directory and support both
+Homebrew prefixes. No display UUIDs, username, or checkout path is baked in.
+
+For switching back on a fresh Mac, install AeroSpace and link the appropriate
+existing AeroSpace package. To reproduce the bar, install SketchyBar and its
+SbarLua dependencies and link your regular or docked SketchyBar package as usual.
+The trial does not install or replace your entire desktop setup. The older
+display-profile scripts still assume the repository lives at `~/dotfiles`.
+
+Tracked files:
+
+- `Brewfile.yabai`: optional package dependencies.
+- `wm.sh`: installation, preferences, switching, rollback, and diagnostics.
+- `yabai/.config/yabai/yabairc`: tiling, gaps, floating rules, and event signals.
+- `yabai/.config/yabai/scripts/`: workspace labels and window helpers.
+- `yabai/.config/yabai/sketchybar.lua`: shared native Space bar items.
+- `skhd/.config/skhd/skhdrc`: keyboard shortcuts and modes.
+
+After edits, run `./wm.sh reload`. Logs and saved preferences live in
+`~/.local/state/dotfiles-wm/`, outside Git. Installation can be repeated without
+adopting existing files. To unlink the trial configs after returning to AeroSpace:
+
+```sh
+stow --dir="$PWD" --target="$HOME" -D yabai skhd
+```
+
+## Validation
+
+```sh
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+lua tests/test_yabai_bar.lua "$PWD"
+```
+
+These tests simulate the desktop commands. They check failure recovery,
+mutually exclusive managers, label assignment, profile-switch suspension, and
+SketchyBar rendering. Live Accessibility permissions, actual keyboard delivery,
+hotplug, and rendering still need a manual trial after the one-time logout.
+
+During that trial check: open/close several windows in the same app, move between
+all six desktops, float/resize a window, play Nuvio video, launch apps through
+Raycast, unplug/reconnect a monitor, then switch back to AeroSpace.
+
+## Upstream references
+
+- [yabai installation](https://github.com/asmvik/yabai/wiki/Installing-yabai-(latest-release))
+- [yabai command reference](https://github.com/asmvik/yabai/blob/master/doc/yabai.asciidoc)
+- [yabai SIP requirements](https://github.com/asmvik/yabai/wiki/Disabling-System-Integrity-Protection)
+- [skhd configuration](https://github.com/asmvik/skhd) — the original skhd is in maintenance mode.
+- [SketchyBar events](https://felixkratz.github.io/SketchyBar/config/events)

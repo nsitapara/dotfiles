@@ -1,0 +1,6 @@
+# Optional window manager trial. Installing does not start either daemon.
+tap "asmvik/formulae"
+brew "asmvik/formulae/yabai"
+brew "asmvik/formulae/skhd"
+brew "jq"
+brew "stow"

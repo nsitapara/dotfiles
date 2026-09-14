@@ -60,6 +60,8 @@ elif name == "sketchybar":
         print(json.dumps(state.get("layout", [{"arrangement-id": 1}])))
     elif args == ["--query", "display_mode"]:
         print(json.dumps({"icon": {"value": ""}, "label": {"value": state["loaded"], "background": {"image": {"value": "(null)"}}}}, indent=2))
+elif name == "launchctl":
+    sys.exit(0 if state.get("yabai_trial") else 1)
 elif name == "sleep":
     pass
 elif name != "aerospace":
@@ -77,7 +79,7 @@ class DisplayModeTests(unittest.TestCase):
         shutil.copy2(ROOT / self.script.name, self.script)
         self.bin = self.path / "bin"
         self.bin.mkdir()
-        for name in ("system_profiler", "readlink", "pgrep", "stow", "sketchybar", "aerospace", "sleep"):
+        for name in ("system_profiler", "readlink", "pgrep", "stow", "sketchybar", "aerospace", "sleep", "launchctl"):
             command = self.bin / name
             command.write_text(f"#!{sys.executable}\n" + MOCK)
             command.chmod(0o755)
@@ -122,6 +124,14 @@ class DisplayModeTests(unittest.TestCase):
         self.run_switch()
         self.run_switch()
         self.assertEqual(self.calls("stow"), before)
+
+    def test_yabai_trial_suspends_profile_changes(self):
+        self.configure(yabai_trial=True)
+        self.run_switch()
+        self.assertEqual(self.calls("system_profiler"), [])
+        self.assertEqual(self.calls("stow"), [])
+        self.assertEqual(self.calls("sketchybar"), [])
+        self.assert_profile("docked")
 
     def test_repeated_dock_undock_cycles(self):
         for count, mode in [(1, "non-docked"), (2, "docked")] * 3:
