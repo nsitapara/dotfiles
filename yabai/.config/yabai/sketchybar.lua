@@ -48,7 +48,7 @@ local function create_pill(index)
       padding_left = 0, padding_right = 0,
       icon = { drawing = false }, label = { drawing = false },
       background = {
-        drawing = true, color = colors.transparent, height = 24,
+        drawing = true, color = colors.transparent, border_width = 0, height = 24,
         image = { drawing = true, scale = 0.7, corner_radius = 5 },
       },
     })
