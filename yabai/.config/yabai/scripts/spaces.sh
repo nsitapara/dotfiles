@@ -10,17 +10,15 @@ if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spac
     mapping=$(jq -nr --argjson spaces "$spaces" --argjson displays "$displays" '
       ($displays | sort_by(.frame.x, .frame.y)) as $ds |
       [$spaces[] | select(."is-native-fullscreen" == false)] as $ss |
-      if ($ds | length) == 1 and ($ss | length) >= 6 then
+      if ($ds | length) == 1 and ($ss | length) >= 1 then
         [$ss | sort_by(.index) | .[:6] | to_entries[] | {index:.value.index, label:("ws" + ((.key+1)|tostring))}]
       elif ($ds | length) == 2 then
         [$ss[] | select(.display == $ds[0].index)] | sort_by(.index) as $left |
         [$ss[] | select(.display == $ds[1].index)] | sort_by(.index) as $right |
-        if ($left|length) >= 3 and ($right|length) >= 3 then
-          [range(0;3) as $i |
-            {index:$left[$i].index,label:("ws" + (($i*2+1)|tostring))},
-            {index:$right[$i].index,label:("ws" + (($i*2+2)|tostring))}]
-        else error("Create three native desktops on each monitor in Mission Control.") end
-      else error("Create six native desktops on one monitor, or use two monitors with three each.") end
+        [range(0;3) as $i |
+          (if $left[$i] then {index:$left[$i].index,label:("ws" + (($i*2+1)|tostring))} else empty end),
+          (if $right[$i] then {index:$right[$i].index,label:("ws" + (($i*2+2)|tostring))} else empty end)]
+      else error("Use one or two monitors for automatic desktop labels.") end
       | .[] | [.index,.label] | @tsv')
     # Validate all labels before mutating any of them.
     while IFS=$'\t' read -r index label; do
@@ -36,6 +34,15 @@ if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spac
 fi
 
 # Routing follows the active docked profile. Rules affect newly opened windows.
-yabai -m rule --add label=dotfiles-dev app='^(Warp|PyCharm)$' space=ws1
-yabai -m rule --add label=dotfiles-collaboration app='^(GitHub Desktop|Slack)$' space=ws2
-echo "Workspaces ws1-ws6 ready. Cmd+1 through Cmd+6 select them."
+spaces=$(yabai -m query --spaces)
+if jq -e 'any(.[]; .label == "ws1")' <<< "$spaces" >/dev/null; then
+    yabai -m rule --add label=dotfiles-dev app='^(Warp|PyCharm)$' space=ws1
+fi
+if jq -e 'any(.[]; .label == "ws2")' <<< "$spaces" >/dev/null; then
+    yabai -m rule --add label=dotfiles-collaboration app='^(GitHub Desktop|Slack)$' space=ws2
+fi
+labels=$(jq -r '[.[] | .label | select(test("^ws[1-6]$"))] | sort | join(", ")' <<< "$spaces")
+echo "Ready: $labels. Cmd+number selects the matching workspace."
+if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spaces" >/dev/null; then
+    echo "For all six shortcuts, create six desktops on one display, or three on each of two displays, then run ./wm.sh spaces."
+fi

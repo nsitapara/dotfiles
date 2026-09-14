@@ -95,7 +95,8 @@ overwritten. More than two displays need a custom initial mapping.
 Labels already present are retained across monitor changes during the session.
 The script does not move entire native Spaces back to their original monitors
 after hotplug. Use Mission Control if you want to restore that arrangement.
-Labels are recreated on a later yabai launch once the desktop counts fit.
+Labels are recreated on a later yabai launch. With fewer desktops, available
+ones are labelled immediately; add the rest and run `./wm.sh spaces` again.
 
 Warp and PyCharm route to `ws1`; GitHub Desktop and Slack route to `ws2`.
 These rules apply to newly opened windows after the desktops are labelled.
@@ -182,7 +183,11 @@ the events; changing Raycast's shortcuts will not fix it.
 
 The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,
-and the active skhd mode. Clicking a desktop selects it. Native desktop/window
+and the active skhd mode. All six slots stay visible, with `1,3,5` on the left
+and `2,4,6` on the right when using two monitors. Gray slots mean the native
+desktop does not exist yet: clicking one opens Mission Control. Add ordinary
+desktops with its `+` button (fullscreen app Spaces do not count), then run
+`./wm.sh spaces`. Clicking an existing desktop selects it. Native desktop/window
 events and yabai signals update the bar without the AeroSpace polling workaround.
 
 Right-side widgets and the center app indicator use the existing theme. The

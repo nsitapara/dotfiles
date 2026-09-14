@@ -6,7 +6,7 @@
 :: default : sketchybar --trigger yabai_mode_changed MODE=default
 :: resize : sketchybar --trigger yabai_mode_changed MODE=resize
 :: workspace : sketchybar --trigger yabai_mode_changed MODE=workspace
-:: insert : sketchybar --trigger yabai_mode_changed MODE=insert
+:: insertion : sketchybar --trigger yabai_mode_changed MODE=insertion
 :: service : sketchybar --trigger yabai_mode_changed MODE=service
 
 cmd - h : true
@@ -20,12 +20,14 @@ cmd + shift - up : yabai -m window --warp north
 cmd - right : yabai -m window --focus east
 cmd + shift - right : yabai -m window --warp east
 
-cmd - equal : "$HOME/.config/yabai/scripts/window.sh" resize width 32
-cmd - minus : "$HOME/.config/yabai/scripts/window.sh" resize width -32
-cmd + shift - equal : "$HOME/.config/yabai/scripts/window.sh" resize height 32
-cmd + shift - minus : "$HOME/.config/yabai/scripts/window.sh" resize height -32
+# skhd names special keys differently from AeroSpace. Use macOS keycodes for
+# punctuation: 0x18 = equals, 0x1B = minus, 0x2B = comma.
+cmd - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize width 32
+cmd - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize width -32
+cmd + shift - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize height 32
+cmd + shift - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize height -32
 cmd - j : yabai -m window --toggle split
-cmd - comma : "$HOME/.config/yabai/scripts/window.sh" layout
+cmd - 0x2B : "$HOME/.config/yabai/scripts/window.sh" layout
 alt - f : yabai -m window --toggle zoom-fullscreen
 
 cmd - 1 : yabai -m space --focus ws1
@@ -64,13 +66,13 @@ cmd + ctrl + alt + shift - f : "$HOME/.config/yabai/scripts/window.sh" float
 cmd + ctrl + alt + shift - d : yabai -m space --layout bsp; yabai -m space --balance
 cmd + ctrl + alt + shift - r ; resize
 cmd + ctrl + alt + shift - w ; workspace
-cmd + ctrl + alt + shift - m ; insert
+cmd + ctrl + alt + shift - m ; insertion
 cmd + alt - s ; service
 f14 ; service
 alt + shift - c : /bin/bash "$HOME/.config/yabai/yabairc"; skhd --reload
 
-resize, workspace, insert, service < escape ; default
-resize, workspace, insert, service < space ; default
+resize, workspace, insertion, service < escape ; default
+resize, workspace, insertion, service < space ; default
 service < f15 ; default
 
 resize < left : "$HOME/.config/yabai/scripts/window.sh" resize width -16
@@ -91,10 +93,10 @@ workspace < shift - right : "$HOME/.config/yabai/scripts/window.sh" send-space n
 workspace < shift - up : "$HOME/.config/yabai/scripts/window.sh" send-display prev
 workspace < shift - down : "$HOME/.config/yabai/scripts/window.sh" send-display next
 
-insert < left : yabai -m window --insert west
-insert < down : yabai -m window --insert south
-insert < up : yabai -m window --insert north
-insert < right : yabai -m window --insert east
+insertion < left : yabai -m window --insert west
+insertion < down : yabai -m window --insert south
+insertion < up : yabai -m window --insert north
+insertion < right : yabai -m window --insert east
 
 service < f : "$HOME/.config/yabai/scripts/window.sh" float
 service < r : yabai -m space --layout bsp; yabai -m space --balance

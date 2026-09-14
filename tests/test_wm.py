@@ -22,6 +22,7 @@ class ShortcutTests(unittest.TestCase):
     def skhd_bindings():
         keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58"],
                           [f"keypad{i}" for i in range(1,7)]))
+        keypad.update({"0x18":"equal", "0x1B":"minus", "0x2B":"comma"})
         result = set()
         for raw in (ROOT / "skhd/.config/skhd/skhdrc").read_text().splitlines():
             line = raw.strip()
@@ -51,6 +52,7 @@ class ShortcutTests(unittest.TestCase):
         current = {normalize(key.split("-")) for key in aerospace["mode"]["main"]["binding"]}
         keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58"],
                           [f"keypad{i}" for i in range(1,7)]))
+        keypad.update({"0x18":"equal", "0x1B":"minus", "0x2B":"comma"})
         for raw in (ROOT / "skhd/.config/skhd/skhdrc").read_text().splitlines():
             line = raw.strip()
             if not line or line.startswith(("#", "::")) or "<" in line:
@@ -102,6 +104,9 @@ elif name == "launchctl":
             for arg in args:
                 if arg.startswith("DOTFILES_YABAI_READY="):
                     pathlib.Path(arg.split("=",1)[1]).touch()
+        if app == "skhd" and state.get("skhd_parse_failure"):
+            with pathlib.Path(args[args.index("-e") + 1]).open("a") as log:
+                log.write("#9:4 expected identifier\n")
         save()
 elif name == "yabai":
     if args == ["--version"]: print("yabai-v" + state.get("version", "7.1.25"))
@@ -197,6 +202,20 @@ class WmTests(unittest.TestCase):
         self.assertEqual(self.state["jobs"], [])
         self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
 
+    def test_skhd_parser_failure_restores_aerospace_even_while_process_runs(self):
+        self.state["skhd_parse_failure"] = True
+        self.save()
+        result = self.run_wm("yabai", success=False)
+        self.assertIn("could not load its shortcuts", result.stderr)
+        self.assertEqual(self.state["jobs"], [])
+        self.assertIn("AeroSpace", self.state["running"])
+
+    def test_old_skhd_errors_do_not_fail_new_start(self):
+        (self.path / "state").mkdir()
+        (self.path / "state/skhd.err.log").write_text("#9:4 expected identifier\n")
+        self.run_wm("yabai")
+        self.assertIn("skhd", self.state["running"])
+
     def test_config_failure_restores_aerospace(self):
         self.state["config_failure"] = True
         self.save()
@@ -256,11 +275,23 @@ class WmTests(unittest.TestCase):
         self.assertEqual(len([c for c in self.calls("yabai") if "--label" in c]),
                          len([c for c in before if "--label" in c]))
 
-    def test_insufficient_desktops_and_conflicting_labels_are_not_modified(self):
-        self.native_spaces([2,3])
-        self.run_spaces(success=False)
-        self.assertFalse(any("--label" in c for c in self.calls("yabai")))
-        self.state["spaces"].append(dict(index=6,display=1,label="personal", **{"is-native-fullscreen":False}))
+    def test_partial_desktops_are_usable_and_can_be_completed(self):
+        self.native_spaces([2,1])
+        self.run_spaces()
+        self.assertEqual([s["label"] for s in self.state["spaces"]], ["ws1","ws3","ws2"])
+        # Inserting a left desktop changes the native index of the right ones.
+        self.state["spaces"][2]["index"] = 4
+        for index, display in [(3,1),(5,2),(6,2)]:
+            self.state["spaces"].append(dict(index=index,display=display,label="",
+                                           **{"is-native-fullscreen":False}))
+        self.save()
+        self.run_spaces()
+        ordered = sorted(self.state["spaces"], key=lambda s:s["index"])
+        self.assertEqual([s["label"] for s in ordered], ["ws1","ws3","ws5","ws2","ws4","ws6"])
+
+    def test_conflicting_labels_are_not_modified(self):
+        self.native_spaces([3,3])
+        self.state["spaces"][-1]["label"] = "personal"
         self.save()
         self.run_spaces(success=False)
         self.assertFalse(any("--label" in c for c in self.calls("yabai")))

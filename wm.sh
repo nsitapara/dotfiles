@@ -11,6 +11,20 @@ die() { echo "$*" >&2; exit 1; }
 loaded() { launchctl list "$1" >/dev/null 2>&1; }
 running() { pgrep -x "$1" >/dev/null 2>&1; }
 need() { command -v "$1" >/dev/null || die "Missing $1. Run: $ROOT/wm.sh install"; }
+skhd_log_offset() {
+    if [ -f "$STATE/skhd.err.log" ]; then wc -c < "$STATE/skhd.err.log"; else echo 0; fi
+}
+check_skhd() {
+    local offset=$1 errors
+    sleep 1
+    running skhd || die "skhd exited. Grant Accessibility access and try again."
+    # skhd remains alive when parsing fails, so process presence is insufficient.
+    errors=$(tail -c "+$((offset + 1))" "$STATE/skhd.err.log" 2>/dev/null || true)
+    if printf '%s\n' "$errors" | grep -Eq '^#[0-9]+:[0-9]+|could not open config'; then
+        printf '%s\n' "$errors" >&2
+        die "skhd could not load its shortcuts. Fix skhdrc before retrying."
+    fi
+}
 reload_bar() {
     if running sketchybar; then
         sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc"
@@ -65,7 +79,7 @@ Usage: ./wm.sh COMMAND
   prepare              Save/set native Spaces preferences; then log out and in
   yabai                Quit AeroSpace, start yabai + skhd, reload SketchyBar
   aerospace            Stop the trial, open AeroSpace, reload SketchyBar
-  spaces               Label six existing desktops, preserving odd/even monitors
+  spaces               Label existing desktops, preserving odd/even monitors
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in
   status               Show running apps and trial jobs
@@ -175,13 +189,15 @@ case "$1" in
             sleep 0.2
         done
         $ready || die "yabai did not become ready. Grant Accessibility access and try again."
+        skhd_offset=$(skhd_log_offset)
         if ! loaded "$SKHD_JOB"; then
             launchctl submit -l "$SKHD_JOB" -o "$STATE/skhd.log" -e "$STATE/skhd.err.log" -- \
                 /usr/bin/env "PATH=$PATH" "HOME=$HOME" "USER=$USER" "SHELL=/bin/bash" \
                 "$(command -v skhd)" -c "$HOME/.config/skhd/skhdrc"
+        else
+            skhd --reload
         fi
-        sleep 1
-        running skhd || die "skhd exited. Grant Accessibility access and try again."
+        check_skhd "$skhd_offset"
         reload_bar
         echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
         echo "Create six desktops in Mission Control, then run ./wm.sh spaces."
@@ -206,7 +222,9 @@ case "$1" in
             "$HOME/.config/yabai/scripts/spaces.sh"
         else
             /bin/bash "$HOME/.config/yabai/yabairc"
+            skhd_offset=$(skhd_log_offset)
             skhd --reload
+            check_skhd "$skhd_offset"
         fi
         reload_bar ;;
     *) die "Unknown command: $1. Run ./wm.sh help" ;;
