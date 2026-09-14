@@ -11,13 +11,13 @@ sbar.add("event", "yabai_windows_changed")
 sbar.add("event", "yabai_mode_changed")
 
 local mode = sbar.add("item", "yabai.mode", {
-  position = "left", drawing = false,
+  position = "left", drawing = false, updates = true,
   icon = { drawing = false },
   label = { string = "", color = colors.mauve },
 })
 mode:subscribe("yabai_mode_changed", function(env)
   local value = env.MODE or "default"
-  mode:set({ drawing = value ~= "default", label = { string = value } })
+  mode:set({ drawing = value ~= "default" and value ~= "service", label = { string = value } })
 end)
 
 local function create_pill(index)

@@ -3,11 +3,11 @@
 # Modes exit with Escape or Space. Cmd+F remains the app's Find shortcut.
 # Reserved for Raycast: Cmd+Shift+C/E/G/B/P/S/V/Z/D, Cmd+Return,
 # Alt+Shift+M, Ctrl+Cmd+Space. Keep modes non-capturing so these pass through.
-:: default : sketchybar --trigger yabai_mode_changed MODE=default
-:: resize : sketchybar --trigger yabai_mode_changed MODE=resize
-:: workspace : sketchybar --trigger yabai_mode_changed MODE=workspace
-:: insertion : sketchybar --trigger yabai_mode_changed MODE=insertion
-:: service : sketchybar --trigger yabai_mode_changed MODE=service
+:: default : "$HOME/.config/skhd/mode.sh" default
+:: resize : "$HOME/.config/skhd/mode.sh" resize
+:: workspace : "$HOME/.config/skhd/mode.sh" workspace
+:: insertion : "$HOME/.config/skhd/mode.sh" insertion
+:: service : "$HOME/.config/skhd/mode.sh" service
 
 cmd - h : true
 cmd + alt - h : true

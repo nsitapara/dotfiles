@@ -24,6 +24,9 @@ exec-on-workspace-change = ['/bin/bash', '-c',
     'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; $HOME/dotfiles/aerospace-retile.sh &'
 ]
 
+# Keep the service indicator in sync with every entry and exit path.
+on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_changed']
+
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true

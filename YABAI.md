@@ -198,6 +198,11 @@ desktop does not exist yet: clicking one retries automatic desktop setup.
 Clicking an existing desktop selects it. Native desktop/window
 events and yabai signals update the bar without the AeroSpace polling workaround.
 
+A purple `SERVICE` badge appears immediately after the workspace group on every
+monitor while service mode is active, in both the yabai and AeroSpace profiles.
+It hides on exit and restores its state after a bar reload. AeroSpace uses its
+mode-change callback; skhd records the mode for its current daemon process.
+
 Right-side widgets and the center app indicator use the existing theme. The
 shared module joins yabai and SketchyBar displays by their physical display IDs,
 so their differing arrangement indices do not pin the indicators to the wrong
@@ -242,6 +247,7 @@ stow --dir="$PWD" --target="$HOME" -D yabai skhd
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 lua tests/test_yabai_bar.lua "$PWD"
+lua tests/test_service_mode.lua "$PWD"
 ```
 
 These tests simulate the desktop commands. They check failure recovery,

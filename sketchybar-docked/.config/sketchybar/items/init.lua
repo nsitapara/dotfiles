@@ -7,6 +7,7 @@ if yabai_active then
 else
   require("items.spaces")
 end
+require("items.service_mode")(yabai_active)
 require("items.center_app")
 require("items.calendar")
 require("items.widgets")
