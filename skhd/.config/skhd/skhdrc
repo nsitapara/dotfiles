@@ -115,6 +115,8 @@ insertion < down : yabai -m window --insert south
 insertion < up : yabai -m window --insert north
 insertion < right : yabai -m window --insert east
 
+# ? is Shift + slash (macOS keycode 0x2C).
+service < shift - 0x2C : sketchybar --trigger wm_help_toggle
 service < f : "$HOME/.config/yabai/scripts/window.sh" float
 service < r : yabai -m space --layout bsp; yabai -m space --balance
 service < up : osascript -e 'set volume output volume ((output volume of (get volume settings)) + 5)'

@@ -195,6 +195,19 @@ desktop on each display and remove unneeded empty desktops yourself.
 
 ## Shortcuts
 
+### Shortcut help
+
+Enter service mode with **Cmd + Alt + S** or **F14**, then press **?**
+(**Shift + /**) to open the shortcut popup below the SERVICE badge. Press ?
+again to hide it, or click the badge to toggle it. **Escape**, **Space**, or
+**F15** closes the popup and returns to normal mode.
+
+The popup separates service-mode keys from normal-mode shortcuts and shows the
+commands for the active manager. Normal-mode shortcuts require leaving service
+mode first. Both docked and undocked profiles include the same help behavior.
+
+### Key bindings
+
 Both AeroSpace profiles use the same shortcut map. Their shared shortcuts also
 match skhd, including Cmd + Alt + S / F14 for service mode, Escape / Space / F15
 to exit service mode, keypad workspace keys, and Cmd + Ctrl + arrows to move

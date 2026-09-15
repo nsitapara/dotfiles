@@ -172,6 +172,7 @@ outer.right =      10
     cmd-ctrl-alt-shift-r = 'mode resize'
 
 [mode.service.binding]
+    shift-slash = 'exec-and-forget sketchybar --trigger wm_help_toggle'
     esc = ['reload-config', 'mode main']
     f15 = 'mode main'
     space = 'mode main'
