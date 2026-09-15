@@ -50,7 +50,7 @@ def configure(manager):
     state.mkdir(parents=True, exist_ok=True)
     config = {
         "Label": LABEL,
-        "ProgramArguments": ["/bin/bash", str(ROOT / "wm.sh"), manager],
+        "ProgramArguments": [str(ROOT / "switch-display-mode.sh"), "--login", manager],
         "RunAtLoad": True,
         "LimitLoadToSessionType": "Aqua",
         "EnvironmentVariables": {

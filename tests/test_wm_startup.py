@@ -51,12 +51,12 @@ class StartupTests(unittest.TestCase):
     def test_login_runs_existing_switcher_without_restart_loop(self):
         startup.configure("yabai")
         config = plistlib.loads(self.agent.read_bytes())
-        self.assertEqual(config["ProgramArguments"], ["/bin/bash", str(self.root / "wm.sh"), "yabai"])
+        self.assertEqual(config["ProgramArguments"], [str(self.root / "switch-display-mode.sh"), "--login", "yabai"])
         self.assertTrue(config["RunAtLoad"])
         self.assertEqual(config["LimitLoadToSessionType"], "Aqua")
         self.assertNotIn("KeepAlive", config)
         self.assertEqual(config["EnvironmentVariables"]["HOME"], str(self.home))
-        self.assertEqual(self.calls[1], config["ProgramArguments"])
+        self.assertEqual(self.calls[1], ["/bin/bash", str(self.root / "wm.sh"), "yabai"])
         self.assertEqual(self.calls[-1][:2], ["launchctl", "bootstrap"])
 
     def test_failed_switch_preserves_saved_default(self):

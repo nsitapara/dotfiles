@@ -8,6 +8,18 @@ set -e
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DOTFILES_DIR"
 
+# Login startup and periodic display checks share this named entry point.
+# Dispatch before taking the display lock: wm.sh owns that lock and calls this
+# script without --login after the selected manager is ready.
+if [ "${1:-}" = --login ]; then
+    case "${2:-}" in
+        yabai|aerospace)
+            [ "$#" -eq 2 ] || exit 64
+            exec "$DOTFILES_DIR/wm.sh" "$2" ;;
+        *) echo "Usage: $0 --login yabai|aerospace" >&2; exit 64 ;;
+    esac
+fi
+
 STATE_FILE="${TMPDIR:-/tmp}/.display-mode-state"
 DISPLAY_STATE_FILE="${STATE_FILE}.displays"
 WORKSPACE_STATE_FILE="${STATE_FILE}.workspaces"

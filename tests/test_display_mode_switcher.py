@@ -103,6 +103,25 @@ class DisplayModeTests(unittest.TestCase):
             file.chmod(0o755)
         self.configure()
 
+    def test_login_delegates_to_window_manager_before_display_checks(self):
+        wm = self.path / "wm.sh"
+        wm.write_text('#!/bin/bash\nprintf "%s" "$1" > "$DISPLAY_TEST_DIR/login-manager"\nexit 7\n')
+        wm.chmod(0o755)
+        for manager in ("yabai", "aerospace"):
+            with self.subTest(manager=manager):
+                result = subprocess.run([str(self.script), "--login", manager], env=self.env,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 7)
+                self.assertEqual((self.path / "login-manager").read_text(), manager)
+                self.assertFalse(Path(str(self.state_file) + ".lock").exists())
+
+    def test_login_rejects_missing_or_invalid_manager(self):
+        for args in (["--login"], ["--login", "other"], ["--login", "yabai", "extra"]):
+            with self.subTest(args=args):
+                result = subprocess.run([str(self.script), *args], env=self.env,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 64)
+
     def configure(self, mode="docked", counts=None, **overrides):
         suffix = "-docked" if mode == "docked" else ""
         state = dict(counts=counts or [1], aerospace="aerospace" + suffix,

@@ -26,6 +26,12 @@ each login; SIP stays enabled. There is no automatic restart loop to undo a
 manual switch. Keep AeroSpace's `start-at-login` false even when it is the
 selected default, so only this launcher controls startup.
 
+The login entry directly runs `switch-display-mode.sh --login yabai` or
+`--login aerospace`. Regular display checks run the same script without arguments
+and never restart the window manager. This gives macOS a named script to display
+instead of the generic `/bin/bash` executable. See [BACKGROUND-SERVICES.md](BACKGROUND-SERVICES.md)
+for the startup inventory and cleanup notes.
+
 If startup fails, inspect `~/.local/state/dotfiles-wm/login.err.log` and the
 `yabai.err.log` / `skhd.err.log` files beside it. Run `./wm.sh doctor`, or switch
 back with `./wm.sh default aerospace`. To remove automatic startup while leaving
