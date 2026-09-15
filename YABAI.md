@@ -258,6 +258,8 @@ two windows of the same application, including floating windows and windows on
 other monitors. The yabai helper remembers the last two windows from focus
 events so floating windows are eligible too. It has no polling loop or daemon.
 It changes focus without rearranging windows. The pointer follows focus.
+When the target is on an inactive Space, yabai explicitly activates that Space
+first, using the same switch command as Cmd + number, then focuses the window.
 
 AeroSpace uses its built-in focus history and can also return to an
 empty workspace, and closing the previous window can leave no target to return

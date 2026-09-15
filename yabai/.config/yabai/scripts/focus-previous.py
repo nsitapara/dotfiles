@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 
 def query(*args):
     result = subprocess.run(['yabai', '-m', 'query', *map(str, args)],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, timeout=2)
     return json.loads(result.stdout) if result.returncode == 0 else None
 
 
@@ -36,8 +37,27 @@ def focus_previous(state):
             or target.get('is-hidden')):
         state['previous'] = None
         return
+    if not target.get('is-visible'):
+        space = query('--spaces', '--space', target['space'])
+        if not space:
+            raise RuntimeError('Previous window workspace is unavailable')
+        if not space.get('is-visible'):
+            # Match Cmd+number: activate the Space explicitly, avoiding the
+            # animated macOS switch caused by focusing an off-Space window.
+            result = subprocess.run(['yabai', '-m', 'space', '--focus', str(target['space'])],
+                                    capture_output=True, text=True, timeout=2)
+            if result.returncode:
+                raise RuntimeError(result.stderr.strip())
+            deadline = time.monotonic() + 1.0
+            while time.monotonic() < deadline:
+                space = query('--spaces', '--space', target['space'])
+                if space and space.get('is-visible'):
+                    break
+                time.sleep(0.01)
+            else:
+                raise RuntimeError('Previous window workspace did not become visible')
     result = subprocess.run(['yabai', '-m', 'window', '--focus', str(target['id'])],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, timeout=2)
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
     remember(state, target)
@@ -46,10 +66,13 @@ def focus_previous(state):
 def main(action):
     directory = Path.home() / '.local/state/dotfiles-wm'
     directory.mkdir(parents=True, exist_ok=True)
-    # One file lock serializes focus signals and shortcut presses. Signals query
-    # current focus instead of trusting an event that may have arrived late.
+    # Signals must never wait for a toggle that is itself waiting on yabai.
+    # The toggle saves its final target; intermediate focus events can be skipped.
     with (directory / 'focus-history.json').open('a+') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)
+        try:
+            fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return
         file.seek(0)
         try:
             state = json.load(file)
@@ -73,6 +96,6 @@ if __name__ == '__main__':
         if action not in ('record', 'reset', 'toggle'):
             raise RuntimeError('Usage: focus-previous.py record|reset|toggle')
         main(action)
-    except (RuntimeError, ValueError, OSError) as error:
+    except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as error:
         print('Previous window: ' + str(error), file=sys.stderr)
         sys.exit(1)
