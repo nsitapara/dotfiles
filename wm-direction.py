@@ -5,6 +5,8 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import socket
+import struct
 import subprocess
 import sys
 import time
@@ -15,10 +17,41 @@ AS_FORMAT = '%{window-id} %{workspace} %{window-layout} %{window-is-fullscreen} 
 
 
 def run(*args, check=True):
-    result = subprocess.run([str(a) for a in args], capture_output=True, text=True)
+    args = [str(a) for a in args]
+    result = yabai_message(args[2:]) if args[:2] == ['yabai', '-m'] else None
+    if result is None:
+        result = subprocess.run(args, capture_output=True, text=True)
     if check and result.returncode:
         raise RuntimeError(result.stderr.strip() or 'Command failed: ' + ' '.join(map(str, args)))
     return result
+
+
+def yabai_message(args):
+    # Same local protocol as yabai 7's CLI, without launching a process for
+    # every query/change. See upstream src/yabai.c:client_send_message.
+    payload = b'\0'.join(arg.encode() for arg in args) + b'\0\0'
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(2)
+        try:
+            connection.connect('/tmp/yabai_' + os.environ.get('USER', '') + '.socket')
+        except OSError:
+            return None  # CLI fallback is safe only before a request is sent.
+        try:
+            connection.sendall(struct.pack('=i', len(payload)) + payload)
+            connection.shutdown(socket.SHUT_WR)
+            chunks = []
+            while True:
+                chunk = connection.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        except OSError as error:
+            # Never replay a possibly executed move through the CLI.
+            raise RuntimeError('yabai connection interrupted: ' + str(error)) from error
+    response = b''.join(chunks).decode()
+    failed = response.startswith('\x07')
+    return subprocess.CompletedProcess(args, int(failed), '' if failed else response,
+                                       response[1:] if failed else '')
 
 
 def query(*args):
@@ -258,6 +291,73 @@ def settled_windows(space, ids):
     raise RuntimeError('Window frames have not settled; stopped.')
 
 
+def wait_for_frames(space, expected):
+    """Finish as soon as the requested geometry arrives, without a fixed delay."""
+    deadline = time.monotonic() + 1
+    while True:
+        windows = [w for w in query('--windows', '--space', space) if w['id'] in expected]
+        if {w['id'] for w in windows} != set(expected):
+            raise RuntimeError('Windows changed during rearrangement; stopped.')
+        if all(abs(w['frame'][axis] - expected[w['id']][axis]) <= 2
+               for w in windows for axis in ('x','y','w','h')):
+            return windows
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Requested window frames have not arrived; stopped.')
+        time.sleep(0.005)
+
+
+def side_plan(selected, windows, direction):
+    """Reuse an existing two-column/row layout instead of rebuilding its tree."""
+    if len(windows) not in (2, 3):
+        return None
+    axis, size, cross, extent = ('x','w','y','h') if direction in ('left','right') else ('y','h','x','w')
+    low = {a:min(w['frame'][a] for w in windows) for a in ('x','y')}
+    high = {a:max(w['frame'][a]+w['frame'][s] for w in windows) for a,s in [('x','w'),('y','h')]}
+    order = (cross, axis)
+    desired_others = sorted((w for w in windows if w['id'] != selected['id']),
+                            key=lambda w: tuple(w['frame'][a] for a in order))
+    for root in windows:
+        group = [w for w in windows if w['id'] != root['id']]
+        f, g = root['frame'], group[0]['frame']
+        if not spans_side(root,windows,direction) or abs(f[size]-g[size]) > 2:
+            continue
+        if not all(abs(w['frame'][axis]-g[axis]) <= 2 and abs(w['frame'][size]-g[size]) <= 2
+                   and abs(w['frame'][extent]-g[extent]) <= 2 for w in group):
+            continue
+        # Reject overlaps/minimum-size clamping and layouts with extra columns.
+        if not (f[axis]+f[size] <= g[axis]+2 or g[axis]+g[size] <= f[axis]+2):
+            continue
+        if len(group) == 2:
+            a,b = sorted(group,key=lambda w:w['frame'][cross])
+            if a['frame'][cross]+a['frame'][extent] > b['frame'][cross]+2:
+                continue
+        correct_side = (abs(f[axis]-low[axis]) <= 2 if direction in ('left','up')
+                        else abs(f[axis]+f[size]-high[axis]) <= 2)
+        plans = []
+        for transform in ([None] if correct_side else ['mirror','rotate']):
+            frames = {w['id']:dict(w['frame']) for w in windows}
+            commands = []
+            if transform:
+                for frame in frames.values():
+                    frame[axis] = low[axis]+high[axis]-frame[axis]-frame[size]
+                    if transform == 'rotate':
+                        frame[cross] = low[cross]+high[cross]-frame[cross]-frame[extent]
+                commands.append(('space',selected['space'],'--mirror','y-axis' if axis=='x' else 'x-axis')
+                                if transform == 'mirror' else ('space',selected['space'],'--rotate','180'))
+            slots = [root['id']] + sorted((w['id'] for w in group),key=lambda id:tuple(frames[id][a] for a in order))
+            wanted = [selected['id']] + [w['id'] for w in desired_others]
+            occupants = list(slots)
+            for i,id in enumerate(wanted):
+                if occupants[i] != id:
+                    j = occupants.index(id)
+                    commands.append(('window',id,'--swap',occupants[i]))
+                    occupants[i],occupants[j] = occupants[j],occupants[i]
+            expected = {id:frames[slot] for id,slot in zip(wanted,slots)}
+            plans.append((commands,expected))
+        return min(plans,key=lambda plan:len(plan[0]))
+    return None
+
+
 def yabai(direction, id=None):
     selected = query('--windows', '--window', *([id] if id else []))
     id = selected['id']
@@ -277,7 +377,9 @@ def yabai(direction, id=None):
     target = neighbor(selected, windows, direction, allow_overlap=True)
     if target:
         window(id, '--swap', target['id'])
-        settled_windows(selected['space'], {w['id'] for w in windows})
+        expected = {w['id']:w['frame'] for w in windows}
+        expected[id],expected[target['id']] = expected[target['id']],expected[id]
+        wait_for_frames(selected['space'], expected)
         return
     if spans_side(selected, windows, direction):
         cross_yabai(selected, direction)
@@ -288,6 +390,14 @@ def yabai(direction, id=None):
 def place_yabai_side(selected, windows, direction):
     """Give this window a root-level side, even if it already spans a narrow column."""
     if len(windows) < 2:
+        return
+    plan = side_plan(selected, windows, direction)
+    if plan is not None:
+        commands,expected = plan
+        for command in commands:
+            run('yabai','-m',*command)
+        if commands:
+            wait_for_frames(selected['space'],expected)
         return
     id = selected['id']
 
@@ -321,12 +431,15 @@ def place_yabai_side(selected, windows, direction):
     slots = sorted((w for w in fresh if w['id'] in other_ids),
                    key=lambda w: tuple(w['frame'][a] for a in order))
     ids = [w['id'] for w in slots]
+    reordered = False
     for i, desired in enumerate(w['id'] for w in others):
         if ids[i] != desired:
             j = ids.index(desired)
             window(desired, '--swap', ids[i])
+            reordered = True
             ids[i], ids[j] = ids[j], ids[i]
-    settled_windows(selected['space'], {w['id'] for w in windows})
+    if reordered:
+        settled_windows(selected['space'], {w['id'] for w in windows})
 
 
 def aerospace(direction, id=None):

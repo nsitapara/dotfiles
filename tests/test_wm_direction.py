@@ -34,7 +34,7 @@ class DirectionTests(unittest.TestCase):
             if args[:2] == ('--spaces','--space'): return {'type':'bsp'}
             if args[:2] == ('--windows','--window'): return self.windows[2]
             return self.windows
-        with patch.object(wm,'query',side_effect=query), patch.object(wm,'window') as command, patch.object(wm,'settled_windows'):
+        with patch.object(wm,'query',side_effect=query), patch.object(wm,'window') as command, patch.object(wm,'wait_for_frames'):
             wm.yabai('left')
         command.assert_called_once_with(3,'--swap',1)
 
@@ -165,7 +165,7 @@ class DirectionTests(unittest.TestCase):
     def test_edge_promotion_moves_other_leaf_and_preserves_selection(self):
         promoted = dict(self.windows[2], **{'split-type':'vertical','split-child':'second_child'})
         fresh = [w(1,0,0,500,495),w(2,0,505,500,495),w(3,510,0,500,1000)]
-        with patch.object(wm,'query',side_effect=[self.windows[2],{'type':'bsp'},self.windows,promoted,promoted]), patch.object(wm,'window') as command, patch.object(wm,'run') as run, patch.object(wm,'settled_windows',return_value=fresh):
+        with patch.object(wm,'query',side_effect=[self.windows[2],{'type':'bsp'},self.windows,promoted,promoted]), patch.object(wm,'window') as command, patch.object(wm,'run') as run, patch.object(wm,'settled_windows',return_value=fresh), patch.object(wm,'side_plan',return_value=None):
             wm.yabai('right')
         calls = [c.args for c in command.call_args_list]
         self.assertIn((2,'--warp',1),calls)
@@ -202,6 +202,93 @@ class DirectionTests(unittest.TestCase):
         self.assertIn((3668,'--warp',11209),[c.args for c in window.call_args_list])
         self.assertIn((984,'--ratio','abs:0.5'),[c.args for c in window.call_args_list])
         run.assert_called_once_with('yabai','-m','space',1,'--balance')
+
+    def test_three_window_promotion_reuses_tiles_with_two_changes(self):
+        commands, expected = wm.side_plan(self.windows[2],self.windows,'right')
+        self.assertEqual(len(commands),2)
+        self.assertEqual(expected[3],dict(x=510,y=0,w=500,h=1000))
+        self.assertEqual(expected[1],dict(x=0,y=0,w=500,h=495))
+        self.assertEqual(expected[2],dict(x=0,y=505,w=500,h=495))
+        with patch.object(wm,'run') as run,patch.object(wm,'wait_for_frames') as wait,patch.object(wm,'settled_windows') as slow:
+            wm.place_yabai_side(self.windows[2],self.windows,'right')
+        self.assertEqual(run.call_count,2)
+        wait.assert_called_once_with(1,expected)
+        slow.assert_not_called()
+
+    def test_side_plans_preserve_geometry_and_reading_order_all_directions(self):
+        for transpose in [False,True]:
+            windows = self.windows if not transpose else [dict(w,frame=dict(x=w['frame']['y'],y=w['frame']['x'],w=w['frame']['h'],h=w['frame']['w'])) for w in self.windows]
+            for direction in (['left','right'] if not transpose else ['up','down']):
+                for selected in windows:
+                    commands,expected = wm.side_plan(selected,windows,direction)
+                    frames = {w['id']:dict(w['frame']) for w in windows}
+                    for command in commands:
+                        if command[0]=='window':
+                            a,b=command[1],command[3];frames[a],frames[b]=frames[b],frames[a]
+                        else:
+                            axes = [('x','w',1010),('y','h',1000)] if not transpose else [('x','w',1000),('y','h',1010)]
+                            for f in frames.values():
+                                for axis,size,total in axes:
+                                    if command[2]=='--rotate' or (axis=='x')==(command[3]=='y-axis'):
+                                        f[axis]=total-f[axis]-f[size]
+                    self.assertEqual(frames,expected)
+                    axis,size,cross,extent=('x','w','y','h') if not transpose else ('y','h','x','w')
+                    self.assertEqual(expected[selected['id']][axis],0 if direction in ('left','up') else 510)
+                    self.assertEqual(expected[selected['id']][extent],1000)
+                    before=sorted((w for w in windows if w['id']!=selected['id']),key=lambda w:(w['frame'][cross],w['frame'][axis]))
+                    after=sorted((id for id in expected if id!=selected['id']),key=lambda id:expected[id][cross])
+                    self.assertEqual(after,[w['id'] for w in before])
+
+    def test_correct_side_is_a_noop_and_unequal_or_overlapping_tiles_use_fallback(self):
+        commands,_=wm.side_plan(self.windows[0],self.windows,'left')
+        self.assertEqual(commands,[])
+        bad=[dict(w,frame=dict(w['frame'])) for w in self.windows]
+        bad[1]['frame']['h']=600
+        self.assertIsNone(wm.side_plan(bad[2],bad,'right'))
+
+    def test_wait_for_frames_does_not_accept_stale_geometry_or_add_fixed_sleep(self):
+        expected={w['id']:w['frame'] for w in self.windows}
+        with patch.object(wm,'query',return_value=self.windows),patch.object(wm.time,'sleep') as sleep:
+            wm.wait_for_frames(1,expected)
+        sleep.assert_not_called()
+        stale=[dict(w,frame=dict(w['frame'],x=w['frame']['x']+10)) for w in self.windows]
+        with patch.object(wm,'query',side_effect=[stale,self.windows]),patch.object(wm.time,'sleep') as sleep:
+            wm.wait_for_frames(1,expected)
+        sleep.assert_called_once_with(.005)
+
+    def test_socket_protocol_and_native_errors(self):
+        import struct
+        from unittest.mock import MagicMock
+        for reply,code in [(b'{"ok":true}',0),(b'\x07invalid window\n',1)]:
+            connection=MagicMock()
+            connection.recv.side_effect=[reply[:3],reply[3:],b'']
+            connection.__enter__.return_value=connection
+            with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run') as cli:
+                result=wm.run('yabai','-m','query','--windows',check=False)
+            self.assertEqual(result.returncode,code)
+            payload=b'query\0--windows\0\0'
+            connection.sendall.assert_called_once_with(struct.pack('=i',len(payload))+payload)
+            cli.assert_not_called()
+            if code:self.assertEqual(result.stderr,'invalid window\n')
+
+    def test_socket_does_not_replay_a_move_after_connection_breaks(self):
+        from unittest.mock import MagicMock
+        connection=MagicMock();connection.__enter__.return_value=connection
+        connection.recv.side_effect=TimeoutError('timeout')
+        with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run') as cli:
+            with self.assertRaisesRegex(RuntimeError,'interrupted'):
+                wm.run('yabai','-m','window',1,'--swap',2)
+        cli.assert_not_called()
+
+    def test_socket_connection_failure_falls_back_before_sending(self):
+        from unittest.mock import MagicMock
+        connection=MagicMock();connection.__enter__.return_value=connection
+        connection.connect.side_effect=FileNotFoundError('socket missing')
+        response=SimpleNamespace(returncode=0,stdout='[]',stderr='')
+        with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run',return_value=response) as cli:
+            self.assertEqual(wm.query('--windows'),[])
+        connection.sendall.assert_not_called()
+        cli.assert_called_once_with(['yabai','-m','query','--windows'],capture_output=True,text=True)
 
     def test_diagonally_separated_tile_is_not_neighbor(self):
         self.assertIsNone(wm.neighbor(w(1,0,0,100,100),[w(2,120,120,100,100)],'right'))

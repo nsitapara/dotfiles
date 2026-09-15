@@ -270,6 +270,15 @@ The shared `wm-direction.py` helper uses the current window sizes and physical
 monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;
 it does not require yabai to be running.
 
+For yabai, the helper sends commands directly to its local socket to avoid
+starting a separate CLI process for every operation. It falls back to the CLI
+if it cannot connect, and never retries a move after a request has been sent.
+Balanced two- and three-window layouts reuse their existing tiles with swaps
+and, when needed, a mirror or rotation. Simple swaps and these layout changes
+finish when the requested window bounds arrive, without fixed settling delays.
+More complex layouts retain the general regrouping path, so they can still show
+intermediate redraws. No window animation is enabled by this helper.
+
 ### Raycast
 
 Cmd+Space, your main Raycast shortcut, is left unbound. The screenshot supplied
