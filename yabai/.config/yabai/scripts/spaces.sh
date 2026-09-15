@@ -1,41 +1,41 @@
 #!/bin/bash
 set -euo pipefail
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+plan_file=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --plan) plan_file=$2; shift 2 ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+done
+if [ -n "$plan_file" ]; then plan=$(cat "$plan_file"); else plan=$("$HERE/display-layout.sh"); fi
 spaces=$(yabai -m query --spaces)
-displays=$(yabai -m query --displays)
-
-# Existing labels survive monitor hotplug. Do not reshuffle a working session.
-if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spaces" >/dev/null; then
-    # Sort physical positions, avoiding machine-specific UUIDs and display IDs.
-    mapping=$(jq -nr --argjson spaces "$spaces" --argjson displays "$displays" '
-      ($displays | sort_by(.frame.x, .frame.y)) as $ds |
-      [$spaces[] | select(."is-native-fullscreen" == false)] as $ss |
-      if ($ds | length) == 1 and ($ss | length) >= 1 then
-        [$ss | sort_by(.index) | .[:6] | to_entries[] | {index:.value.index, label:("ws" + ((.key+1)|tostring))}]
-      elif ($ds | length) == 2 then
-        [$ss[] | select(.display == $ds[0].index)] | sort_by(.index) as $left |
-        [$ss[] | select(.display == $ds[1].index)] | sort_by(.index) as $right |
-        [range(0;3) as $i |
-          (if $left[$i] then {index:$left[$i].index,label:("ws" + (($i*2+1)|tostring))} else empty end),
-          (if $right[$i] then {index:$right[$i].index,label:("ws" + (($i*2+2)|tostring))} else empty end)]
-      else error("Use one or two monitors for automatic desktop labels.") end
-      | .[] | [.index,.label] | @tsv')
-    # Validate all labels before mutating any of them.
-    while IFS=$'\t' read -r index label; do
-        old=$(jq -r --argjson index "$index" '.[] | select(.index == $index) | .label' <<< "$spaces")
-        if [ -n "$old" ] && [ "$old" != "$label" ]; then
-            echo "Desktop $index already has label $old; refusing to replace it." >&2
-            exit 1
-        fi
-    done <<< "$mapping"
+# Assign only unlabelled desktops and labels owned by this setup. Native
+# fullscreen and custom-labelled desktops remain untouched.
+mapping=$(jq -cn --argjson spaces "$spaces" --argjson plan "$plan" '
+  [$plan[] as $screen |
+    [$spaces[] | select(.display == $screen.index and ."is-native-fullscreen" == false)
+     | select(.label == "" or (.label | test("^ws[1-9]$")))] | sort_by(.index) as $ss |
+    $screen.workspaces | to_entries[] |
+    select($ss[.key] != null) |
+    {index:$ss[.key].index,label:("ws" + (.value|tostring))}]
+  | sort_by(.index)')
+[ "$mapping" != '[]' ] || { echo 'No ordinary desktops are available to label.' >&2; exit 1; }
+current=$(jq -c '[.[] | select(.label | test("^ws[1-9]$")) | {index,label}] | sort_by(.index)' <<< "$spaces")
+if [ "$current" != "$mapping" ]; then
+    # Clear our old aliases first, avoiding collisions when swapping ws2/ws3.
+    while read -r index; do
+        [ -n "$index" ] && yabai -m space "$index" --label
+    done < <(jq -r '.[].index' <<< "$current")
     while IFS=$'\t' read -r index label; do
         yabai -m space "$index" --label "$label"
-    done <<< "$mapping"
+    done < <(jq -r '.[] | [.index,.label] | @tsv' <<< "$mapping")
 fi
-
-spaces=$(yabai -m query --spaces)
-labels=$(jq -r '[.[] | .label | select(test("^ws[1-6]$"))] | sort | join(", ")' <<< "$spaces")
+labels=$(jq -r '[.[].label] | sort | join(", ")' <<< "$mapping")
 echo "Ready: $labels. Cmd+number selects the matching workspace."
-if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spaces" >/dev/null; then
-    echo "For all six shortcuts, create six desktops on one display, or three on each of two displays, then run ./wm.sh spaces."
+expected=$(jq '[.[].workspaces[]] | length' <<< "$plan")
+actual=$(jq 'length' <<< "$mapping")
+if [ "$actual" -lt "$expected" ]; then
+    echo "Run ./wm.sh spaces to create the remaining $((expected - actual)) desktops."
 fi

@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class ShortcutTests(unittest.TestCase):
     @staticmethod
     def skhd_bindings():
-        keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58"],
-                          [f"keypad{i}" for i in range(1,7)]))
+        keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58","0x59","0x5B","0x5C"],
+                          [f"keypad{i}" for i in range(1,10)]))
         keypad.update({"0x18":"equal", "0x1B":"minus", "0x2B":"comma"})
         result = set()
         for raw in (ROOT / "skhd/.config/skhd/skhdrc").read_text().splitlines():
@@ -50,8 +50,8 @@ class ShortcutTests(unittest.TestCase):
         def normalize(parts):
             return tuple(sorted(p.lower() for p in parts[:-1])) + (parts[-1].lower(),)
         current = {normalize(key.split("-")) for key in aerospace["mode"]["main"]["binding"]}
-        keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58"],
-                          [f"keypad{i}" for i in range(1,7)]))
+        keypad = dict(zip(["0x53","0x54","0x55","0x56","0x57","0x58","0x59","0x5B","0x5C"],
+                          [f"keypad{i}" for i in range(1,10)]))
         keypad.update({"0x18":"equal", "0x1B":"minus", "0x2B":"comma"})
         for raw in (ROOT / "skhd/.config/skhd/skhdrc").read_text().splitlines():
             line = raw.strip()
@@ -116,7 +116,7 @@ elif name == "yabai":
     elif args[:3] == ["-m", "query", "--displays"]: print(json.dumps(state["displays"]))
     elif args[:2] == ["-m", "space"] and args[3] == "--label":
         for space in state["spaces"]:
-            if space["index"] == int(args[2]): space["label"] = args[4]
+            if space["index"] == int(args[2]): space["label"] = args[4] if len(args) > 4 else ""
         save()
 elif name == "skhd": print("skhd-v0.3.9")
 elif name == "osascript":
@@ -267,8 +267,14 @@ class WmTests(unittest.TestCase):
                     display=display, label="", **{"is-native-fullscreen":False}))
         self.save()
 
-    def run_spaces(self, success=True):
-        result = subprocess.run(["/bin/bash", str(ROOT / "yabai/.config/yabai/scripts/spaces.sh")],
+    def run_spaces(self, success=True, plan=None):
+        if plan is None:
+            plan = ([dict(index=1,workspaces=[1,2,3,4,5,6])]
+                    if len(self.state["displays"]) == 1 else
+                    [dict(index=1,workspaces=[1,3,5]),dict(index=2,workspaces=[2,4,6])])
+        plan_path = self.path / "plan.json"
+        plan_path.write_text(json.dumps(plan))
+        result = subprocess.run(["/bin/bash", str(ROOT / "yabai/.config/yabai/scripts/spaces.sh"), "--plan", str(plan_path)],
                                 env=self.env, capture_output=True, text=True, timeout=10)
         self.refresh()
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
@@ -301,12 +307,30 @@ class WmTests(unittest.TestCase):
         ordered = sorted(self.state["spaces"], key=lambda s:s["index"])
         self.assertEqual([s["label"] for s in ordered], ["ws1","ws3","ws5","ws2","ws4","ws6"])
 
-    def test_conflicting_labels_are_not_modified(self):
+    def test_custom_labels_are_preserved(self):
         self.native_spaces([3,3])
         self.state["spaces"][-1]["label"] = "personal"
         self.save()
-        self.run_spaces(success=False)
-        self.assertFalse(any("--label" in c for c in self.calls("yabai")))
+        self.run_spaces()
+        self.assertEqual(self.state["spaces"][-1]["label"], "personal")
+
+    def test_open_laptop_adds_789_and_undocking_relabels_without_moving_windows(self):
+        self.native_spaces([3,3,3])
+        self.state["spaces"][0]["windows"] = [123]
+        self.save()
+        self.run_spaces(plan=[dict(index=1,workspaces=[1,3,5]),
+                              dict(index=2,workspaces=[2,4,6]),
+                              dict(index=3,workspaces=[7,8,9])])
+        self.assertEqual([s["label"] for s in self.state["spaces"]],
+                         ["ws1","ws3","ws5","ws2","ws4","ws6","ws7","ws8","ws9"])
+        # Simulate macOS gathering native Spaces onto the remaining display.
+        self.state["displays"] = self.state["displays"][:1]
+        for space in self.state["spaces"]: space["display"] = 1
+        self.save()
+        self.run_spaces()
+        self.assertEqual([s["label"] for s in self.state["spaces"]],
+                         ["ws1","ws2","ws3","ws4","ws5","ws6","","",""])
+        self.assertEqual(self.state["spaces"][0]["windows"], [123])
 
 
 if __name__ == "__main__":

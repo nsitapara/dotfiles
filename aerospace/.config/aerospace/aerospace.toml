@@ -10,7 +10,8 @@ after-startup-command = [
     'exec-and-forget sketchybar',
     # 1s refresh poller — covers same-app window closes, which AeroSpace's async
     # pipeline never notices on its own (#1615). See comments in the script.
-    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh'
+    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh',
+    'exec-and-forget $HOME/dotfiles/switch-display-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change; re-poll aerospace so windows closed while
@@ -104,6 +105,19 @@ outer.right =      10
     cmd-4 = 'workspace 4'
     cmd-5 = 'workspace 5'
     cmd-6 = 'workspace 6'
+
+    cmd-7 = 'workspace 7'
+    cmd-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-keypad7 = 'workspace 7'
+    cmd-shift-keypad7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-8 = 'workspace 8'
+    cmd-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-keypad8 = 'workspace 8'
+    cmd-shift-keypad8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-9 = 'workspace 9'
+    cmd-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+    cmd-keypad9 = 'workspace 9'
+    cmd-shift-keypad9 = 'move-node-to-workspace 9 --focus-follows-window'
 
     cmd-pageUp = ['workspace prev']
     cmd-pageDown = ['workspace next']
@@ -278,4 +292,3 @@ run = 'layout floating'
 [[on-window-detected]]
 if.app-id="com.mitchellh.ghostty"
 run= "layout tiling"
-

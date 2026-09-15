@@ -87,8 +87,8 @@ the original macOS preferences after the trial:
 
 This quits AeroSpace, waits for it to exit, starts yabai and skhd, then reloads
 SketchyBar with native Space indicators. Your existing AeroSpace poller exits
-when AeroSpace quits. The display-profile switcher and monitor-repair script
-pause while the trial job is loaded.
+when AeroSpace quits. The display-profile switcher follows the active manager.
+The physical arrangement repair remains specific to AeroSpace.
 
 On the first attempt, macOS may request Accessibility access. Grant **both**
 yabai and skhd access in System Settings > Privacy & Security > Accessibility.
@@ -101,12 +101,42 @@ Do not also run `brew services start`, `yabai --start-service`, or
 `skhd --start-service`; the switcher refuses independently managed instances.
 Use `wm.sh` for switching instead of opening both window managers manually.
 
-### Set up the six desktops
+### Automatic desktops and monitor preferences
 
 `./wm.sh yabai` creates missing desktops automatically, then assigns the
-workspace shortcuts. It keeps six ordinary desktops on one monitor, or three
-on each of two monitors. Existing desktops and windows are preserved; extra
-desktops are never deleted. Fullscreen app Spaces do not count.
+workspace shortcuts. Both managers and both SketchyBar profiles use one policy:
+
+| Active screens | Workspace placement |
+|---|---|
+| Laptop only, or one external with lid closed | 1–6 on the only screen |
+| Laptop + one external | Laptop: 1/3/5; external: 2/4/6 |
+| Two externals, lid closed | Preferred odd monitor: 1/3/5; preferred even monitor: 2/4/6 |
+| Two externals + laptop | Same external assignments; laptop: 7/8/9 |
+
+Edit **`yabai/.config/yabai/display-preferences.json`** to change monitors:
+
+```json
+{
+  "odd_monitor": "LG HDR QHD",
+  "even_monitor": "PA278QV"
+}
+```
+
+These variables are exact macOS display names, shared by AeroSpace and yabai.
+Run `yabai/.config/yabai/scripts/display-layout.sh --aerospace` while AeroSpace
+is active, or omit `--aerospace` while yabai is active, to see detected names
+and assignments. With only one external connected it always gets 2/4/6,
+regardless of its preferred role. Unknown pairs fall back to physical left-to-right
+order; a recognized monitor keeps its preferred role.
+
+After editing, run `./switch-display-mode.sh`; the automatic check also picks up
+changes within 30 seconds. Workspace roles do not depend on which display is main.
+The optional `clamshell_repair` section holds the older AeroSpace physical-layout
+snapshot. On replacement hardware, set its `enabled` to `false`, or update its
+UUIDs/settings from `displayplacer list` if you want arrangement repair too.
+
+Existing native desktops and windows are preserved; extra desktops are never
+deleted. Fullscreen and custom-labelled desktops do not count toward the target.
 
 **One-time permission:** enable **Dotfiles Spaces** in System Settings > Privacy
 & Security > Accessibility. If needed, add `~/Applications/Dotfiles Spaces.app`
@@ -123,12 +153,12 @@ After granting permission, retry `./wm.sh yabai`. While the trial is already
 running, retry desktop setup with `./wm.sh spaces` or click a gray bar slot.
 `./wm.sh reload` also repairs missing desktops.
 
-On one monitor, desktops are labelled `ws1` through `ws6` in native order. On
-two monitors, left-to-right display positions determine the mapping: `1,3,5`
-on the left and `2,4,6` on the right, matching the docked AeroSpace profile.
-Conflicting existing labels are not overwritten. More than two displays need a
-custom mapping. Fully established labels are retained across monitor changes;
-the helper adds desktops but does not relocate labelled Spaces after hotplug.
+Yabai assigns `ws1`–`ws9` to ordinary desktops on the planned displays and
+reassigns these owned labels after hotplug. Custom labels are preserved. With SIP
+enabled, this changes desktop numbers without relocating whole native Spaces or
+their existing windows. AeroSpace moves its own workspaces to the planned monitors.
+When the laptop disappears, 7–9 leave the default bar; extra native desktops remain
+accessible in Mission Control and are shown as `D<number>` in the yabai bar.
 
 The helper uses Mission Control's Accessibility identifiers, which Apple can
 change between macOS releases. Its Swift source and build script are tracked in
@@ -163,8 +193,8 @@ The baseline follows the currently active **docked** AeroSpace configuration.
 |---|---|
 | Cmd + arrow | Focus neighboring window |
 | Cmd + Shift + arrow | Reinsert window beside its neighbor |
-| Cmd + 1–6, including keypad | Focus labelled desktop |
-| Cmd + Shift + 1–6 | Send window to desktop and follow it |
+| Cmd + 1–9, including keypad | Focus labelled desktop |
+| Cmd + Shift + 1–9 | Send window to desktop and follow it |
 | Cmd + Page Up / Page Down | Previous / next native Space |
 | Cmd + Home / End | Workspace 1 / 6 |
 | Alt + Tab | Previous focused Space |
@@ -223,9 +253,9 @@ the events; changing Raycast's shortcuts will not fix it.
 
 The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,
-and the active skhd mode. All six slots stay visible, with `1,3,5` on the left
-and `2,4,6` on the right when using two monitors. Gray slots mean the native
-desktop does not exist yet: clicking one retries automatic desktop setup.
+and the active skhd mode. All configured slots stay visible on their assigned
+monitors, including laptop slots 7–9 with both externals connected. Gray slots
+mean the native desktop does not exist yet: clicking one retries automatic setup.
 Clicking an existing desktop selects it. Native desktop/window
 events and yabai signals update the bar without the AeroSpace polling workaround.
 
@@ -240,14 +270,18 @@ so their differing arrangement indices do not pin the indicators to the wrong
 screen. Missing displays hide affected items until a complete update arrives.
 
 The trial leaves any running JankyBorders instance alone. Initial top padding is
-50 points on every display; adjust `yabairc` if the laptop notch leaves too much
-space. The separate `sketchybar-light` profile is not integrated by this setup.
+50 points, then the display profile applies `built_in_top_padding` (16) or
+`external_top_padding` (50) from the shared preferences. AeroSpace has matching
+per-monitor gaps in its TOML files. The separate `sketchybar-light` profile is not
+integrated by this setup.
 
 ## Reinstall or move to another Mac
 
 Clone this repository wherever you prefer, then run `./wm.sh install` there.
 The new packages and helpers use the current home directory and support both
-Homebrew prefixes. No display UUIDs, username, or checkout path is baked in.
+Homebrew prefixes. Workspace assignment needs only your monitor names. The
+optional physical-layout repair snapshot is machine-specific; disable it or
+update it on the new Mac.
 
 For switching back on a fresh Mac, install AeroSpace and link the appropriate
 existing AeroSpace package. To reproduce the bar, install SketchyBar and its
@@ -260,6 +294,7 @@ Tracked files:
 - `Brewfile.yabai`: optional package dependencies.
 - `wm.sh`: installation, preferences, switching, rollback, and diagnostics.
 - `wm-startup.py`: saved login selection and LaunchAgent installation.
+- `yabai/.config/yabai/display-preferences.json`: shared monitor roles and optional physical repair.
 - `yabai/.config/yabai/yabairc`: tiling, gaps, floating rules, and event signals.
 - `yabai/.config/yabai/scripts/`: desktop setup, workspace labels, and window helpers.
 - `yabai/.config/yabai/helpers/Spaces.swift`: SIP-enabled desktop creation helper.
@@ -283,12 +318,12 @@ lua tests/test_service_mode.lua "$PWD"
 ```
 
 These tests simulate the desktop commands. They check failure recovery,
-mutually exclusive managers, label assignment, profile-switch suspension, and
-SketchyBar rendering. Live Accessibility permissions, actual keyboard delivery,
+mutually exclusive managers, label assignment, one/two/three-screen profiles,
+retry/no-op behavior, and SketchyBar rendering. Live Accessibility permissions, actual keyboard delivery,
 hotplug, and rendering still need a manual trial after the one-time logout.
 
 During that trial check: open/close several windows in the same app, move between
-all six desktops, float/resize a window, play Nuvio video, launch apps through
+all configured desktops, float/resize a window, play Nuvio video, launch apps through
 Raycast, unplug/reconnect a monitor, then switch back to AeroSpace.
 
 ## Upstream references

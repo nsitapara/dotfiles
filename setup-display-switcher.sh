@@ -57,6 +57,10 @@ if ! command -v stow &> /dev/null; then
     MISSING_DEPS+=("stow")
 fi
 
+if ! command -v jq &> /dev/null; then
+    MISSING_DEPS+=("jq")
+fi
+
 if ! command -v brew &> /dev/null; then
     echo -e "${YELLOW}⚠ homebrew not found${NC}"
     MISSING_DEPS+=("homebrew")
@@ -80,7 +84,7 @@ if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     done
     echo ""
     echo "Please install missing dependencies:"
-    echo "  brew install stow"
+    echo "  brew install stow jq"
     echo "  brew install --cask nikitabobko/tap/aerospace"
     echo "  brew install sketchybar"
     exit 1
@@ -91,7 +95,7 @@ echo ""
 
 # Check for required directories
 echo "Checking configuration directories..."
-REQUIRED_DIRS=("aerospace" "aerospace-docked" "sketchybar" "sketchybar-docked")
+REQUIRED_DIRS=("aerospace" "aerospace-docked" "sketchybar" "sketchybar-docked" "yabai")
 MISSING_DIRS=()
 
 for dir in "${REQUIRED_DIRS[@]}"; do
@@ -110,6 +114,8 @@ fi
 
 echo -e "${GREEN}✓ All required directories found${NC}"
 echo ""
+
+"$SCRIPT_DIR/yabai/.config/yabai/scripts/build-spaces-helper.sh"
 
 # Make the switch script executable
 echo "Setting up display mode switcher script..."

@@ -26,13 +26,18 @@
 LOCK="${TMPDIR:-/tmp}/aerospace-monitor-sync.lock"
 BIN=/opt/homebrew/bin
 
-# --- golden clamshell arrangement --------------------------------------------
-# Re-snapshot with `displayplacer list | tail -1` if the desk setup changes.
-LG=98C1FB25-A9D8-4BF1-A6FB-B5F43EFF2313        # LG HDR QHD — left,  workspaces 1,3,5
-PA=72BE38E4-ED54-416E-A1C5-004D9725F0C7        # PA278QV    — right, workspaces 2,4,6
-BUILTIN=37D8832A-2D66-02CA-B9F7-8F30A301B230   # Built-in Retina Display
-LG_ORIGIN="origin:(0,0)"
-PA_ORIGIN="origin:(2560,0)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PREFERENCES="$ROOT/yabai/.config/yabai/display-preferences.json"
+# Optional physical arrangement repair is configured alongside workspace roles.
+# A replacement monitor won't match these UUIDs; update the snapshot or disable it.
+repair=$("$BIN/jq" -e '.clamshell_repair | select(.enabled)' "$PREFERENCES" 2>/dev/null) || repair='{}'
+LG=$("$BIN/jq" -r '.odd_display_uuid // empty' <<< "$repair")
+PA=$("$BIN/jq" -r '.even_display_uuid // empty' <<< "$repair")
+BUILTIN=$("$BIN/jq" -r '.built_in_uuid // empty' <<< "$repair")
+LG_SETTINGS=$("$BIN/jq" -r '.odd_settings // empty' <<< "$repair")
+PA_SETTINGS=$("$BIN/jq" -r '.even_settings // empty' <<< "$repair")
+LG_ORIGIN=$(printf '%s\n' "$LG_SETTINGS" | sed -nE 's/.*(origin:\([^)]*\)).*/\1/p')
+PA_ORIGIN=$(printf '%s\n' "$PA_SETTINGS" | sed -nE 's/.*(origin:\([^)]*\)).*/\1/p')
 
 # Keep output independent of the Lua callback, which exits when the bar reloads.
 exec >>/tmp/display-mode-switcher.log 2>>/tmp/display-mode-switcher.err
@@ -44,11 +49,13 @@ lockf -s -t 0 8 || exit 0
 sleep 1.5
 
 # Serialize with wm.sh before repairing displays. During a yabai trial, native
-# Spaces own monitor placement; leave the AeroSpace-specific repair suspended.
+# Spaces own monitor placement; skip the AeroSpace-specific arrangement repair
+# and let the shared switcher select the yabai profile instead.
 exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
 lockf -s -t 10 9 || exit 1
 if launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
-    exit 0
+    exec 9>&-
+    exec "$ROOT/switch-display-mode.sh"
 fi
 
 # Only repair in clamshell with both externals back. Every other state — laptop
@@ -65,7 +72,9 @@ lg_seg=$(segment "$LG" "$current")
 pa_seg=$(segment "$PA" "$current")
 builtin_seg=$(segment "$BUILTIN" "$current")
 
-if lid_closed && [ -n "$lg_seg" ] && [ -n "$pa_seg" ]; then
+if [ -n "$LG" ] && [ -n "$PA" ] && [ -n "$BUILTIN" ] &&
+   [ -n "$LG_ORIGIN" ] && [ -n "$PA_ORIGIN" ] &&
+   lid_closed && [ -n "$lg_seg" ] && [ -n "$pa_seg" ]; then
     # A disabled built-in counts as correct as much as an absent one does —
     # otherwise re-applying would never satisfy the check and would loop forever.
     builtin_ok=false
@@ -75,12 +84,12 @@ if lid_closed && [ -n "$lg_seg" ] && [ -n "$pa_seg" ]; then
         # This emits another display_change; the check above makes that pass a
         # no-op rather than a loop.
         "$BIN/displayplacer" \
-            "id:$LG res:2560x1440 hz:75 color_depth:8 enabled:true scaling:off $LG_ORIGIN degree:0" \
-            "id:$PA res:2560x1440 hz:75 color_depth:8 enabled:true scaling:off $PA_ORIGIN degree:0" \
+            "id:$LG $LG_SETTINGS" \
+            "id:$PA $PA_SETTINGS" \
             "id:$BUILTIN enabled:false" >/dev/null 2>&1
         sleep 1.5   # let it settle before the profile switch reads the layout
     fi
 fi
 
 exec 9>&-
-exec "$HOME/dotfiles/switch-display-mode.sh"
+exec "$ROOT/switch-display-mode.sh"

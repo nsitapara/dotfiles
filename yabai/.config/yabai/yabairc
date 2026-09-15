@@ -40,9 +40,14 @@ for event in window_created window_destroyed window_focused window_title_changed
         action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed'
 done
 
-# Label available native desktops; missing slots stay dimmed in the bar.
-# wm.sh creates missing desktops after the daemon becomes ready.
-"$HOME/.config/yabai/scripts/spaces.sh" || echo 'Run ./wm.sh spaces to finish desktop setup.' >&2
+# Hotplug works even if SketchyBar is stopped. The helper debounces geometry
+# changes and never switches the window manager or repairs physical displays.
+for event in display_added display_removed display_moved display_resized; do
+    yabai -m signal --add label="dotfiles-$event" event="$event" \
+        action='"$HOME/.config/yabai/scripts/display-profile.sh"'
+done
+
+# wm.sh creates and labels desktops once the daemon is ready.
 if [ -n "${DOTFILES_YABAI_READY:-}" ]; then
     touch "$DOTFILES_YABAI_READY"
 fi

@@ -6,63 +6,10 @@ local space_brackets = {}
 local space_icon_slots = {} -- native macOS app-icon image items, per workspace
 local space_trails = {}     -- trailing pad so the last icon isn't flush to the edge
 
--- ============================================================================
--- WORKSPACE COUNT CONFIGURATION
--- ============================================================================
--- Change this number to add/remove workspaces (e.g., 6, 9, etc.)
--- Also update aerospace.toml keyboard shortcuts to match:
---   - Add: cmd-N = 'workspace N'
---   - Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
--- ============================================================================
-local WORKSPACE_COUNT = 6
-
--- ============================================================================
--- MULTI-MONITOR WORKSPACE ASSIGNMENT
--- ============================================================================
--- Each space item is pinned to the monitor its windows live on via `display`,
--- so a monitor's bar only shows the workspaces that live on it (not all 1-6 on
--- every screen). Computed dynamically from aerospace itself.
---
--- Join on the monitor NAME, not on any display id. Every id-based join here has
--- broken at least once: sketchybar's DirectDisplayID is re-assigned by
--- CoreGraphics across reboots, and aerospace's
--- monitor-appkit-nsscreen-screens-id is an enumeration position, not a stable
--- id — after one reboot they disagreed entirely ({1,2} vs {2,3}) and every pill
--- landed on one bar. Names survive reboots.
---
--- The name -> `display` (arrangement-id) map can be static because
--- aerospace-monitor-sync.sh enforces the golden arrangement: LG at (0,0) is
--- arrangement 1, PA278QV to its right is arrangement 2.
---
--- NOTE: the pills are plain `item`s, not `space`s. A `space` item carries a
--- native mission-control-space association whose display mask overrides the
--- `display` property, so it always renders on every monitor. Plain items
--- honor `display`, which is what makes per-monitor pinning actually work.
-local workspace_to_display = {}
-for i = 1, WORKSPACE_COUNT do
-  workspace_to_display[i] = 1 -- fallback if aerospace can't be reached
-end
-
-local display_of_monitor = {
-  ["LG HDR QHD"] = 1,
-  ["PA278QV"] = 2,
-}
-
--- Absolute path: this runs in sketchybar's launchd environment, not a login shell.
-local handle = io.popen(
-  "/opt/homebrew/bin/aerospace list-workspaces --all " ..
-  "--format '%{workspace}|%{monitor-name}' 2>/dev/null"
-)
-if handle then
-  for line in handle:lines() do
-    local ws, mon = line:match("^(%d+)|(.+)$")
-    ws = tonumber(ws)
-    if ws and mon and ws >= 1 and ws <= WORKSPACE_COUNT then
-      workspace_to_display[ws] = display_of_monitor[mon] or 1
-    end
-  end
-  handle:close()
-end
+-- Same shared policy as yabai: external odds/evens, plus laptop 7-9 when
+-- both externals are connected. Match physical IDs instead of fixed bar indices.
+local workspace_to_display = require("items.workspace_layout")()
+local WORKSPACE_COUNT = workspace_to_display[9] and 9 or 6
 
 -- App icons are native macOS images (background.image = "app.<name>"). Unlike a
 -- text label, an image does NOT auto-size its item, so each icon needs an

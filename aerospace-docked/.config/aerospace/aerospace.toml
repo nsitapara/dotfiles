@@ -15,7 +15,8 @@ after-startup-command = [
     'exec-and-forget sketchybar',
     # 1s refresh poller — covers same-app window closes, which AeroSpace's async
     # pipeline never notices on its own (#1615). See comments in the script.
-    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh'
+    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh',
+    'exec-and-forget $HOME/dotfiles/switch-display-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change; re-poll aerospace so windows closed while
@@ -99,6 +100,19 @@ outer.right =      10
     cmd-5 = 'workspace 5'
     cmd-6 = 'workspace 6'
 
+    cmd-7 = 'workspace 7'
+    cmd-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-keypad7 = 'workspace 7'
+    cmd-shift-keypad7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-8 = 'workspace 8'
+    cmd-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-keypad8 = 'workspace 8'
+    cmd-shift-keypad8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-9 = 'workspace 9'
+    cmd-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+    cmd-keypad9 = 'workspace 9'
+    cmd-shift-keypad9 = 'move-node-to-workspace 9 --focus-follows-window'
+
     cmd-pageUp = ['workspace prev']
     cmd-pageDown = ['workspace next']
 
@@ -171,29 +185,8 @@ outer.right =      10
     up = 'volume up'
     shift-down = ['volume set 0', 'mode main']
 
-[workspace-to-monitor-force-assignment]
-# Both layouts pin by monitor NAME, with main/secondary as the fallback for
-# when that monitor is absent. Bare 'secondary' means "any non-main monitor",
-# so a third display — Screen Sharing's virtual one — matches it and steals
-# workspaces onto a screen that isn't physically there.
-
-# Layout A (active): odd/even split (odd -> left screen, even -> right screen).
-1 = ['LG HDR QHD', 'main']
-2 = ['PA278QV', 'secondary']
-3 = ['LG HDR QHD', 'main']
-4 = ['PA278QV', 'secondary']
-5 = ['LG HDR QHD', 'main']
-6 = ['PA278QV', 'secondary']
-
-# Layout B: 1-3 -> left screen, 4-6 -> right screen.
-# To go back, uncomment this block and comment out Layout A.
-# 1 = ['LG HDR QHD', 'main']
-# 2 = ['LG HDR QHD', 'main']
-# 3 = ['LG HDR QHD', 'main']
-# 4 = ['PA278QV', 'secondary']
-# 5 = ['PA278QV', 'secondary']
-# 6 = ['PA278QV', 'secondary']
-
+# Monitor assignments are applied by switch-display-mode.sh from the same
+# display-preferences.json policy as yabai, including one external + laptop.
 
 [mode.merge.binding]
     space = 'mode main'

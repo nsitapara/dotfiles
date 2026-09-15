@@ -6,13 +6,15 @@ import ApplicationServices
 struct Failure: Error, CustomStringConvertible { let description: String }
 struct Space: Decodable {
     let display: Int
+    let label: String
     let fullscreen: Bool
     enum CodingKeys: String, CodingKey {
-        case display
+        case display, label
         case fullscreen = "is-native-fullscreen"
     }
 }
 struct Display: Decodable { let id: Int; let index: Int }
+struct DisplayPlan: Decodable { let id: Int; let index: Int; let workspaces: [Int] }
 
 func run(_ executable: String, _ arguments: [String]) throws -> Data {
     let task = Process(), pipe = Pipe()
@@ -45,7 +47,7 @@ func waitFor<T>(_ action: () throws -> T?) rethrows -> T? {
     } while Date() < deadline
     return nil
 }
-func ensureSpaces(yabai: String) throws -> Int {
+func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
     func displays() throws -> [Display] {
         try JSONDecoder().decode([Display].self, from: run(yabai, ["-m", "query", "--displays"]))
     }
@@ -53,15 +55,22 @@ func ensureSpaces(yabai: String) throws -> Int {
         try JSONDecoder().decode([Space].self, from: run(yabai, ["-m", "query", "--spaces"]))
     }
     func count(_ all: [Space], _ display: Display) -> Int {
-        all.filter { $0.display == display.index && !$0.fullscreen }.count
+        all.filter {
+            $0.display == display.index && !$0.fullscreen &&
+            ($0.label.isEmpty || $0.label.range(of: "^ws[1-9]$", options: .regularExpression) != nil)
+        }.count
     }
     let screens = try displays()
-    guard (1...2).contains(screens.count) else {
-        throw Failure(description: "Automatic desktops support one or two monitors.")
-    }
-    let target = screens.count == 1 ? 6 : 3
+    guard !plan.isEmpty, plan.count <= 3,
+          plan.map(\.id).sorted() == screens.map(\.id).sorted(),
+          plan.allSatisfy({ entry in
+              screens.contains { $0.id == entry.id && $0.index == entry.index } &&
+              (1...6).contains(entry.workspaces.count)
+          }) else { throw Failure(description: "Monitor layout changed; retry after it settles.") }
     let initial = try spaces()
-    guard screens.contains(where: { count(initial, $0) < target }) else { return 0 }
+    guard screens.contains(where: { screen in
+        count(initial, screen) < plan.first(where: { $0.id == screen.id })!.workspaces.count
+    }) else { return 0 }
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
     guard AXIsProcessTrustedWithOptions(options) else {
         throw Failure(description: "Enable Dotfiles Spaces in System Settings > Privacy & Security > Accessibility, then run ./wm.sh spaces again.")
@@ -84,6 +93,7 @@ func ensureSpaces(yabai: String) throws -> Int {
     }
     var created = 0
     for screen in screens {
+        let target = plan.first(where: { $0.id == screen.id })!.workspaces.count
         // Requery after each click: native indices can change as Spaces appear.
         for _ in 0..<target {
             guard try displays().map(\.id) == screens.map(\.id) else {
@@ -113,10 +123,30 @@ func ensureSpaces(yabai: String) throws -> Int {
 }
 
 let arguments = CommandLine.arguments
-if arguments.count == 3 {
+if arguments.count == 2 && arguments[1] == "--display-info" {
+    // Read-only metadata for per-screen notch padding; no Accessibility needed.
+    var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+    var count: UInt32 = 0
+    guard CGGetActiveDisplayList(16, &ids, &count) == .success else { exit(1) }
+    let result = ids.prefix(Int(count)).map { id -> [String: Any] in
+        let screen = NSScreen.screens.first {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == id
+        }
+        let frame = CGDisplayBounds(id)
+        let uuid = CGDisplayCreateUUIDFromDisplayID(id).takeRetainedValue()
+        return ["id": Int(id), "builtin": CGDisplayIsBuiltin(id) != 0,
+                "name": screen?.localizedName ?? "", "uuid": CFUUIDCreateString(nil, uuid) as String,
+                "frame": ["x":frame.origin.x, "y":frame.origin.y, "w":frame.width, "h":frame.height]]
+    }
+    if let data = try? JSONSerialization.data(withJSONObject: result),
+       let json = String(data: data, encoding: .utf8) { print(json) }
+} else if arguments.count == 4 {
     let resultPath = arguments[2]
     let message: String
-    do { message = "OK Created \(try ensureSpaces(yabai: arguments[1])) missing desktops.\n" }
+    do {
+        let plan = try JSONDecoder().decode([DisplayPlan].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[3])))
+        message = "OK Created \(try ensureSpaces(yabai: arguments[1], plan: plan)) missing desktops.\n"
+    }
     catch { message = "ERROR \(error)\n" }
     try? message.write(toFile: resultPath, atomically: true, encoding: .utf8)
 } else {

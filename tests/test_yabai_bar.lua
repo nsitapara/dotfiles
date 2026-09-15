@@ -92,4 +92,19 @@ events["yabai.observer:space_change"]({})
 laptop.spaces = {laptop.spaces[1]}
 callbacks[5](laptop)
 assert(items["yabai.space.native7"].props.drawing == false, "Removed extra desktop disappears")
+events["yabai.observer:display_change"]({})
+local triple = fixture()
+triple.displays[#triple.displays+1] = {index=3,id=300,frame={x=-1920,y=0}}
+triple.bar_displays[#triple.bar_displays+1] = {DirectDisplayID=300,["arrangement-id"]=3}
+triple.layout = {{id=100,workspaces={2,4,6}},{id=200,workspaces={1,3,5}},{id=300,workspaces={7,8,9}}}
+triple.spaces = {{index=1,display=3,label="ws7",["has-focus"]=true,["is-native-fullscreen"]=false}}
+callbacks[6](triple)
+for _, i in ipairs({7,8,9}) do
+  assert(items["yabai.space." .. i].props.drawing == true)
+  assert(items["yabai.space." .. i].props.display == 3, "Laptop gets three additional slots")
+end
+assert(items["yabai.space.1"].props.display == 1, "Missing slots follow plan, not left-right fallback")
+events["yabai.observer:display_change"]({})
+callbacks[7](fixture())
+for i=7,9 do assert(items["yabai.space." .. i].props.drawing == false) end
 print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")

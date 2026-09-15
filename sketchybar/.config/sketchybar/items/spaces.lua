@@ -6,15 +6,10 @@ local space_brackets = {}
 local space_icon_slots = {} -- native macOS app-icon image items, per workspace
 local space_trails = {}     -- trailing pad so the last icon isn't flush to the edge
 
--- ============================================================================
--- WORKSPACE COUNT CONFIGURATION
--- ============================================================================
--- Change this number to add/remove workspaces (e.g., 6, 9, etc.)
--- Also update aerospace.toml keyboard shortcuts to match:
---   - Add: cmd-N = 'workspace N'
---   - Add: cmd-shift-N = 'move-node-to-workspace N --focus-follows-window'
--- ============================================================================
-local WORKSPACE_COUNT = 6
+-- Same shared policy as yabai: external odds/evens, plus laptop 7-9 when
+-- both externals are connected. Match physical IDs instead of fixed bar indices.
+local workspace_to_display = require("items.workspace_layout")()
+local WORKSPACE_COUNT = workspace_to_display[9] and 9 or 6
 
 -- App icons are native macOS images (background.image = "app.<name>"). Unlike a
 -- text label, an image does NOT auto-size its item, so each icon needs an
@@ -33,9 +28,8 @@ local NUMBER_SIZE_FOCUSED = 18.0 -- focused workspace number grows with the pill
 for i = 1, WORKSPACE_COUNT, 1 do
   -- Space item carries the workspace number; the bracket below is the visible
   -- pill (so the highlight wraps the number AND the icons as one element).
-  local space = sbar.add("space", "space." .. i, {
-    space = i,
-    ignore_association = "on",
+  local space = sbar.add("item", "space." .. i, {
+    display = workspace_to_display[i],
     icon = {
       font = { family = settings.font.numbers, size = 14.0 },
       string = i,
@@ -58,6 +52,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
   for s = 1, SLOTS_PER_SPACE do
     local slot = sbar.add("item", "space." .. i .. ".icon." .. s, {
       position = "left",
+      display = workspace_to_display[i],
       drawing = false,
       width = ICON_CELL,
       padding_left = 0,  -- explicit: don't inherit the global 5/5 item padding
@@ -81,6 +76,7 @@ for i = 1, WORKSPACE_COUNT, 1 do
   -- (kept small so the right gap matches the spacing between icons)
   local trail = sbar.add("item", "space." .. i .. ".trail", {
     position = "left",
+    display = workspace_to_display[i],
     drawing = false,
     width = 4,
     padding_left = 0,
@@ -94,7 +90,8 @@ for i = 1, WORKSPACE_COUNT, 1 do
 
   -- The bracket IS the pill: fill + border + focus highlight. Matches the
   -- right-side widget pills (default.lua): bg1 fill + soft bg2 2px border.
-  local space_bracket = sbar.add("bracket", bracket_members, {
+  local space_bracket = sbar.add("bracket", "space.bracket." .. i, bracket_members, {
+    display = workspace_to_display[i],
     background = {
       color = colors.bg1,
       border_color = colors.bg2,
@@ -106,9 +103,8 @@ for i = 1, WORKSPACE_COUNT, 1 do
   space_brackets[i] = space_bracket
 
   -- Padding space between pills
-  sbar.add("space", "space.padding." .. i, {
-    space = i,
-    ignore_association = "on",
+  sbar.add("item", "space.padding." .. i, {
+    display = workspace_to_display[i],
     script = "",
     width = settings.group_paddings,
   })
@@ -218,12 +214,10 @@ space_window_observer:subscribe("aerospace_workspace_change", function(env)
   update_workspace_icons()
 end)
 
--- A display appearing or disappearing (monitor hotplug, or Screen Sharing
--- swapping the physical monitors for its virtual one) means the OTHER profile
--- should be stowed — this laptop variant and the docked one differ in gaps and
--- in whether spaces are pinned per-display. switch-display-mode.sh handles that,
--- but only on a 30s launchd interval; this makes it immediate.
--- See aerospace-monitor-sync.sh.
+-- workspace_to_display above is resolved once at load, so a display appearing or
+-- disappearing (monitor hotplug, or Screen Sharing's virtual display) leaves
+-- these pills pinned to a stale display index. The script diffs the monitor list
+-- and only reloads when it really changed — see aerospace-monitor-sync.sh.
 space_window_observer:subscribe("display_change", function(env)
   sbar.exec(os.getenv("HOME") .. "/dotfiles/aerospace-monitor-sync.sh")
 end)

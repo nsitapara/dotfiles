@@ -208,8 +208,10 @@ case "$1" in
         "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"
         reload_bar
         echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
-        echo "All six desktop slots are ready."
-        trap - EXIT ;;
+        echo "All configured desktop slots are ready."
+        trap - EXIT
+        exec 9>&-
+        "$ROOT/switch-display-mode.sh" ;;
     aerospace)
         check_external_services
         stop_trial
@@ -235,6 +237,10 @@ case "$1" in
             skhd --reload
             check_skhd "$skhd_offset"
         fi
-        reload_bar ;;
+        reload_bar
+        # yabairc resets global padding; reapply per-screen padding after reload.
+        rm -f "$STATE/display-profile.signature"
+        exec 9>&-
+        "$ROOT/switch-display-mode.sh" ;;
     *) die "Unknown command: $1. Run ./wm.sh help" ;;
 esac

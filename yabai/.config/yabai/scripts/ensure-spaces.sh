@@ -7,13 +7,15 @@ exec 8>"${TMPDIR:-/tmp}/.dotfiles-create-spaces.lock"
 lockf -s -t 20 8 || { echo 'Desktop setup is already running.' >&2; exit 1; }
 "$HERE/build-spaces-helper.sh"
 result=$(mktemp "${TMPDIR:-/tmp}/dotfiles-spaces.XXXXXX")
-trap 'rm -f "$result"' EXIT
+plan=$(mktemp "${TMPDIR:-/tmp}/dotfiles-layout.XXXXXX")
+trap 'rm -f "$result" "$plan"' EXIT
+"$HERE/display-layout.sh" > "$plan"
 # Launch as an app so macOS grants permission to this helper, not the terminal.
-open -W -n -g "$HOME/Applications/Dotfiles Spaces.app" --args "$(command -v yabai)" "$result"
+open -W -n -g "$HOME/Applications/Dotfiles Spaces.app" --args "$(command -v yabai)" "$result" "$plan"
 if ! grep -q '^OK ' "$result"; then
     cat "$result" >&2
     echo 'Automatic desktop setup did not finish.' >&2
     exit 1
 fi
 cat "$result"
-"$HERE/spaces.sh"
+"$HERE/spaces.sh" --plan "$plan" "$@"

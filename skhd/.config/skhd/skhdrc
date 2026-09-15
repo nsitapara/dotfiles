@@ -57,6 +57,20 @@ cmd + shift - 6 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
 cmd - 0x58 : yabai -m space --focus ws6
 cmd + shift - 0x58 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
 
+# Laptop workspaces when both external monitors are connected.
+cmd - 7 : yabai -m space --focus ws7
+cmd + shift - 7 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd - 0x59 : yabai -m space --focus ws7
+cmd + shift - 0x59 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd - 8 : yabai -m space --focus ws8
+cmd + shift - 8 : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd - 0x5B : yabai -m space --focus ws8
+cmd + shift - 0x5B : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd - 9 : yabai -m space --focus ws9
+cmd + shift - 9 : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+cmd - 0x5C : yabai -m space --focus ws9
+cmd + shift - 0x5C : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+
 cmd - pageup : yabai -m space --focus prev
 cmd - pagedown : yabai -m space --focus next
 cmd - home : yabai -m space --focus ws1
