@@ -274,7 +274,7 @@ return to the window you just left. This works with different applications or
 two windows of the same application, including floating windows and windows on
 other monitors. The yabai helper remembers the last two windows from focus
 events so floating windows are eligible too. It has no polling loop or daemon.
-It changes focus without rearranging windows. The pointer follows focus.
+It changes focus without rearranging windows or moving the pointer.
 When the target is on an inactive Space, yabai explicitly activates that Space
 first, using the same switch command as Cmd + number, then focuses the window.
 
@@ -313,10 +313,10 @@ Focus prefers the same row or column when multiple windows share the incoming
 edge. An empty destination monitor receives focus without opening an application.
 Arrow selection also handles partially overlapping windows when an app refuses
 to shrink to its assigned tile size.
-Keyboard focus changes move the pointer to the focused window in yabai and
-both AeroSpace profiles. AeroSpace also centers it on an empty monitor when
-switching there. Clicking a workspace number or app icon in SketchyBar keeps
-the pointer in place. This applies to docked and undocked bars.
+Window, workspace, and monitor focus changes keep the pointer in place in
+yabai and both AeroSpace profiles. This applies to keyboard shortcuts and
+SketchyBar clicks, with either docked or undocked bars. No click override is
+needed.
 
 The shared `wm-direction.py` helper uses the current window sizes and physical
 monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;
