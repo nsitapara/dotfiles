@@ -91,7 +91,7 @@ outer.right =      10
 
     cmd-j = 'layout tiles horizontal vertical'
     cmd-comma = 'layout accordion horizontal vertical'
-    alt-f = 'fullscreen'
+    cmd-f = 'fullscreen'
 
     cmd-1 = 'workspace 1'
     cmd-2 = 'workspace 2'
@@ -159,6 +159,7 @@ outer.right =      10
     # Floating window
     # Float toggle: when a window BECOMES floating, shrink it to 1600x1000 so it
     # visibly pops out of the layout (AeroSpace has no float-size memory).
+    cmd-ctrl-shift-f = 'exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh'
     cmd-ctrl-alt-shift-f = 'exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh'
 
     # Modes

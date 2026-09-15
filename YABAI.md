@@ -209,10 +209,10 @@ The baseline follows the currently active **docked** AeroSpace configuration.
 | Cmd + Ctrl + left / right | Send window to previous / next display, wrapping |
 | Cmd + equals / minus | Resize width |
 | Cmd + Shift + equals / minus | Resize height |
-| Alt + F | Fill the tiling area without native fullscreen |
+| Cmd + F | Fill the tiling area without native fullscreen |
 | Cmd + J | Toggle the focused window's split direction |
 | Cmd + comma | Toggle whole-Space BSP / stack layout |
-| Cmd + Ctrl + Alt + Shift + F | Float / tile; center a newly floated window |
+| Cmd + Ctrl + Shift + F | Float / tile; center a newly floated window |
 | Cmd + Ctrl + Alt + Shift + D | Restore BSP layout and balance windows |
 | Cmd + Ctrl + Alt + Shift + R | Resize mode; arrows resize, Shift uses larger steps |
 | Cmd + Ctrl + Alt + Shift + W | Workspace/display navigation mode |

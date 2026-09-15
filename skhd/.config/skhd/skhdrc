@@ -1,6 +1,6 @@
 # yabai shortcuts based on the docked AeroSpace profile.
 # skhd executes actions through /bin/bash, set by wm.sh.
-# Modes exit with Escape or Space. Cmd+F remains the app's Find shortcut.
+# Modes exit with Escape or Space. Cmd+F expands the focused window within its workspace.
 # Reserved for Raycast: Cmd+Shift+C/E/G/B/P/S/V/Z/D, Cmd+Return,
 # Alt+Shift+M, Ctrl+Cmd+Space. Keep modes non-capturing so these pass through.
 :: default : "$HOME/.config/skhd/mode.sh" default
@@ -30,7 +30,7 @@ cmd + shift - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize height -32
 cmd - 0 : yabai -m space --balance
 cmd - j : yabai -m window --toggle split
 cmd - 0x2B : "$HOME/.config/yabai/scripts/window.sh" layout
-alt - f : yabai -m window --toggle zoom-fullscreen
+cmd - f : yabai -m window --toggle zoom-fullscreen
 
 cmd - 1 : yabai -m space --focus ws1
 cmd + shift - 1 : "$HOME/.config/yabai/scripts/window.sh" send-space ws1
@@ -78,6 +78,7 @@ cmd - end : yabai -m space --focus ws6
 alt - tab : yabai -m space --focus recent
 cmd + ctrl - right : "$HOME/.config/yabai/scripts/window.sh" send-display next
 cmd + ctrl - left : "$HOME/.config/yabai/scripts/window.sh" send-display prev
+cmd + ctrl + shift - f : "$HOME/.config/yabai/scripts/window.sh" float
 cmd + ctrl + alt + shift - f : "$HOME/.config/yabai/scripts/window.sh" float
 cmd + ctrl + alt + shift - d : yabai -m space --layout bsp; yabai -m space --balance
 cmd + ctrl + alt + shift - r ; resize
