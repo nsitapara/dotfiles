@@ -4,6 +4,18 @@ Yabai is the current default. It manages windows; skhd handles shortcuts.
 Raycast continues to launch apps. AeroSpace is installed and configured as a
 fallback, with its own automatic startup disabled in both display profiles.
 
+## Temporary macOS 27 compatibility build
+
+As of September 14, 2026, this Mac runs a locally patched yabai 7.1.25 through
+`~/Applications/Yabai macOS 27.app`. The original Homebrew binary is preserved.
+This workaround is temporary: return to the official release when it fixes
+SIP-enabled Space switching and the macOS 27 window-management paths.
+
+See [the patch record and official-release migration steps](yabai-patches/README.md)
+for the exact upstream commits, permission setup, installed paths, validation,
+rollback command, and cleanup list. `yabai --version` alone cannot distinguish
+the local build because both report 7.1.25.
+
 ## Switch now and at future logins
 
 From this checkout, use:
