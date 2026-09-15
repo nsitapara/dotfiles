@@ -109,7 +109,8 @@ local function render(spaces, windows, displays, bar_displays, layout)
     local id, app = window.space, window.app
     apps_by_space[id] = apps_by_space[id] or {}
     seen_apps[id] = seen_apps[id] or {}
-    if app and app ~= "" and not seen_apps[id][app] and not window["is-hidden"] then
+    -- Chrome gets one icon per window; other apps remain grouped.
+    if app and app ~= "" and (app == "Google Chrome" or not seen_apps[id][app]) and not window["is-hidden"] then
       seen_apps[id][app] = true
       table.insert(apps_by_space[id], app)
     end

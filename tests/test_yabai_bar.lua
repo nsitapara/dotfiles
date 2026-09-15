@@ -41,7 +41,9 @@ local function fixture()
       {index=2,display=2,label="ws2",["has-focus"]=false,["is-native-fullscreen"]=false},
       {index=3,display=2,label="",["is-native-fullscreen"]=true},
     },
-    windows = {{space=1,app="Terminal"},{space=1,app="Terminal"},{space=1,app="Browser"}},
+    windows = {{space=1,app="Terminal"},{space=1,app="Terminal"},
+      {space=1,app="Google Chrome"},{space=1,app="Google Chrome"},
+      {space=1,app="Google Chrome",["is-hidden"]=true}},
     displays = {{index=1,id=100,frame={x=0,y=0}},{index=2,id=200,frame={x=1920,y=0}}},
     bar_displays = {{DirectDisplayID=100,["arrangement-id"]=2},{DirectDisplayID=200,["arrangement-id"]=1}},
   }
@@ -50,8 +52,10 @@ callbacks[1](fixture())
 assert(items["yabai.space.3"].props.display == 2, "Must join physical IDs, not indices")
 assert(items["yabai.space.3"].props.icon.string == "3")
 assert(items["yabai.space.3.app.1"].props.background.image == "app.Terminal")
-assert(items["yabai.space.3.app.2"].props.background.image == "app.Browser")
-assert(items["yabai.space.3.app.3"].props.drawing == false, "Deduplicate icons")
+assert(items["yabai.space.3.app.2"].props.background.image == "app.Google Chrome")
+assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
+assert(items["yabai.space.3.app.3"].props.drawing == true, "Show each Chrome window")
+assert(items["yabai.space.3.app.4"].props.drawing == false, "Group other apps and skip hidden windows")
 assert(items["yabai.space.native3"] == nil, "Skip native fullscreen Spaces")
 for _, i in ipairs({1,4,5,6}) do
   local props = items["yabai.space." .. i].props

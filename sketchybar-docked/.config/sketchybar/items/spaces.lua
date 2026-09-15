@@ -176,7 +176,7 @@ sbar.exec("aerospace list-workspaces --focused", function(result)
   set_focus(tonumber(result))
 end)
 
--- Replace the glyph label with native app icons, one per app (deduped, capped)
+-- Show Chrome once per window; group other apps. Keep the existing icon cap.
 local space_window_observer = sbar.add("item", { drawing = false, updates = true })
 local function update_workspace_icons()
   for i = 1, WORKSPACE_COUNT do
@@ -185,7 +185,7 @@ local function update_workspace_icons()
       local idx = 0
       local seen = {}
       for app_name in result:gmatch("[^\r\n]+") do
-        if app_name and app_name ~= "" and not seen[app_name] then
+        if app_name and app_name ~= "" and (app_name == "Google Chrome" or not seen[app_name]) then
           seen[app_name] = true
           if idx < #slots then
             idx = idx + 1
