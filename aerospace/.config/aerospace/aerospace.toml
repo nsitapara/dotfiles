@@ -1,7 +1,7 @@
 # Reference: https://github.com/i3/i3/blob/next/etc/config
 
-# Start AeroSpace at login
-start-at-login = true
+# Login startup is managed by ./wm.sh default; see YABAI.md.
+start-at-login = false
 
 after-startup-command = [
     # JankyBorders - colors loaded from Omarchy theme

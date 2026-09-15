@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install and switch window managers. Trial jobs exist only for this login.
+# Install and switch window managers. wm-startup.py manages the login default.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
@@ -79,16 +79,22 @@ Usage: ./wm.sh COMMAND
   prepare              Save/set native Spaces preferences; then log out and in
   yabai                Quit AeroSpace, start yabai + skhd, reload SketchyBar
   aerospace            Stop the trial, open AeroSpace, reload SketchyBar
+  default MANAGER      Switch now and at login: yabai or aerospace
+  default status       Show the saved login default
+  default off          Remove login launcher; keep current manager running
   spaces               Create missing desktops and label odd/even monitors
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in
   status               Show running apps and trial jobs
 
-SIP stays enabled. Trial jobs do not start at the next login. See YABAI.md.
+SIP stays enabled. Use default to persist a choice across logins. See YABAI.md.
 EOF
         exit 0 ;;
 esac
 [ "$(uname -s)" = Darwin ] || die "This script requires macOS."
+if [ "$1" = default ]; then
+    exec /usr/bin/python3 "$ROOT/wm-startup.py" "${2:-status}"
+fi
 mkdir -p "$STATE"
 umask 077
 

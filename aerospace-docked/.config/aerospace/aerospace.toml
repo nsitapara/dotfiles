@@ -1,7 +1,7 @@
 # Reference: https://github.com/i3/i3/blob/next/etc/config
 
 # Start AeroSpace at login
-start-at-login = true
+start-at-login = false # Login startup is managed by ./wm.sh default; see YABAI.md.
 
 after-startup-command = [
     # JankyBorders has a built-in detection of already running process,

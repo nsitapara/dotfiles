@@ -1,11 +1,38 @@
-# Try yabai and skhd
+# Yabai as the default window manager
 
-This is an optional macOS setup alongside AeroSpace. Yabai manages windows;
-skhd handles shortcuts. Raycast continues to launch apps.
+Yabai is the current default. It manages windows; skhd handles shortcuts.
+Raycast continues to launch apps. AeroSpace is installed and configured as a
+fallback, with its own automatic startup disabled in both display profiles.
 
-The trial keeps SIP enabled. It uses transient launchd jobs for this login,
-without installing yabai/skhd login services. AeroSpace's existing login setting
-is unchanged. At the next login, use `./wm.sh yabai` to start another trial.
+## Switch now and at future logins
+
+From this checkout, use:
+
+```sh
+./wm.sh default yabai       # Use Yabai now and after login/restart
+./wm.sh default aerospace   # Switch back if Yabai's behavior or performance is poor
+./wm.sh default status      # Show the saved login choice
+```
+
+For a temporary comparison, `./wm.sh aerospace` and `./wm.sh yabai` change only
+the current session. The saved default returns at the next login. No logout is
+needed to switch managers after the initial macOS Spaces setup below.
+
+`default` verifies that the selected manager starts before saving the choice.
+It installs `~/Library/LaunchAgents/local.dotfiles.wm-login.plist`, which runs
+the existing switcher once per graphical login. The switcher stops the other
+manager before starting the chosen one. Its yabai/skhd jobs are recreated at
+each login; SIP stays enabled. There is no automatic restart loop to undo a
+manual switch. Keep AeroSpace's `start-at-login` false even when it is the
+selected default, so only this launcher controls startup.
+
+If startup fails, inspect `~/.local/state/dotfiles-wm/login.err.log` and the
+`yabai.err.log` / `skhd.err.log` files beside it. Run `./wm.sh doctor`, or switch
+back with `./wm.sh default aerospace`. To remove automatic startup while leaving
+the current manager running, use `./wm.sh default off`.
+
+The launcher refers to this checkout's absolute path. After moving the checkout,
+rerun `./wm.sh default yabai` or `./wm.sh default aerospace` from its new location.
 
 ## Plan and first installation
 
@@ -117,11 +144,12 @@ AeroSpace keeps its own app assignments.
 ## Switch back
 
 ```sh
-./wm.sh aerospace
+./wm.sh default aerospace
 ```
 
-This stops the trial jobs, verifies yabai/skhd have exited, opens AeroSpace,
-reloads the AeroSpace SketchyBar items, and resumes the display profile switcher.
+This changes the login default, stops the yabai/skhd jobs, verifies they have
+exited, opens AeroSpace, reloads its SketchyBar items, and resumes the display
+profile switcher.
 The AeroSpace configuration is preserved. Extra native desktops remain, and
 the previous window positions and AeroSpace workspace assignments are not
 restored from a snapshot. Use Mission Control to gather windows into your usual
@@ -231,6 +259,7 @@ Tracked files:
 
 - `Brewfile.yabai`: optional package dependencies.
 - `wm.sh`: installation, preferences, switching, rollback, and diagnostics.
+- `wm-startup.py`: saved login selection and LaunchAgent installation.
 - `yabai/.config/yabai/yabairc`: tiling, gaps, floating rules, and event signals.
 - `yabai/.config/yabai/scripts/`: desktop setup, workspace labels, and window helpers.
 - `yabai/.config/yabai/helpers/Spaces.swift`: SIP-enabled desktop creation helper.
