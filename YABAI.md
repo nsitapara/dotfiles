@@ -301,8 +301,10 @@ Change `PRESETS` in `wm-size.py` to customize the sizes for both managers.
 
 This preserves the two-column layout, including multiple windows stacked in
 either column. The focused window stays selected. Floating, fullscreen,
-accordion/stack layouts, overlapping windows, and layouts with more or fewer
-than two aligned columns are left alone. App minimum widths can limit shrinking.
+accordion/stack layouts, and layouts with more or fewer than two aligned
+columns are left alone. App minimum widths can limit shrinking. Yabai calculates
+the split from column positions, the configured gap, and the display edge, so
+an app extending beyond its assigned tile does not disable the presets.
 The helper runs only on a keypress; yabai uses the existing native socket.
 AeroSpace reads window geometry on demand. No background watcher is added.
 

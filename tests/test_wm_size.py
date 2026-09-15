@@ -48,10 +48,29 @@ class Presets(unittest.TestCase):
             windows = [window(1, 0, 1000), window(2, 1016, 1000)]
             wm = Mock()
             wm.eligible.return_value = True
-            wm.query.side_effect = [windows[selected_id-1], {'type': 'bsp'}, windows]
+            wm.query.side_effect = [windows[selected_id-1], {'type': 'bsp'}, windows,
+                                   {'frame': {'x': 0, 'w': 2026}}]
+            wm.run.side_effect = [Mock(stdout='16'), Mock(stdout='10')]
             size.resize_yabai(wm, 1)
             wm.window.assert_called_once_with(selected_id, '--resize', expected)
-            wm.run.assert_not_called()
+            self.assertTrue(all(call.args[2] == 'config' for call in wm.run.call_args_list))
+
+    def test_laptop_minimum_sizes_do_not_disable_presets(self):
+        left = window(1, 10, 1269, 48, 1061)
+        top = window(2, 1294, 840, 48, 697)
+        bottom = window(3, 1294, 500, 760, 375)
+        # Actual right-hand apps exceed their 423px tiles. The split still
+        # occupies 75/25, and shrinking the left column must restore 65/35.
+        self.assertEqual(size.resize_plan(left, [left, top, bottom], -1,
+                         gap=15, right_edge=1717), ('right', -169))
+        self.assertEqual(size.resize_plan(bottom, [left, top, bottom], 1,
+                         gap=15, right_edge=1717), ('left', 423))
+
+    def test_minimum_height_does_not_change_column_membership(self):
+        left = window(1, 10, 846, 48, 1061)
+        top = window(2, 872, 846, 48, 697)
+        bottom = window(3, 872, 846, 760, 375)
+        self.assertEqual(size.resize_plan(bottom, [left, top, bottom], 1), ('left', 254))
 
     def test_yabai_declines_zoom_and_stack(self):
         for flag in ['has-fullscreen-zoom', 'has-parent-zoom', 'stack-index']:

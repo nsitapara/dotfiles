@@ -13,7 +13,7 @@ PRESETS = (0.50, 0.65, 0.75)
 TOLERANCE = 2
 
 
-def resize_plan(selected, windows, step):
+def resize_plan(selected, windows, step, *, gap=None, right_edge=None):
     """Recognize two aligned columns; decline overlaps and ambiguous layouts."""
     columns = []
     for window in sorted(windows, key=lambda w: w['frame']['x']):
@@ -26,26 +26,36 @@ def resize_plan(selected, windows, step):
             columns.append([window])
     if len(columns) != 2:
         return None
+    logical = gap is not None and right_edge is not None
     bounds = []
     for column in columns:
         first = column[0]['frame']
-        if any(abs(w['frame']['w'] - first['w']) > TOLERANCE for w in column):
+        if not logical and any(abs(w['frame']['w'] - first['w']) > TOLERANCE for w in column):
             return None
         rows = sorted(column, key=lambda w: w['frame']['y'])
-        if any(a['frame']['y'] + a['frame']['h'] > b['frame']['y'] + TOLERANCE
+        # Minimum heights can overrun the row below. Identical row origins,
+        # however, indicate an overlapping/stacked layout rather than two rows.
+        if any((abs(a['frame']['y'] - b['frame']['y']) <= TOLERANCE if logical else
+                a['frame']['y'] + a['frame']['h'] > b['frame']['y'] + TOLERANCE)
                for a, b in zip(rows, rows[1:])):
             return None
         bounds.append((rows[0]['frame']['y'], rows[-1]['frame']['y'] + rows[-1]['frame']['h']))
     left, right = (column[0]['frame'] for column in columns)
-    if (left['x'] + left['w'] > right['x'] + TOLERANCE
-            or any(abs(a-b) > TOLERANCE for a, b in zip(*bounds))):
+    # Bottom edges need not match: an app can refuse a shorter height without
+    # changing which column it belongs to.
+    if ((not logical and left['x'] + left['w'] > right['x'] + TOLERANCE)
+            or abs(bounds[0][0]-bounds[1][0]) > TOLERANCE):
         return None
     side = next((i for i, column in enumerate(columns)
                  if any(w['id'] == selected['id'] for w in column)), None)
     if side is None:
         return None
-    width = selected['frame']['w']
-    total = left['w'] + right['w']
+    widths = ([right['x'] - left['x'] - gap, right_edge - right['x']]
+              if logical else [left['w'], right['w']])
+    if min(widths) <= 0:
+        return None
+    width = widths[side]
+    total = sum(widths)
     targets = [round(total * ratio) for ratio in PRESETS]
     candidates = [target for target in targets
                   if (target-width)*step > TOLERANCE]
@@ -68,7 +78,15 @@ def resize_yabai(wm, step):
     windows = [w for w in rows if wm.eligible(w) and w['display'] == selected['display']]
     if any(w.get('stack-index') for w in windows):
         return
-    plan = resize_plan(selected, windows, step)
+    # Actual AX window sizes can exceed their tiles at an app's minimum size.
+    # Column origins plus the configured gap and screen edge still describe
+    # the split, so shrinking back works even after an app refuses a preset.
+    display = wm.query('--displays', '--display', selected['display'])['frame']
+    def setting(name):
+        return float(wm.run('yabai', '-m', 'config', '--space', selected['space'], name).stdout)
+    gap = setting('window_gap')
+    right_edge = display['x'] + display['w'] - setting('right_padding')
+    plan = resize_plan(selected, windows, step, gap=gap, right_edge=right_edge)
     if plan:
         edge, delta = plan
         wm.window(selected['id'], '--resize', f'{edge}:{delta if edge == "right" else -delta}:0')
