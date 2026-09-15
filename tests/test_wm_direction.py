@@ -302,6 +302,58 @@ class DirectionTests(unittest.TestCase):
             cli.assert_not_called()
             if code:self.assertEqual(result.stderr,'invalid window\n')
 
+    def test_minimum_height_finishes_after_stabilizing(self):
+        expected = {1:dict(x=872,y=586,w=846,h=523)}
+        clamped = [w(1,872,586,846,620)]
+        with patch.object(wm,'query',return_value=clamped), \
+                patch.object(wm.time,'monotonic',side_effect=[0,0,.05,.101]), \
+                patch.object(wm.time,'sleep'):
+            self.assertEqual(wm.wait_for_frames(1,expected),clamped)
+
+    def test_clamped_frames_must_stop_changing(self):
+        expected = {1:dict(x=872,y=586,w=846,h=523)}
+        resizing = [w(1,872,586,846,800)]
+        clamped = [w(1,872,586,846,620)]
+        with patch.object(wm,'query',side_effect=[resizing,clamped,clamped,clamped]) as query, \
+                patch.object(wm.time,'monotonic',side_effect=[0,0,.09,.11,.20]), \
+                patch.object(wm.time,'sleep'):
+            self.assertEqual(wm.wait_for_frames(1,expected),clamped)
+        self.assertEqual(query.call_count,4)
+
+    def test_replacement_can_shrink_below_previous_occupants_minimum(self):
+        expected = {1:dict(x=872,y=586,w=846,h=620)}
+        actual = [w(1,872,586,846,523)]
+        with patch.object(wm,'query',return_value=actual), \
+                patch.object(wm.time,'monotonic',side_effect=[0,0,.101]), \
+                patch.object(wm.time,'sleep'):
+            self.assertEqual(wm.wait_for_frames(1,expected),actual)
+
+    def test_wrong_positions_still_timeout(self):
+        expected = {1:dict(x=872,y=586,w=846,h=523)}
+        for frame in [w(1,800,586,846,620),w(1,872,500,700,620)]:
+            with self.subTest(frame=frame), patch.object(wm,'query',return_value=[frame]), \
+                    patch.object(wm.time,'monotonic',side_effect=[0,0,.2,1.01]), \
+                    patch.object(wm.time,'sleep'):
+                with self.assertRaisesRegex(RuntimeError,'Requested window frames'):
+                    wm.wait_for_frames(1,expected)
+
+    def test_closing_window_during_exact_frame_wait_stops(self):
+        with patch.object(wm,'query',return_value=[]):
+            with self.assertRaisesRegex(RuntimeError,'Windows changed'):
+                wm.wait_for_frames(1,{1:dict(x=0,y=0,w=500,h=500)})
+
+    def test_stable_minimum_height_overlap_can_be_reordered(self):
+        clamped = [w(1,0,0,500,620),w(2,0,538,500,523)]
+        with patch.object(wm,'query',return_value=clamped) as query, patch.object(wm.time,'sleep'):
+            self.assertEqual(wm.settled_windows(1,{1,2}),clamped)
+        self.assertEqual(query.call_count,4)
+
+    def test_coincident_transient_tiles_are_not_accepted_as_minimum_sizes(self):
+        coincident = [w(1,0,0,500,620),w(2,0,0,500,523)]
+        with patch.object(wm,'query',return_value=coincident), patch.object(wm.time,'sleep'):
+            with self.assertRaisesRegex(RuntimeError,'have not settled'):
+                wm.settled_windows(1,{1,2})
+
     def test_socket_does_not_replay_a_move_after_connection_breaks(self):
         from unittest.mock import MagicMock
         connection=MagicMock();connection.__enter__.return_value=connection

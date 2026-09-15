@@ -269,31 +269,42 @@ def insert(id, direction):
 
 def settled_windows(space, ids):
     # macOS sends frame updates after yabai acknowledges a layout command.
-    # Wait for non-overlapping, stable frames before deriving another action.
+    # Wait for stable frames before deriving another action.
     previous = None
+    stable_samples = 0
     for _ in range(25):
         time.sleep(0.04)
         windows = [w for w in query('--windows', '--space', space) if w['id'] in ids]
         if {w['id'] for w in windows} != ids:
             raise RuntimeError('Windows changed during rearrangement; stopped.')
         overlap = False
+        coincident = False
         for i, a in enumerate(windows):
             f = a['frame']
             for b in windows[i+1:]:
                 g = b['frame']
+                if abs(f['x']-g['x']) <= 2 and abs(f['y']-g['y']) <= 2:
+                    coincident = True
                 if (min(f['x']+f['w'],g['x']+g['w'])-max(f['x'],g['x']) > 2 and
                         min(f['y']+f['h'],g['y']+g['h'])-max(f['y'],g['y']) > 2):
                     overlap = True
         snapshot = sorted((w['id'], tuple(w['frame'][a] for a in ('x','y','w','h'))) for w in windows)
+        stable_samples = stable_samples + 1 if snapshot == previous else 1
         if not overlap and snapshot == previous:
+            return windows
+        # App minimum sizes can leave settled tiles overlapping. Distinct,
+        # stable origins still let us restore their reading order safely.
+        if overlap and not coincident and stable_samples >= 4:
             return windows
         previous = snapshot
     raise RuntimeError('Window frames have not settled; stopped.')
 
 
 def wait_for_frames(space, expected):
-    """Finish as soon as the requested geometry arrives, without a fixed delay."""
+    """Wait for the requested frames, allowing stable minimum-size clamping."""
     deadline = time.monotonic() + 1
+    previous = None
+    stable_since = None
     while True:
         windows = [w for w in query('--windows', '--space', space) if w['id'] in expected]
         if {w['id'] for w in windows} != set(expected):
@@ -301,7 +312,23 @@ def wait_for_frames(space, expected):
         if all(abs(w['frame'][axis] - expected[w['id']][axis]) <= 2
                for w in windows for axis in ('x','y','w','h')):
             return windows
-        if time.monotonic() >= deadline:
+        now = time.monotonic()
+        # Origins must match. Sizes were estimated from the previous occupants:
+        # swapping a minimum-sized app out can also make its replacement smaller.
+        # Require stable actual frames instead of waiting for those estimates.
+        positions_match = all(
+            all(abs(w['frame'][a] - expected[w['id']][a]) <= 2 for a in ('x', 'y'))
+            for w in windows
+        )
+        snapshot = sorted((w['id'], tuple(w['frame'][a] for a in ('x','y','w','h'))) for w in windows)
+        if not positions_match:
+            stable_since = None
+        elif snapshot != previous or stable_since is None:
+            stable_since = now
+        elif now - stable_since >= 0.1:
+            return windows
+        previous = snapshot
+        if now >= deadline:
             raise RuntimeError('Requested window frames have not arrived; stopped.')
         time.sleep(0.005)
 

@@ -377,6 +377,16 @@ if it cannot connect, and never retries a move after a request has been sent.
 Balanced two- and three-window layouts reuse their existing tiles with swaps
 and, when needed, a mirror or rotation. Simple swaps and these layout changes
 finish when the requested window bounds arrive, without fixed settling delays.
+If an app enforces a minimum size, the helper accepts its actual size after
+100 ms without further changes, provided every window reached its expected
+position. This also handles the replacement app shrinking below the previous
+occupant's minimum size. Previously T3 refused a 523-point tile and stayed at
+620 points, causing a one-second timeout that discarded subsequent move keys.
+The reproduced swap fell from 1.03 seconds to approximately 0.13 seconds.
+The regrouping path also accepts stable overlapping tiles with distinct origins
+after four samples, so minimum sizes do not force another one-second timeout.
+Moving frames, wrong positions, and windows disappearing still prevent further
+layout operations.
 More complex layouts retain the general regrouping path, so they can still show
 intermediate redraws. No window animation is enabled by this helper.
 
