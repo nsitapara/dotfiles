@@ -15,6 +15,9 @@ require("items")
 sbar.add("item", "display_mode", { drawing = false, label = { string = "docked" } })
 sbar.end_config()
 
+-- Move below the native menu while the pointer is at the screen's top edge.
+sbar.exec('/usr/bin/python3 "$HOME/dotfiles/sketchybar-hover/run.py"')
+
 -- Run the event loop of the sketchybar module (without this there will be no
 -- callback functions executed in the lua module)
 sbar.event_loop()
