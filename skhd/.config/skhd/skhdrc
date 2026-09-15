@@ -76,7 +76,7 @@ cmd - pagedown : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" n
 cmd - home : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
 cmd - end : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
 alt - tab : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" recent
-cmd + alt - tab : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" toggle
+ctrl - tab : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" toggle
 cmd + ctrl - right : "$HOME/.config/yabai/scripts/window.sh" send-display next
 cmd + ctrl - left : "$HOME/.config/yabai/scripts/window.sh" send-display prev
 cmd + ctrl + shift - f : "$HOME/.config/yabai/scripts/window.sh" float

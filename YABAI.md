@@ -222,7 +222,7 @@ the selected window between monitors. Cmd + G is available to applications.
 | Cmd + Page Up / Page Down | Previous / next native Space |
 | Cmd + Home / End | Workspace 1 / 6 |
 | Alt + Tab | Previous focused Space |
-| Cmd + Alt + Tab | Toggle between current and previously focused window |
+| Ctrl + Tab | Toggle between current and previously focused window |
 | Cmd + Ctrl + left / right | Send window to previous / next display, wrapping |
 | Cmd + equals / minus | Resize width |
 | Cmd + Shift + equals / minus | Resize height |
@@ -252,7 +252,7 @@ native Space/display-change events.
 
 ### Previous window
 
-**Cmd + Alt + Tab** returns to the last focused window. Press it again to
+**Ctrl + Tab** returns to the last focused window. Press it again to
 return to the window you just left. This works with different applications or
 two windows of the same application, including floating windows and windows on
 other monitors. The yabai helper remembers the last two windows from focus
