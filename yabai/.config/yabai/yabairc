@@ -46,6 +46,10 @@ yabai -m signal --add label=dotfiles-focus-new-app-window event=window_created \
     app='^(Warp|PyCharm|GitHub Desktop|Slack)$' \
     action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; yabai -m window --focus "$YABAI_WINDOW_ID"'
 
+# Cmd+Tab can switch to a hidden app without unhiding it. Force it visible.
+yabai -m signal --add label=dotfiles-unhide-front-app event=application_front_switched \
+    action='"$HOME/.config/yabai/scripts/unhide-app.sh" "$YABAI_PROCESS_ID"'
+
 # Native 'recent' excludes floating windows, so retain a pair from focus events.
 /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" reset
 yabai -m signal --add label=dotfiles-focus-history event=window_focused \
