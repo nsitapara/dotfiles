@@ -46,13 +46,12 @@ default-root-container-orientation = "auto"
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
 key-mapping.preset = 'qwerty'
 
-# Mouse follows focus when focused monitor changes
-# on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-# on-focus-changed = "move-mouse window-lazy-center"
+# Keep the pointer with keyboard focus, including empty destination monitors.
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 # Workaround for delayed re-tiling on window open/close since 0.20/0.21 async rewrite.
 # Single-flight re-poll script — see comments in ~/dotfiles/aerospace-retile.sh.
-on-focus-changed = ['exec-and-forget $HOME/dotfiles/aerospace-retile.sh']
+on-focus-changed = ['move-mouse window-force-center', 'exec-and-forget $HOME/dotfiles/aerospace-retile.sh']
 
 [gaps]
 inner.horizontal = 15
@@ -217,10 +216,10 @@ outer.right =      10
     space = 'mode main'
     esc = 'mode main'
 
-    left = ['workspace prev', 'move-mouse window-force-center']
-    right = ['workspace next', 'move-mouse window-force-center']
-    up = ['focus-monitor prev', 'move-mouse window-force-center']
-    down = ['focus-monitor next', 'move-mouse window-force-center']
+    left = ['workspace prev']
+    right = ['workspace next']
+    up = ['focus-monitor prev']
+    down = ['focus-monitor next']
     
     shift-right = ['move-node-to-workspace next --focus-follows-window']
     shift-left = ['move-node-to-workspace prev --focus-follows-window']
