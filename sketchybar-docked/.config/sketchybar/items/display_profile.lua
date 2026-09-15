@@ -10,14 +10,13 @@ local wm = 'export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; "$HOME/dotfile
 local menu = sbar.add("item", "display.profile", {
   position = "right", updates = true,
   icon = {
-    string = "\u{100657}", color = colors.white, padding_left = 6, padding_right = 3,
+    string = "\u{100657}", color = colors.white,
     font = { style = settings.font.style_map["Regular"], size = 16.0 },
   },
   label = {
-    string = "–", color = colors.white, padding_left = 0, padding_right = 6,
+    string = "–", color = colors.white,
     font = { family = settings.font.numbers, style = settings.font.style_map["Semibold"], size = 13.0 },
   },
-  padding_left = 4, padding_right = 4,
   popup = {
     drawing = false, align = "right", height = 25,
     background = { color = colors.bg1, border_color = colors.mauve, border_width = 1, corner_radius = 9 },
