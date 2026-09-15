@@ -34,42 +34,60 @@ cmd - f : yabai -m window --toggle zoom-fullscreen
 
 cmd - 1 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
 cmd + shift - 1 : "$HOME/.config/yabai/scripts/window.sh" send-space ws1
+cmd + ctrl + shift - 1 : yabai -m window --space ws1
 cmd - 0x53 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
 cmd + shift - 0x53 : "$HOME/.config/yabai/scripts/window.sh" send-space ws1
+cmd + ctrl + shift - 0x53 : yabai -m window --space ws1
 cmd - 2 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws2
 cmd + shift - 2 : "$HOME/.config/yabai/scripts/window.sh" send-space ws2
+cmd + ctrl + shift - 2 : yabai -m window --space ws2
 cmd - 0x54 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws2
 cmd + shift - 0x54 : "$HOME/.config/yabai/scripts/window.sh" send-space ws2
+cmd + ctrl + shift - 0x54 : yabai -m window --space ws2
 cmd - 3 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws3
 cmd + shift - 3 : "$HOME/.config/yabai/scripts/window.sh" send-space ws3
+cmd + ctrl + shift - 3 : yabai -m window --space ws3
 cmd - 0x55 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws3
 cmd + shift - 0x55 : "$HOME/.config/yabai/scripts/window.sh" send-space ws3
+cmd + ctrl + shift - 0x55 : yabai -m window --space ws3
 cmd - 4 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws4
 cmd + shift - 4 : "$HOME/.config/yabai/scripts/window.sh" send-space ws4
+cmd + ctrl + shift - 4 : yabai -m window --space ws4
 cmd - 0x56 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws4
 cmd + shift - 0x56 : "$HOME/.config/yabai/scripts/window.sh" send-space ws4
+cmd + ctrl + shift - 0x56 : yabai -m window --space ws4
 cmd - 5 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws5
 cmd + shift - 5 : "$HOME/.config/yabai/scripts/window.sh" send-space ws5
+cmd + ctrl + shift - 5 : yabai -m window --space ws5
 cmd - 0x57 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws5
 cmd + shift - 0x57 : "$HOME/.config/yabai/scripts/window.sh" send-space ws5
+cmd + ctrl + shift - 0x57 : yabai -m window --space ws5
 cmd - 6 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
 cmd + shift - 6 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
+cmd + ctrl + shift - 6 : yabai -m window --space ws6
 cmd - 0x58 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
 cmd + shift - 0x58 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
+cmd + ctrl + shift - 0x58 : yabai -m window --space ws6
 
 # Laptop workspaces when both external monitors are connected.
 cmd - 7 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws7
 cmd + shift - 7 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd + ctrl + shift - 7 : yabai -m window --space ws7
 cmd - 0x59 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws7
 cmd + shift - 0x59 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd + ctrl + shift - 0x59 : yabai -m window --space ws7
 cmd - 8 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws8
 cmd + shift - 8 : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd + ctrl + shift - 8 : yabai -m window --space ws8
 cmd - 0x5B : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws8
 cmd + shift - 0x5B : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd + ctrl + shift - 0x5B : yabai -m window --space ws8
 cmd - 9 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws9
 cmd + shift - 9 : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+cmd + ctrl + shift - 9 : yabai -m window --space ws9
 cmd - 0x5C : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws9
 cmd + shift - 0x5C : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+cmd + ctrl + shift - 0x5C : yabai -m window --space ws9
 
 cmd - pageup : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" prev
 cmd - pagedown : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" next

@@ -219,6 +219,7 @@ the selected window between monitors. Cmd + G is available to applications.
 | Cmd + Shift + arrow | Swap, fill the side, then move to the neighboring monitor |
 | Cmd + 1–9, including keypad | Focus labelled desktop |
 | Cmd + Shift + 1–9 | Send window to desktop and follow it |
+| Cmd + Ctrl + Shift + 1–9 | Send window to desktop and stay on the current workspace |
 | Cmd + Page Up / Page Down | Previous / next native Space |
 | Cmd + Home / End | Workspace 1 / 6 |
 | Alt + Tab | Previous focused Space |

@@ -41,6 +41,7 @@ return function(yabai_active)
       {"Cmd + Shift + arrows", "Swap, fill a side, then cross monitors"},
       {"Cmd + 1–9", "Switch workspace"},
       {"Cmd + Shift + 1–9", "Move window to workspace and follow it"},
+      {"Cmd + Ctrl + Shift + 1–9", "Send window to workspace; stay here"},
       {"Alt + Tab", "Return to the previous workspace"},
       {"Ctrl + Tab", "Return to the previously focused window"},
       {"Cmd + F", "Toggle window fullscreen within the workspace"},
