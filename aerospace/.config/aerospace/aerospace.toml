@@ -119,6 +119,13 @@ outer.right =      10
     cmd-keypad9 = 'workspace 9'
     cmd-shift-keypad9 = 'move-node-to-workspace 9 --focus-follows-window'
 
+    cmd-keypad1 = 'workspace 1'
+    cmd-keypad2 = 'workspace 2'
+    cmd-keypad3 = 'workspace 3'
+    cmd-keypad4 = 'workspace 4'
+    cmd-keypad5 = 'workspace 5'
+    cmd-keypad6 = 'workspace 6'
+
     cmd-pageUp = ['workspace prev']
     cmd-pageDown = ['workspace next']
 
@@ -133,14 +140,20 @@ outer.right =      10
     cmd-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
     cmd-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
 
-    alt-tab = 'workspace-back-and-forth' 
-    # Move current workspace to next monitor (wrap-around)
-    cmd-ctrl-right = 'move-workspace-to-monitor --wrap-around next'
+    cmd-shift-keypad1 = 'move-node-to-workspace 1 --focus-follows-window'
+    cmd-shift-keypad2 = 'move-node-to-workspace 2 --focus-follows-window'
+    cmd-shift-keypad3 = 'move-node-to-workspace 3 --focus-follows-window'
+    cmd-shift-keypad4 = 'move-node-to-workspace 4 --focus-follows-window'
+    cmd-shift-keypad5 = 'move-node-to-workspace 5 --focus-follows-window'
+    cmd-shift-keypad6 = 'move-node-to-workspace 6 --focus-follows-window'
 
-    # Move current workspace to previous monitor (wrap-around)
-    cmd-ctrl-left = 'move-workspace-to-monitor --wrap-around prev'
+    alt-tab = 'workspace-back-and-forth'
+    # Move the focused window and follow it, wrapping between monitors.
+    cmd-ctrl-right = 'move-node-to-monitor --wrap-around next --focus-follows-window'
+    cmd-ctrl-left = 'move-node-to-monitor --wrap-around prev --focus-follows-window'
 
-    cmd-g = 'mode service'
+    cmd-alt-s = 'mode service'
+    f14 = 'mode service'
 
     alt-shift-c = 'reload-config'
 
@@ -160,6 +173,8 @@ outer.right =      10
 
 [mode.service.binding]
     esc = ['reload-config', 'mode main']
+    f15 = 'mode main'
+    space = 'mode main'
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
     f = ['exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh', 'mode main'] # Float toggle, shrinks on float
     backspace = ['close-all-windows-but-current', 'mode main']

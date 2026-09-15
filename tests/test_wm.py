@@ -47,6 +47,9 @@ class ShortcutTests(unittest.TestCase):
 
     def test_trial_does_not_claim_new_global_keys_from_raycast(self):
         aerospace = tomllib.loads((ROOT / "aerospace-docked/.config/aerospace/aerospace.toml").read_text())
+        single = tomllib.loads((ROOT / "aerospace/.config/aerospace/aerospace.toml").read_text())
+        self.assertEqual(single["mode"], aerospace["mode"],
+                         "AeroSpace shortcuts must not change when a monitor is connected")
         def normalize(parts):
             return tuple(sorted(p.lower() for p in parts[:-1])) + (parts[-1].lower(),)
         current = {normalize(key.split("-")) for key in aerospace["mode"]["main"]["binding"]}

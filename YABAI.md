@@ -195,7 +195,10 @@ desktop on each display and remove unneeded empty desktops yourself.
 
 ## Shortcuts
 
-The baseline follows the currently active **docked** AeroSpace configuration.
+Both AeroSpace profiles use the same shortcut map. Their shared shortcuts also
+match skhd, including Cmd + Alt + S / F14 for service mode, Escape / Space / F15
+to exit service mode, keypad workspace keys, and Cmd + Ctrl + arrows to move
+the selected window between monitors. Cmd + G is available to applications.
 
 | Shortcut | yabai action |
 |---|---|
