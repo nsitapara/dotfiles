@@ -1,7 +1,7 @@
 -- Headless checks for the display profile menu; no live commands run.
 local root = assert(arg[1], "Pass the repository path")
 package.preload.colors = function() return { mauve=1, white=2, grey=3, bg1=4 } end
-package.preload.settings = function() return { font = { numbers = "Test", style_map = { Regular = "Regular", Semibold = "Semibold" } } } end
+package.preload.settings = function() return { group_paddings = 5, font = { numbers = "Test", style_map = { Regular = "Regular", Semibold = "Semibold" } } } end
 for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   local items, events, callbacks, commands = {}, {}, {}, {}
   sbar = {
@@ -32,6 +32,7 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   assert(menu.props.position == "right")
   assert(#callbacks == 1, "one status query at load")
   assert(menu.props.icon.string == "\u{100657}", "monitor icon")
+  assert(items["display.profile.bracket"] and items["display.profile.padding"], "bordered pill and spacer like other widgets")
   callbacks[1]("docked laptop\n") -- pinned docked, but only the laptop layout fit
   assert(menu.props.label.string == "2", menu.props.label.string)
   assert(menu.props.label.color == 3 and menu.props.icon.color == 3, "a pin that is not in effect shows grey")

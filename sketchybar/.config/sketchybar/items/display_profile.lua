@@ -23,6 +23,10 @@ local menu = sbar.add("item", "display.profile", {
   },
 })
 
+-- Same bordered pill and spacing as the other right-side widgets.
+sbar.add("bracket", "display.profile.bracket", { menu.name }, { background = { color = colors.bg1 } })
+sbar.add("item", "display.profile.padding", { position = "right", width = settings.group_paddings })
+
 local rows, shown = {}, false
 local function refresh()
   sbar.exec(wm, function(result)
