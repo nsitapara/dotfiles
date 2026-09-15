@@ -15,7 +15,7 @@ require("items")
 sbar.add("item", "display_mode", { drawing = false, label = { string = "docked" } })
 sbar.end_config()
 
--- Move below the native menu while the pointer is at the screen's top edge.
+-- Hide SketchyBar while the native menu bar is in use.
 sbar.exec('/usr/bin/python3 "$HOME/dotfiles/sketchybar-hover/run.py"')
 
 -- Run the event loop of the sketchybar module (without this there will be no

@@ -1,28 +1,31 @@
 import Foundation
 
-// Separate enter/leave thresholds keep the moving bar from chasing the pointer.
+// Keep ordinary SketchyBar clicks available and debounce the return from menus.
 struct HoverState {
-    private(set) var offset = 0
+    private(set) var hidden = false
     private var leaveTime: TimeInterval?
 
-    mutating func update(distance: Double?, menuHeight: Int, barHeight: Int,
-                         mouseDown: Bool, now: TimeInterval) -> Int? {
-        if offset == 0 {
-            if let distance, distance >= 0, distance <= 2, !mouseDown {
-                offset = menuHeight
+    mutating func update(distance: Double?, menuHeight: Int,
+                         mouseDown: Bool, menuVisible: Bool, now: TimeInterval) -> Bool? {
+        if !hidden {
+            let atTop = distance.map { $0 >= 0 && $0 <= 2 } ?? false
+            if menuVisible || (atTop && !mouseDown) {
+                hidden = true
                 leaveTime = nil
-                return offset
+                return true
             }
+        } else if menuVisible {
+            leaveTime = nil
         } else if let distance, distance >= 0,
-                  distance <= Double(offset + barHeight + 8) {
+                  distance <= Double(menuHeight + 8) {
             leaveTime = nil
         } else if mouseDown {
             leaveTime = nil
         } else if let start = leaveTime {
             if now - start >= 0.35 {
-                offset = 0
+                hidden = false
                 leaveTime = nil
-                return 0
+                return false
             }
         } else {
             leaveTime = now

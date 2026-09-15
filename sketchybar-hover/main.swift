@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 
 // Pointer polling requires neither Accessibility nor Input Monitoring access.
-// See https://github.com/malpern/sketchybar-toggle for the hide/show alternative.
+// Window metadata keeps the bar hidden while a native dropdown is open.
 let args = CommandLine.arguments
 guard args.count == 4, let barPID = Int32(args[2]), barPID > 0 else {
     fputs("Usage: sbar-hover SKETCHYBAR_PATH BAR_PID LOCK_FILE\n", stderr)
@@ -32,7 +32,27 @@ func bar(_ arguments: [String]) {
 }
 
 func restore() {
-    bar(["--bar", "topmost=off", "y_offset=0"])
+    bar(["--bar", "topmost=off", "hidden=off", "y_offset=0"])
+}
+
+func nativeMenuVisible() -> Bool {
+    guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, 0)
+            as? [[String: Any]] else { return false }
+    for window in windows {
+        // macOS 27 marks some layers with bit 31. Ignore it when matching.
+        guard let number = window[kCGWindowLayer as String] as? NSNumber else { continue }
+        let layer: Int64 = number.int64Value & Int64(0x7fff_ffff)
+        guard layer == 24 else { continue }
+        let owner = window[kCGWindowOwnerName as String] as? String
+        guard owner == "Window Server" else { continue }
+        guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
+              let height = bounds["Height"] as? NSNumber,
+              let width = bounds["Width"] as? NSNumber else { continue }
+        if height.doubleValue > 0 && height.doubleValue <= 100 && width.doubleValue > 100 {
+            return true
+        }
+    }
+    return false
 }
 
 var signalSources: [DispatchSourceSignal] = []
@@ -45,26 +65,28 @@ for sig in [SIGTERM, SIGINT] {
 
 var state = HoverState()
 var ticks = 0
-bar(["--bar", "topmost=window", "y_offset=0"])
+var menuVisible = false
+bar(["--bar", "topmost=window", "hidden=off", "y_offset=0"])
 let timer = DispatchSource.makeTimerSource(queue: .main)
 timer.schedule(deadline: .now(), repeating: .milliseconds(33), leeway: .milliseconds(5))
 timer.setEventHandler {
     autoreleasepool {
         ticks += 1
         if ticks % 30 == 0 && kill(barPID, 0) != 0 { exit(0) }
+        if ticks % 3 == 1 { menuVisible = nativeMenuVisible() }
         let pointer = NSEvent.mouseLocation
         let screen = NSScreen.screens.first {
             $0.frame.insetBy(dx: -1, dy: -1).contains(pointer)
         }
         let distance = screen.map { Double($0.frame.maxY - pointer.y) }
-        // Auto-hide can report a zero visible-frame inset. Reserve at least 36pt
-        // for the native menu, including its background, or the notch's safe area.
+        // Auto-hide can report a zero visible-frame inset. Keep at least 36pt
+        // as the native-menu pointer zone, or the notch's safe area if larger.
         let menuHeight = Int(ceil(max(36, screen?.safeAreaInsets.top ?? 0)))
-        if let offset = state.update(distance: distance, menuHeight: menuHeight,
-                                     barHeight: 40,
+        if let hidden = state.update(distance: distance, menuHeight: menuHeight,
                                      mouseDown: NSEvent.pressedMouseButtons != 0,
+                                     menuVisible: menuVisible,
                                      now: ProcessInfo.processInfo.systemUptime) {
-            bar(["--animate", "sin", "10", "--bar", "y_offset=\(offset)"])
+            bar(["--bar", "hidden=\(hidden ? "on" : "off")", "y_offset=0"])
         }
     }
 }

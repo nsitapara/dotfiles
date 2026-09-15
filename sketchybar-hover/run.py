@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import signal
 import shutil
+import platform
 import subprocess
 import sys
 import tempfile
@@ -33,7 +34,20 @@ sources = [root / 'HoverState.swift', root / 'main.swift']
 if not binary.exists() or any(p.stat().st_mtime > binary.stat().st_mtime for p in sources):
     with tempfile.TemporaryDirectory(dir=cache, prefix='build.') as build:
         output = Path(build) / 'sbar-hover'
-        subprocess.run(['swiftc', '-O', *map(str, sources), '-o', str(output)], check=True)
+        # A launched bar can inherit stale SDK/deployment settings after an OS upgrade.
+        # Resolve compiler and SDK together, and use a supported deployment target.
+        build_env = os.environ.copy()
+        for key in ('SDKROOT', 'MACOSX_DEPLOYMENT_TARGET'):
+            build_env.pop(key, None)
+        sdk = subprocess.check_output(
+            ['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'],
+            env=build_env, text=True,
+        ).strip()
+        subprocess.run([
+            '/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-sdk', sdk,
+            '-target', platform.machine() + '-apple-macosx13.0', '-O',
+            *map(str, sources), '-o', str(output),
+        ], env=build_env, check=True, timeout=60)
         output.replace(binary)
 
 # The daemon is an ancestor when this launcher is run from its Lua config.
