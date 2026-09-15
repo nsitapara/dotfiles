@@ -34,6 +34,11 @@ yabai -m signal --add label=dotfiles-focus-new-app-window event=window_created \
     app='^(Warp|PyCharm|GitHub Desktop|Slack)$' \
     action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; yabai -m window --focus "$YABAI_WINDOW_ID"'
 
+# Native 'recent' excludes floating windows, so retain a pair from focus events.
+/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" reset
+yabai -m signal --add label=dotfiles-focus-history event=window_focused \
+    action='/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" record'
+
 # Update app icons for same-app window changes, too.
 for event in window_created window_destroyed window_focused window_title_changed; do
     yabai -m signal --add label="dotfiles-$event" event="$event" \

@@ -148,6 +148,7 @@ outer.right =      10
     cmd-shift-keypad6 = 'move-node-to-workspace 6 --focus-follows-window'
 
     alt-tab = 'workspace-back-and-forth'
+    cmd-alt-tab = 'focus-back-and-forth'
     # Move the focused window and follow it, wrapping between monitors.
     cmd-ctrl-right = 'move-node-to-monitor --wrap-around next --focus-follows-window'
     cmd-ctrl-left = 'move-node-to-monitor --wrap-around prev --focus-follows-window'

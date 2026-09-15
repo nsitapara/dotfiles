@@ -42,6 +42,7 @@ return function(yabai_active)
       {"Cmd + 1–9", "Switch workspace"},
       {"Cmd + Shift + 1–9", "Move window to workspace and follow it"},
       {"Alt + Tab", "Return to the previous workspace"},
+      {"Cmd + Alt + Tab", "Return to the previously focused window"},
       {"Cmd + F", "Toggle window fullscreen within the workspace"},
       {"Cmd + Ctrl + Shift + F", "Toggle floating"},
       {"Cmd + 0", "Balance window sizes"},
