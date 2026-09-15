@@ -85,7 +85,7 @@ outer.right =      10
     cmd-shift-equal = ['resize height +32']
     cmd-shift-minus = ['resize height -32']
     cmd-0 = 'balance-sizes' # Reset window sizes in the current workspace
-    cmd-shift-0 = 'balance-sizes'
+    cmd-ctrl-0 = 'balance-sizes'
 
     cmd-j = 'layout tiles horizontal vertical'
     cmd-comma = 'layout accordion horizontal vertical'

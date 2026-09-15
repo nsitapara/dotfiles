@@ -30,7 +30,7 @@ cmd + shift - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize height 32
 cmd + shift - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize height -32
 # Reset window sizes in the current space.
 cmd - 0 : yabai -m space --balance
-cmd + shift - 0 : yabai -m space --balance
+cmd + ctrl - 0 : yabai -m space --balance
 cmd - j : yabai -m window --toggle split
 cmd - 0x2B : "$HOME/.config/yabai/scripts/window.sh" layout
 cmd - f : yabai -m window --toggle zoom-fullscreen

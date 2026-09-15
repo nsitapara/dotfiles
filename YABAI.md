@@ -232,7 +232,7 @@ the selected window between monitors. Cmd + G is available to applications.
 | Cmd + Ctrl + left / right | Send window to previous / next display, wrapping |
 | Cmd + equals / minus | Resize width |
 | Cmd + Shift + equals / minus | Resize height |
-| Cmd + 0 or Cmd + Shift + 0 | Balance all tiled window sizes in the current workspace |
+| Cmd + 0 or Cmd + Ctrl + 0 | Balance all tiled window sizes in the current workspace |
 | Cmd + Ctrl + equals / minus | Step column width up / down through 50%, 65%, 75% |
 | Cmd + F | Fill the tiling area without native fullscreen |
 | Cmd + J | Toggle the focused window's split direction |
