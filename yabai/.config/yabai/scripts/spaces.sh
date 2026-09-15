@@ -33,14 +33,7 @@ if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spac
     done <<< "$mapping"
 fi
 
-# Routing follows the active docked profile. Rules affect newly opened windows.
 spaces=$(yabai -m query --spaces)
-if jq -e 'any(.[]; .label == "ws1")' <<< "$spaces" >/dev/null; then
-    yabai -m rule --add label=dotfiles-dev app='^(Warp|PyCharm)$' space=ws1
-fi
-if jq -e 'any(.[]; .label == "ws2")' <<< "$spaces" >/dev/null; then
-    yabai -m rule --add label=dotfiles-collaboration app='^(GitHub Desktop|Slack)$' space=ws2
-fi
 labels=$(jq -r '[.[] | .label | select(test("^ws[1-6]$"))] | sort | join(", ")' <<< "$spaces")
 echo "Ready: $labels. Cmd+number selects the matching workspace."
 if ! jq -e '[.[] | select(.label | test("^ws[1-6]$"))] | length == 6' <<< "$spaces" >/dev/null; then

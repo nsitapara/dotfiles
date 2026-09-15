@@ -107,9 +107,12 @@ The helper uses Mission Control's Accessibility identifiers, which Apple can
 change between macOS releases. Its Swift source and build script are tracked in
 the dotfiles; the compiled app stays outside Git.
 
-Warp and PyCharm route to `ws1`; GitHub Desktop and Slack route to `ws2`.
-These rules apply to newly opened windows after the desktops are labelled.
-Existing windows are not automatically moved into those workspaces.
+New managed windows open on the focused display's current workspace.
+New Warp, PyCharm, GitHub Desktop, and Slack windows also receive keyboard focus.
+These apps have no fixed workspace assignment in yabai. Opening an app that
+already has a window elsewhere can still activate that existing window;
+this setting does not bring existing windows to the current workspace.
+AeroSpace keeps its own app assignments.
 
 ## Switch back
 
