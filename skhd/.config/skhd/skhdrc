@@ -12,13 +12,13 @@
 cmd - h : true
 cmd + alt - h : true
 cmd - left : yabai -m window --focus west
-cmd + shift - left : yabai -m window --warp west
+cmd + shift - left : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai left
 cmd - down : yabai -m window --focus south
-cmd + shift - down : yabai -m window --warp south
+cmd + shift - down : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai down
 cmd - up : yabai -m window --focus north
-cmd + shift - up : yabai -m window --warp north
+cmd + shift - up : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai up
 cmd - right : yabai -m window --focus east
-cmd + shift - right : yabai -m window --warp east
+cmd + shift - right : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai right
 
 # skhd names special keys differently from AeroSpace. Use macOS keycodes for
 # punctuation: 0x18 = equals, 0x1B = minus, 0x2B = comma.

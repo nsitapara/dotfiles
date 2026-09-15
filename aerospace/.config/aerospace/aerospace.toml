@@ -72,10 +72,10 @@ outer.right =      10
     cmd-up       =   'focus --boundaries-action wrap-around-the-workspace up'
     cmd-right    =   'focus --boundaries-action wrap-around-the-workspace right'
 
-    cmd-shift-left = 'move left'
-    cmd-shift-down = 'move down'
-    cmd-shift-up = 'move up'
-    cmd-shift-right = 'move right'
+    cmd-shift-left = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace left'
+    cmd-shift-down = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace down'
+    cmd-shift-up = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace up'
+    cmd-shift-right = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace right'
 
 
     cmd-equal = ['resize width +32']

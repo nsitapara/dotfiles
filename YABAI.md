@@ -200,7 +200,7 @@ The baseline follows the currently active **docked** AeroSpace configuration.
 | Shortcut | yabai action |
 |---|---|
 | Cmd + arrow | Focus neighboring window |
-| Cmd + Shift + arrow | Reinsert window beside its neighbor |
+| Cmd + Shift + arrow | Swap with a neighbor; at an edge, fill that side |
 | Cmd + 1–9, including keypad | Focus labelled desktop |
 | Cmd + Shift + 1–9 | Send window to desktop and follow it |
 | Cmd + Page Up / Page Down | Previous / next native Space |
@@ -226,6 +226,20 @@ insertion is not AeroSpace container merging. Directional focus and previous/nex
 Space navigation stop at boundaries; only the display-send helper wraps.
 Modes stay active until Escape/Space, or F15 in service mode. The old
 close-all-other-windows action is not bound in this trial.
+
+### Swap, then make the window large
+
+In both managers, **Cmd + Shift + arrow** first swaps the selected tiled window
+with a neighbor without changing the tile sizes. At the workspace edge, pressing
+toward that edge gives the selected window its own side, with the other windows
+grouped opposite it. Right/left makes a full-height column; up/down makes a
+full-width row. Cmd + arrow still only changes focus.
+
+For example, select the bottom-right window in a three-window layout and press
+Cmd + Shift + Right. It fills the right half and the other two share the left.
+The shared `wm-direction.py` helper keeps the operation in the same workspace.
+Yabai leaves floating/fullscreen/zoomed windows and deliberate stacks alone.
+AeroSpace uses its swap command and rebuilds the tiling group on an edge press.
 
 ### Raycast
 
