@@ -1,0 +1,25 @@
+diff --git a/src/bar.c b/src/bar.c
+index 88df424..5797558 100644
+--- a/src/bar.c
++++ b/src/bar.c
+@@ -81,7 +81,9 @@ static void bar_calculate_popup_anchor_for_bar_item(struct bar* bar, struct bar_
+ 
+ void bar_order_item_windows(struct bar* bar) {
+   if (bar->sid < 1 || bar->adid < 1 || !bar->shown) return;
+-  window_set_level(&bar->window, g_bar_manager.window_level);
++  // Backgrounds must stay behind item windows even if WindowServer raises
++  // a clicked background. Reserve the next level for bracket backgrounds.
++  window_set_level(&bar->window, g_bar_manager.window_level - 2);
+   window_order(&bar->window, NULL, W_ABOVE);
+ 
+   struct window* previous_window = NULL;
+@@ -91,7 +93,8 @@ void bar_order_item_windows(struct bar* bar) {
+     if (bar_item->position == POSITION_POPUP) continue;
+ 
+     struct window* window = bar_item_get_window(bar_item, bar->adid);
+-    window_set_level(window, g_bar_manager.window_level);
++    window_set_level(window, g_bar_manager.window_level
++                              - (bar_item->type == BAR_COMPONENT_GROUP ? 1 : 0));
+ 
+     if (!first_window) first_window = window;
+ 

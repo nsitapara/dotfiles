@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """Switch native Spaces and recover window focus if macOS leaves Finder active."""
 import json
+import importlib.util
+from pathlib import Path
 import os
-import subprocess
 import sys
 import time
 
 
+# Share the direct socket transport used by directional shortcuts. It falls back
+# to the CLI only if no request was sent, so moves are never replayed.
+_spec = importlib.util.spec_from_file_location(
+    'wm_direction', Path(__file__).resolve().parents[4] / 'wm-direction.py')
+_wm = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_wm)
+
+
 def command(*args):
-    return subprocess.run(['yabai', '-m', *map(str, args)], capture_output=True, text=True)
+    return _wm.run('yabai', '-m', *args, check=False)
 
 
 def query(*args):
@@ -27,14 +36,17 @@ def restore(space):
     if not space or space.get('is-native-fullscreen'):
         return
     # Space/display events can arrive before macOS finishes activating the Space.
-    for _ in range(8):
-        time.sleep(0.08)
+    for attempt in range(9):
+        if attempt:
+            time.sleep(0.08)
         current = query('--spaces', '--space')
         if not current or current['id'] != space['id']:
             return  # The user already switched somewhere else.
         focused = query('--windows', '--window')
         if visible(focused, current) and focused.get('has-focus'):
             return
+        if attempt == 0:
+            continue  # Fast path checks focus; repair still waits for activation.
         windows = query('--windows', '--space', current['index'])
         if windows is None:
             return

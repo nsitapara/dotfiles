@@ -10,6 +10,7 @@ local alias_name = "Amphetamine,Amphetamine"
 local hovered, busy, status_pending = false, false, false
 local revision = 0
 local hover_pending, watch_pending = false, false
+local power_pending = false
 local hover_revision = 0
 local check_hover
 local watch_pointer
@@ -19,7 +20,7 @@ local amphetamine = sbar.add(native_item and "item" or "alias", alias_name, {
   position = "right",
   width = "dynamic",
   alias = not native_item and { scale = 1.0, color = colors.grey, update_freq = 2 } or nil,
-  update_freq = 1,
+  update_freq = native_item and 5 or 1,
   icon = { drawing = native_item, string = "􀸙", color = colors.grey, padding_left = 8, padding_right = 8 },
   label = { drawing = false },
   padding_left = 5,
@@ -113,10 +114,13 @@ local function refresh_tooltip()
 end
 
 local function update_status()
-  if check_hover then check_hover() end
+  if not native_item and check_hover then check_hover() end
+  if power_pending then return end
+  power_pending = true
   -- Keep the bar accurate without querying AppleScript when the tooltip is closed.
   local requested_revision = revision
   sbar.exec("/usr/bin/pmset -g assertions", function(result, exit_code)
+    power_pending = false
     if exit_code ~= 0 or busy or requested_revision ~= revision then return end
     local active = false
     for line in result:gmatch("[^\r\n]+") do
@@ -138,6 +142,7 @@ amphetamine:subscribe("mouse.clicked", function(env)
     hover_revision = hover_revision + 1
     suppress_hover = true
     amphetamine:set({ popup = { drawing = false } })
+    if native_item then amphetamine:set({ update_freq = 5 }) end
     watch_pointer()
     sbar.exec(native_item
       and '/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" open amphetamine'
@@ -157,10 +162,11 @@ end)
 local function hide_tooltip()
   hovered = false
   hover_revision = hover_revision + 1
-  amphetamine:set({ popup = { drawing = false } })
+  amphetamine:set({ popup = { drawing = false }, update_freq = native_item and 5 or 1 })
 end
 
 watch_pointer = function()
+  if native_item then return end
   if (not hovered and not suppress_hover) or watch_pending then return end
   watch_pending = true
   run_script("hover-watch", function(result, exit_code)
@@ -177,6 +183,12 @@ end
 
 check_hover = function()
   if hovered or hover_pending or suppress_hover then return end
+  if native_item then
+    hovered = true
+    amphetamine:set({ popup = { drawing = true }, update_freq = 1 })
+    refresh_tooltip()
+    return
+  end
   hover_pending = true
   local requested_revision = hover_revision
   run_script("hover-check", function(result, exit_code)
@@ -189,9 +201,15 @@ check_hover = function()
     watch_pointer()
   end)
 end
--- Alias items can miss entry events and emit exit events during image refreshes.
--- Check direct entry on the routine tick; the pointer watcher handles real exits.
+-- Regular items deliver reliable entry/exit events. Only legacy aliases need
+-- process-based polling because image refreshes can produce false exit events.
 amphetamine:subscribe("mouse.entered", check_hover)
+if native_item then
+  amphetamine:subscribe("mouse.exited", function()
+    suppress_hover = false
+    hide_tooltip()
+  end)
+end
 local function sync_power(env)
   local action = "sync"
   if env and (env.INFO == "AC" or env.INFO == "BATTERY") then

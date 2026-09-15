@@ -18,7 +18,7 @@ class FocusTests(unittest.TestCase):
         self.focused = None
         self.commands = []
         self.addCleanup(patch.stopall)
-        patch.object(focus.time,'sleep').start()
+        self.sleep = patch.object(focus.time,'sleep').start()
         patch.object(focus,'query',side_effect=self.query).start()
         patch.object(focus,'command',side_effect=self.command).start()
 
@@ -42,6 +42,7 @@ class FocusTests(unittest.TestCase):
         self.focused = dict(self.windows[0],**{'has-focus':True})
         focus.restore(self.space)
         self.assertEqual(self.commands,[])
+        self.sleep.assert_not_called()
 
     def test_window_on_other_monitor_does_not_count_as_destination_focus(self):
         self.focused = dict(id=99,space=1,**{'has-focus':True,'is-visible':True})
@@ -92,6 +93,13 @@ class FocusTests(unittest.TestCase):
             return original(*args)
         with patch.object(focus,'command',side_effect=command): focus.switch('ws2')
         self.assertEqual(self.commands,[('window','--focus',22)])
+
+    def test_focus_arriving_during_activation_is_preserved(self):
+        self.sleep.side_effect = lambda _: setattr(
+            self, 'focused', dict(self.windows[0], **{'has-focus': True}))
+        focus.restore(self.space)
+        self.assertEqual(self.commands, [])
+        self.sleep.assert_called_once_with(0.08)
 
     def test_native_fullscreen_is_left_to_macos(self):
         self.space['is-native-fullscreen'] = True
