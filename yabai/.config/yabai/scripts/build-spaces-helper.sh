@@ -19,5 +19,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 <key>LSUIElement</key><true/>
 </dict></plist>
 EOF
-swiftc -O "$SOURCE" -o "$BINARY" -framework AppKit -framework ApplicationServices
+# The toolchain's default deployment target can exceed the running OS, and
+# LaunchServices then refuses to open the app (error -10825). Pin it.
+swiftc -O -target "$(uname -m)-apple-macos13.0" "$SOURCE" -o "$BINARY" -framework AppKit -framework ApplicationServices
 codesign --force --sign - --identifier local.dotfiles.spaces "$APP"

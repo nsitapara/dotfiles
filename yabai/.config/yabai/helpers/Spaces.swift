@@ -81,15 +81,24 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
     }
     let dock = AXUIElementCreateApplication(app.processIdentifier)
     AXUIElementSetMessagingTimeout(dock, 2)
-    let wasOpen = child(dock, "mc") != nil
+    // macOS 27 moved Mission Control's controls from the Dock into WindowManager,
+    // and the Dock's empty "mc" group now exists even while Mission Control is closed.
+    let manager = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.WindowManager").first
+        .map { AXUIElementCreateApplication($0.processIdentifier) }
+    if let manager { AXUIElementSetMessagingTimeout(manager, 2) }
+    func displayGroups() -> [AXUIElement] {
+        let candidates = (child(dock, "mc").map(children) ?? []) + (manager.map(children) ?? [])
+        return candidates.filter { attribute($0, "AXIdentifier") as? String == "mc.display" }
+    }
+    let wasOpen = !displayGroups().isEmpty
     if !wasOpen { _ = try run("/usr/bin/open", ["-a", "Mission Control"]) }
     defer {
-        if !wasOpen && child(dock, "mc") != nil {
+        if !wasOpen && !displayGroups().isEmpty {
             // Opening Mission Control a second time toggles it closed.
             _ = try? run("/usr/bin/open", ["-a", "Mission Control"])
         }
     }
-    guard waitFor({ child(dock, "mc") }) != nil else {
+    guard waitFor({ displayGroups().isEmpty ? nil : true }) != nil else {
         throw Failure(description: "Mission Control did not expose its Accessibility controls.")
     }
     var created = 0
@@ -103,9 +112,7 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
             let before = try count(spaces(), screen)
             if before >= target { break }
             let add: AXUIElement? = waitFor {
-                guard let mc = child(dock, "mc"),
-                      let display = children(mc).first(where: {
-                          attribute($0, "AXIdentifier") as? String == "mc.display" &&
+                guard let display = displayGroups().first(where: {
                           (attribute($0, "AXDisplayID") as? NSNumber)?.intValue == screen.id
                       }), let group = child(display, "mc.spaces") else { return nil }
                 return child(group, "mc.spaces.add")
