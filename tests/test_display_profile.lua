@@ -1,7 +1,7 @@
 -- Headless checks for the display profile menu; no live commands run.
 local root = assert(arg[1], "Pass the repository path")
 package.preload.colors = function() return { mauve=1, white=2, grey=3, bg1=4 } end
-package.preload.settings = function() return { font = { numbers = "Test" } } end
+package.preload.settings = function() return { font = { numbers = "Test", style_map = { Regular = "Regular", Semibold = "Semibold" } } } end
 for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   local items, events, callbacks, commands = {}, {}, {}, {}
   sbar = {
@@ -36,9 +36,9 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   assert(menu.props.label.string == "2", menu.props.label.string)
   assert(menu.props.label.color == 3 and menu.props.icon.color == 3, "a pin that is not in effect shows grey")
   callbacks[1]("docked docked\n")
-  assert(menu.props.label.color == 1, "a pin in effect shows the accent color")
+  assert(menu.props.label.color == 2 and menu.props.icon.color == 2, "a pin in effect is plain white")
   callbacks[1]("auto single\n") -- no pin yet: show the applied layout
-  assert(menu.props.label.string == "1" and menu.props.label.color == 1, menu.props.label.string)
+  assert(menu.props.label.string == "1" and menu.props.label.color == 2, menu.props.label.string)
   callbacks[1]("laptop laptop\n")
   assert(menu.props.label.string == "0")
   assert(items["display.profile.auto"] == nil, "no Auto row")

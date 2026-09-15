@@ -9,10 +9,13 @@ local wm = 'export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; "$HOME/dotfile
 
 local menu = sbar.add("item", "display.profile", {
   position = "right", updates = true,
-  icon = { string = "\u{100657}", color = colors.mauve, font = { size = 15.0 }, padding_left = 6, padding_right = 3 },
+  icon = {
+    string = "\u{100657}", color = colors.white, padding_left = 6, padding_right = 3,
+    font = { style = settings.font.style_map["Regular"], size = 16.0 },
+  },
   label = {
-    string = "–", color = colors.mauve, padding_left = 0, padding_right = 6,
-    font = { family = settings.font.numbers, size = 13.0, style = "Semibold" },
+    string = "–", color = colors.white, padding_left = 0, padding_right = 6,
+    font = { family = settings.font.numbers, style = settings.font.style_map["Semibold"], size = 13.0 },
   },
   padding_left = 4, padding_right = 4,
   popup = {
@@ -25,11 +28,11 @@ local rows, shown = {}, false
 local function refresh()
   sbar.exec(wm, function(result)
     -- Output: "<pinned> <applied>". The number follows the pin; a pin the screens
-    -- cannot satisfy shows grey, and with no pin the applied layout shows.
+    -- cannot satisfy shows grey; otherwise plain white like the other widgets.
     local pinned, applied = tostring(result):match("^%s*(%S+)%s+(%S+)")
     local shown_profile = number[pinned] and pinned or applied
     local in_effect = not number[pinned] or pinned == applied
-    local color = in_effect and colors.mauve or colors.grey
+    local color = in_effect and colors.white or colors.grey
     menu:set({ icon = { color = color }, label = { string = number[shown_profile] or "–", color = color } })
     for id, row in pairs(rows) do
       row:set({ label = { color = id == pinned and colors.mauve or colors.white } })
