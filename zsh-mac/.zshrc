@@ -136,7 +136,7 @@ gtn() {
   if [[ -n "$existing" ]]; then
     cd "$existing"
   else
-    git gtr new "$1" && cd "$(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | grep "$1")"
+    bash "$HOME/.config/gtn/create.sh" "$@" && cd "$(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | grep "$1")"
   fi
 }
 
@@ -190,9 +190,11 @@ case ":$PATH:" in
 esac
 # pnpm end
 
-# >>> headroom docker-native >>>
-export PATH="/Users/nishsitapara/.local/bin:$PATH"
-# <<< headroom docker-native <<<
+# opencode
+export PATH=/Users/nishsitapara/.opencode/bin:$PATH
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"
 
 # Local HeraSight database helpers.
 source "$HOME/.config/herasight/db_snapshot.zsh"
