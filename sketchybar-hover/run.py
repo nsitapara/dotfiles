@@ -11,6 +11,8 @@ import tempfile
 # SketchyBar's child processes can inherit SIGCHLD=SIG_IGN on newer macOS.
 # Restore waitpid behavior before compiling or querying the daemon PID.
 signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+# SbarLua puts a 60-second alarm on exec children. This is a persistent provider.
+signal.alarm(0)
 os.environ['PATH'] = '/opt/homebrew/bin:/usr/local/bin:' + os.environ.get('PATH', '')
 root = Path(__file__).resolve().parent
 cache = Path.home() / '.cache/dotfiles/sketchybar-hover'
