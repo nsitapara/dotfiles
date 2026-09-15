@@ -293,6 +293,14 @@ reloaded and skips closed, hidden, or minimized targets.
 
 ### Column width presets
 
+For small adjustments, Cmd + equals / minus changes width and adding Shift
+changes height. Yabai's `wm-resize.py` selects the shared divider from the tile
+order, including a containing column when the selected window is in a row.
+It does not probe the outer edge first: yabai's pixel rounding can misidentify
+that edge and reverse the resize direction. Resize mode uses the same helper.
+Floating windows resize from their bottom-right corner; app minimum sizes still
+apply. These commands do not change focus.
+
 Cmd + Ctrl + equals increases the selected column to the next preset;
 Cmd + Ctrl + minus decreases it. The presets are 50%, 65%, and 75% of the
 two columns' combined width, excluding the gap. They stop at the endpoints

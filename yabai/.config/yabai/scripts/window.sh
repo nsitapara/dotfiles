@@ -5,12 +5,7 @@ case "${1:-}" in
     float)
         exec /usr/bin/python3 "$HOME/dotfiles/wm-float.py" ;;
     resize)
-        delta=${3:?Missing resize delta}
-        if [ "${2:?Missing resize axis}" = width ]; then
-            yabai -m window --resize "right:$delta:0" || yabai -m window --resize "left:$((-delta)):0"
-        else
-            yabai -m window --resize "bottom:0:$delta" || yabai -m window --resize "top:0:$((-delta))"
-        fi ;;
+        exec /usr/bin/python3 "$HOME/dotfiles/wm-resize.py" "${2:?Missing resize axis}" "${3:?Missing resize delta}" ;;
     send-space)
         target=$(yabai -m query --spaces --space "${2:?Missing space}" | jq -er '.index')
         yabai -m window --space "$target" && yabai -m space --focus "$target" ;;
