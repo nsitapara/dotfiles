@@ -66,25 +66,38 @@ for sig in [SIGTERM, SIGINT] {
 var state = HoverState()
 var ticks = 0
 var menuVisible = false
+// Screen geometry queries round-trip to the window server; refresh once a second
+// instead of on every pointer tick. Auto-hide can report a zero visible-frame
+// inset, so keep at least 36pt as the menu zone, or the notch's safe area.
+struct ScreenInfo { let frame: CGRect; let menuHeight: Int }
+var screens: [ScreenInfo] = []
+func refreshScreens() {
+    screens = NSScreen.screens.map {
+        ScreenInfo(frame: $0.frame, menuHeight: Int(ceil(max(36, $0.safeAreaInsets.top))))
+    }
+}
+refreshScreens()
 bar(["--bar", "topmost=window", "hidden=off", "y_offset=0"])
 let timer = DispatchSource.makeTimerSource(queue: .main)
 timer.schedule(deadline: .now(), repeating: .milliseconds(33), leeway: .milliseconds(5))
 timer.setEventHandler {
     autoreleasepool {
         ticks += 1
-        if ticks % 30 == 0 && kill(barPID, 0) != 0 { exit(0) }
-        let pointer = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first {
-            $0.frame.insetBy(dx: -1, dy: -1).contains(pointer)
+        if ticks % 30 == 0 {
+            if kill(barPID, 0) != 0 { exit(0) }
+            refreshScreens()
         }
+        let pointer = NSEvent.mouseLocation
+        let screen = screens.first { $0.frame.insetBy(dx: -1, dy: -1).contains(pointer) }
         let distance = screen.map { Double($0.frame.maxY - pointer.y) }
-        // Auto-hide can report a zero visible-frame inset. Keep at least 36pt
-        // as the native-menu pointer zone, or the notch's safe area if larger.
-        let menuHeight = Int(ceil(max(36, screen?.safeAreaInsets.top ?? 0)))
-        // Poll the native menu at 30 Hz while the pointer is in its zone so the
-        // hide lands as the bar appears; 10 Hz elsewhere keeps the cost low.
+        let menuHeight = screen?.menuHeight ?? 36
+        // The window-list query is the costly part. Poll it at 30 Hz only while
+        // the pointer is in the menu zone so the hide lands as the bar appears,
+        // 10 Hz while hidden to notice the menu closing, and 2 Hz otherwise for
+        // keyboard-driven menu activation.
         let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
-        if nearTop || ticks % 3 == 1 { menuVisible = nativeMenuVisible() }
+        let menuInterval = nearTop ? 1 : (state.hidden ? 3 : 15)
+        if ticks % menuInterval == 0 { menuVisible = nativeMenuVisible() }
         if let hidden = state.update(distance: distance, menuHeight: menuHeight,
                                      mouseDown: NSEvent.pressedMouseButtons != 0,
                                      menuVisible: menuVisible,

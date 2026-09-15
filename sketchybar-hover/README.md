@@ -14,9 +14,10 @@ It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
 
-The helper checks on-screen window metadata at 10 Hz to detect the native menu
-bar, rising to 30 Hz while the pointer is in the menu zone, without capturing
-screen contents. macOS 27 marks some window layers with
+The helper checks on-screen window metadata to detect the native menu bar,
+without capturing screen contents: 2 Hz while the bar is shown and the pointer
+is away from the top, 10 Hz while hidden, and 30 Hz while the pointer is in the
+menu zone. Screen geometry is cached and refreshed once a second. macOS 27 marks some window layers with
 bit 31; this flag is masked when identifying the menu layer. Pointer polling
 remains 30 Hz. The native menu must be configured to auto-hide.
 
