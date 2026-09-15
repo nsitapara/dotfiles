@@ -71,8 +71,9 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
     guard screens.contains(where: { screen in
         count(initial, screen) < plan.first(where: { $0.id == screen.id })!.workspaces.count
     }) else { return 0 }
-    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-    guard AXIsProcessTrustedWithOptions(options) else {
+    // Display events and periodic checks must never open permission dialogs.
+    // Opening this app explicitly from Finder still requests access below.
+    guard AXIsProcessTrusted() else {
         throw Failure(description: "Enable Dotfiles Spaces in System Settings > Privacy & Security > Accessibility, then run ./wm.sh spaces again.")
     }
     guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first else {

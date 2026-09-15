@@ -41,7 +41,10 @@ if [ "$signature" = "$old" ] && [[ "$live" == *"/$package/.config/"* ]] &&
    { ! $bar_running || [ "$loaded" = "$mode" ]; }; then exit 0; fi
 
 echo "Applying yabai $mode profile ($count active screens)"
-"$HERE/ensure-spaces.sh"
+if ! "$HERE/ensure-spaces.sh"; then
+    echo 'Desktop creation unavailable; applying the display profile with existing desktops.' >&2
+    "$HERE/spaces.sh"
+fi
 # The helper can take time to create Spaces. Don't record a different topology.
 after=$("$HERE/display-layout.sh")
 [ "$(jq -cS . <<< "$after")" = "$(jq -cS . <<< "$plan")" ] || {

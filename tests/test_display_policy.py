@@ -85,6 +85,7 @@ elif name == 'ensure-spaces.sh':
     if state.get('change_during_setup'):
         state['plan'][0]['frame']['x'] += 1
         save()
+elif name == 'spaces.sh': pass
 elif name == 'yabai':
     if args == ['-m','query','--spaces']:
         print(json.dumps([{'index':i+1,'display':s['index'],'is-native-fullscreen':False}
@@ -114,7 +115,7 @@ class NativeProfileTests(unittest.TestCase):
         self.bin = self.root/'bin'
         self.bin.mkdir()
         for directory, names in [(self.bin,['launchctl','pgrep','sleep','readlink','yabai','stow','sketchybar']),
-                                 (self.here,['display-layout.sh','ensure-spaces.sh'])]:
+                                 (self.here,['display-layout.sh','ensure-spaces.sh','spaces.sh'])]:
             for name in names:
                 file = directory/name
                 file.write_text(f'#!{sys.executable}\n'+MOCK)
@@ -161,14 +162,23 @@ class NativeProfileTests(unittest.TestCase):
         self.assertEqual(sum(len(s['workspaces']) for s in applied),9)
         self.assertIn(['yabai','-m','config','--space','3','top_padding','50'],self.calls('yabai'))
 
-    def test_creation_failure_and_topology_change_do_not_cache_success(self):
-        for failure in ['ensure_failure','change_during_setup']:
-            with self.subTest(failure=failure):
-                self.state[failure] = True
-                self.run_profile(success=False)
-                self.assertFalse(self.signature.exists())
-                self.assertEqual(self.calls('stow'),[])
-                self.state.pop(failure)
+    def test_creation_failure_still_applies_profile_without_repeated_setup(self):
+        self.state['ensure_failure'] = True
+        self.run_profile()
+        self.assertEqual(self.state['package'], 'sketchybar')
+        self.assertEqual(self.state['loaded'], 'non-docked')
+        self.assertEqual(len(self.calls('spaces.sh')), 1)
+        self.assertIn(['yabai','-m','config','--space','1','top_padding','16'], self.calls('yabai'))
+        self.assertTrue(self.signature.exists())
+        self.run_profile()
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 1)
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1)
+
+    def test_topology_change_does_not_cache_success(self):
+        self.state['change_during_setup'] = True
+        self.run_profile(success=False)
+        self.assertFalse(self.signature.exists())
+        self.assertEqual(self.calls('stow'), [])
 
     def test_reload_failure_retries(self):
         self.state['reload_failure'] = True
