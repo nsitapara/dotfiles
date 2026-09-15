@@ -1,6 +1,7 @@
 -- Headless checks for the display profile menu; no live commands run.
 local root = assert(arg[1], "Pass the repository path")
 package.preload.colors = function() return { mauve=1, white=2, grey=3, bg1=4 } end
+package.preload.settings = function() return { font = { numbers = "Test" } } end
 for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   local items, events, callbacks, commands = {}, {}, {}, {}
   sbar = {
@@ -30,16 +31,20 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   local menu = assert(items["display.profile"], "menu item exists")
   assert(menu.props.position == "right")
   assert(#callbacks == 1, "one status query at load")
+  assert(menu.props.icon.string == "\u{100657}", "monitor icon")
   callbacks[1]("docked laptop\n") -- pinned docked, but only the laptop layout fit
-  assert(menu.props.label.string == "2 MON", menu.props.label.string)
-  assert(menu.props.label.color == 3, "a pin that is not in effect shows grey")
+  assert(menu.props.label.string == "2", menu.props.label.string)
+  assert(menu.props.label.color == 3 and menu.props.icon.color == 3, "a pin that is not in effect shows grey")
   callbacks[1]("docked docked\n")
   assert(menu.props.label.color == 1, "a pin in effect shows the accent color")
-  callbacks[1]("auto single\n")
-  assert(menu.props.label.string == "AUTO")
+  callbacks[1]("auto single\n") -- no pin yet: show the applied layout
+  assert(menu.props.label.string == "1" and menu.props.label.color == 1, menu.props.label.string)
+  callbacks[1]("laptop laptop\n")
+  assert(menu.props.label.string == "0")
+  assert(items["display.profile.auto"] == nil, "no Auto row")
   local row = assert(items["display.profile.laptop"], "menu row exists")
   assert(row.props.position == "popup.display.profile")
-  assert(items["display.profile.auto"].props.label.color == 1, "active row highlighted")
+  assert(row.props.label.color == 1, "active row highlighted")
   assert(items["display.profile.docked"].props.label.color == 2, "inactive row plain")
   events["display.profile:mouse.clicked"]()
   assert(menu.props.popup.drawing == true, "click opens the menu")

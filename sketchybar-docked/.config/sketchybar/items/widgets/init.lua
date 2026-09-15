@@ -1,4 +1,5 @@
 require("items.widgets.amphetamine")
+require("items.display_profile")
 require("items.widgets.battery")
 require("items.widgets.volume")
 require("items.widgets.wifi")
