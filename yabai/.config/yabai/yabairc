@@ -19,6 +19,18 @@ yabai -m config bottom_padding 8
 yabai -m config left_padding 10
 yabai -m config right_padding 10
 
+# Apply the selection border even when AeroSpace has not run this session.
+if command -v borders >/dev/null 2>&1; then
+    (
+        if [ -r "$HOME/.config/omarchy/current/borders.sh" ]; then
+            source "$HOME/.config/omarchy/current/borders.sh"
+        fi
+        borders active_color="${BORDER_ACTIVE:-0xffcba6f7}" \
+            inactive_color="${BORDER_INACTIVE:-0xff585b70}" \
+            width="${BORDER_WIDTH:-8.0}"
+    ) >/dev/null 2>&1 &
+fi
+
 # Labelled rules replace themselves on reload. App names are yabai's API.
 yabai -m rule --add label=dotfiles-utilities \
     app='^(System Settings|System Preferences|Activity Monitor|App Store|Clock|FaceTime|1Password|Nuvio)$' manage=off

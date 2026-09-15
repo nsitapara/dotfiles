@@ -418,7 +418,9 @@ shared module joins yabai and SketchyBar displays by their physical display IDs,
 so their differing arrangement indices do not pin the indicators to the wrong
 screen. Missing displays hide affected items until a complete update arrives.
 
-The trial leaves any running JankyBorders instance alone. Initial top padding is
+The yabai config applies the current theme's JankyBorders colors and width on
+startup and reload, with purple/gray defaults when no theme is installed.
+JankyBorders remains optional. Initial top padding is
 50 points, then the display profile applies `built_in_top_padding` (16) or
 `external_top_padding` (50) from the shared preferences. AeroSpace has matching
 per-monitor gaps in its TOML files. The separate `sketchybar-light` profile is not
