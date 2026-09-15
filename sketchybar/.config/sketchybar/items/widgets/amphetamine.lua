@@ -1,4 +1,10 @@
 local colors = require("colors")
+-- Avoid io.popen/pclose: SbarLua children inherit unusual SIGCHLD handling.
+local version_file = io.open("/System/Library/CoreServices/SystemVersion.plist", "r")
+local version_xml = version_file and version_file:read("*a") or ""
+if version_file then version_file:close() end
+local version = version_xml:match("<key>ProductVersion</key>%s*<string>(%d+)") or "0"
+local native_item = (tonumber(version:match("^%d+")) or 0) >= 27
 
 local alias_name = "Amphetamine,Amphetamine"
 local hovered, busy, status_pending = false, false, false
@@ -9,12 +15,12 @@ local check_hover
 local watch_pointer
 local suppress_hover = false
 
-local amphetamine = sbar.add("alias", alias_name, {
+local amphetamine = sbar.add(native_item and "item" or "alias", alias_name, {
   position = "right",
   width = "dynamic",
-  alias = { scale = 1.0, color = colors.grey, update_freq = 2 },
+  alias = not native_item and { scale = 1.0, color = colors.grey, update_freq = 2 } or nil,
   update_freq = 1,
-  icon = { drawing = false },
+  icon = { drawing = native_item, string = "􀸙", color = colors.grey, padding_left = 8, padding_right = 8 },
   label = { drawing = false },
   padding_left = 5,
   padding_right = 0,
@@ -91,7 +97,7 @@ local function show_status(result, exit_code)
     end
   end
   local color = active and colors.green or colors.grey
-  amphetamine:set({ alias = { color = color } })
+  amphetamine:set(native_item and { icon = { color = color } } or { alias = { color = color } })
   remaining:set({ label = { string = text, color = color } })
   hint:set({ label = { string = help, color = colors.grey } })
 end
@@ -120,7 +126,8 @@ local function update_status()
         break
       end
     end
-    amphetamine:set({ alias = { color = active and colors.green or colors.grey } })
+    local color = active and colors.green or colors.grey
+    amphetamine:set(native_item and { icon = { color = color } } or { alias = { color = color } })
     refresh_tooltip()
   end)
 end
@@ -132,7 +139,9 @@ amphetamine:subscribe("mouse.clicked", function(env)
     suppress_hover = true
     amphetamine:set({ popup = { drawing = false } })
     watch_pointer()
-    sbar.exec('"$CONFIG_DIR/helpers/menus/bin/menus" -s "Amphetamine,Amphetamine"')
+    sbar.exec(native_item
+      and '/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" open amphetamine'
+      or '"$CONFIG_DIR/helpers/menus/bin/menus" -s "Amphetamine,Amphetamine"')
     return
   end
   if env.BUTTON ~= "left" or busy then return end

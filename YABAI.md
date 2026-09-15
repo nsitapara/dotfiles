@@ -412,6 +412,15 @@ the events; changing Raycast's shortcuts will not fix it.
 
 ## SketchyBar and borders
 
+On macOS 27, the regular and docked profiles use normal SketchyBar items for
+CodexBar and Amphetamine because their native menu windows are absent from
+SketchyBar's alias lookup. `scripts/menu-status.py` reads CodexBar's displayed
+percentages through Accessibility and opens the provider menus. Amphetamine
+keeps its session controls and shows a coffee icon colored by its current state.
+CodexBar's separate provider icons must remain enabled. Missing status reads
+show `?` rather than a stale percentage. Older macOS versions keep the aliases.
+These SketchyBar changes are independent of the temporary yabai build.
+
 The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,
 and the active skhd mode. All configured slots stay visible on their assigned
