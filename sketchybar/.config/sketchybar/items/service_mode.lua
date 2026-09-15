@@ -51,6 +51,7 @@ return function(yabai_active)
       {"Cmd + comma", yabai_active and "Toggle tiled / stacked layout" or "Toggle tiles / accordion layout"},
       {"Cmd + = / minus", "Increase / decrease width"},
       {"Cmd + Shift + = / minus", "Increase / decrease height"},
+      {"Cmd + Ctrl + = / minus", "Step column width: 50%, 65%, 75%"},
       {"Cmd + Ctrl + Left / Right", "Move window between monitors; wrap and follow"},
       {"Cmd + Alt + S / F14", "Enter service mode"},
       {"Cmd + Ctrl + Alt + Shift", "Add R: resize, W: workspace, M: " .. (yabai_active and "insertion" or "merge")},

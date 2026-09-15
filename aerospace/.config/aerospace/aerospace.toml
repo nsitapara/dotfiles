@@ -80,6 +80,8 @@ outer.right =      10
 
     cmd-equal = ['resize width +32']
     cmd-minus = ['resize width -32']
+    cmd-ctrl-equal = 'exec-and-forget /usr/bin/python3 $HOME/dotfiles/wm-size.py aerospace up'
+    cmd-ctrl-minus = 'exec-and-forget /usr/bin/python3 $HOME/dotfiles/wm-size.py aerospace down'
     cmd-shift-equal = ['resize height +32']
     cmd-shift-minus = ['resize height -32']
     cmd-0 = 'balance-sizes' # Reset window sizes in the current workspace

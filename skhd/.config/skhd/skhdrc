@@ -24,6 +24,8 @@ cmd + shift - right : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai ri
 # punctuation: 0x18 = equals, 0x1B = minus, 0x2B = comma.
 cmd - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize width 32
 cmd - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize width -32
+cmd + ctrl - 0x18 : /usr/bin/python3 "$HOME/dotfiles/wm-size.py" yabai up
+cmd + ctrl - 0x1B : /usr/bin/python3 "$HOME/dotfiles/wm-size.py" yabai down
 cmd + shift - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize height 32
 cmd + shift - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize height -32
 # Reset window sizes in the current space.

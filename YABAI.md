@@ -227,6 +227,7 @@ the selected window between monitors. Cmd + G is available to applications.
 | Cmd + Ctrl + left / right | Send window to previous / next display, wrapping |
 | Cmd + equals / minus | Resize width |
 | Cmd + Shift + equals / minus | Resize height |
+| Cmd + Ctrl + equals / minus | Step column width up / down through 50%, 65%, 75% |
 | Cmd + F | Fill the tiling area without native fullscreen |
 | Cmd + J | Toggle the focused window's split direction |
 | Cmd + comma | Toggle whole-Space BSP / stack layout |
@@ -284,6 +285,21 @@ empty workspace, and closing the previous window can leave no target to return
 to. Focus two open windows to establish a new pair. **Alt + Tab** remains the
 separate previous-workspace shortcut. Yabai starts a new pair when its config is
 reloaded and skips closed, hidden, or minimized targets.
+
+### Column width presets
+
+Cmd + Ctrl + equals increases the selected column to the next preset;
+Cmd + Ctrl + minus decreases it. The presets are 50%, 65%, and 75% of the
+two columns' combined width, excluding the gap. They stop at the endpoints
+and use the actual width, so manual resizing and Cmd + 0 remain compatible.
+Change `PRESETS` in `wm-size.py` to customize the sizes for both managers.
+
+This preserves the two-column layout, including multiple windows stacked in
+either column. The focused window stays selected. Floating, fullscreen,
+accordion/stack layouts, overlapping windows, and layouts with more or fewer
+than two aligned columns are left alone. App minimum widths can limit shrinking.
+The helper runs only on a keypress; yabai uses the existing native socket.
+AeroSpace reads window geometry on demand. No background watcher is added.
 
 ### Directional focus and movement
 
