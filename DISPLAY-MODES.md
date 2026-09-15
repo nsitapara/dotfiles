@@ -1,6 +1,6 @@
 # Display modes: docked, laptop, and Screen Sharing
 
-Three layouts have to work, and they are selected by display count, not by choice:
+Three layouts have to work. They are pinned from the bar's profile menu (the pill on the right, or `./wm.sh profile NAME`); the Auto entry detects once from the connected screens. Nothing polls displays. A pin the connected screens cannot satisfy falls back to Auto and shows greyed in the bar:
 
 | Layout | Displays | Profile stowed |
 |---|---|---|
@@ -17,7 +17,7 @@ per-monitor split" is exactly right. No third profile exists.
 | Piece | Role |
 |---|---|
 | `switch-display-mode.sh` | Counts displays, unstows/stows the matching profile, reloads AeroSpace + sketchybar. Idempotent — exits early when the mode and the stowed config already agree. |
-| `local.dotfiles.desktop` (launchd) | Starts the saved manager once at login, then checks displays every 30s. The single service is installed by `./wm.sh default yabai` or `aerospace`. |
+| `local.dotfiles.desktop` (launchd) | Starts the saved manager once at login, which applies the pinned profile once. The single service is installed by `./wm.sh default yabai` or `aerospace`. |
 | `aerospace-monitor-sync.sh` | Runs it *immediately*, off sketchybar's built-in `display_change` event, and repairs the arrangement first. |
 
 The switcher waits for two matching display snapshots before applying a profile.
@@ -52,10 +52,11 @@ and its `.displays` companion. Run the isolated regression tests on macOS with
 unplugging, config desynchronization, failed detection/reloads, and concurrent
 invocations without changing the live desktop.
 
-Without the event hook there is a window of up to 30s where the wrong profile is
-stowed: workspaces force-assigned to a monitor that isn't there, space pills
-pinned to a dead display index. That window is what made sketchybar look "cut
-off" after connecting a Screen Sharing session.
+Without the event hook the wrong AeroSpace profile stays stowed until a profile is
+re-pinned: workspaces force-assigned to a monitor that isn't there, space pills
+pinned to a dead display index. That is what made sketchybar look "cut off" after
+connecting a Screen Sharing session. Under yabai, display changes only refresh
+the pills; the profile changes when you pick one.
 
 ## Trap: three different display numbers
 

@@ -8,19 +8,14 @@ set -e
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DOTFILES_DIR"
 
-# One launchd service starts the manager once, then checks displays. Dispatch
-# before taking the display lock: wm.sh and each check acquire it themselves.
+# One launchd service starts the manager once at login, which applies the pinned
+# profile. Nothing polls displays afterwards: profiles are chosen from the bar
+# menu or `wm.sh profile`. Dispatch before taking the display lock: wm.sh takes it.
 if [ "${1:-}" = --service ]; then
     case "${2:-}" in
         yabai|aerospace)
             [ "$#" -eq 2 ] || exit 64
-            "$DOTFILES_DIR/wm.sh" "$2"
-            # No manager startup inside this loop: manual switches must stick.
-            while sleep 30; do
-                "$DOTFILES_DIR/switch-display-mode.sh" ||
-                    echo "Display check failed; retrying in 30 seconds." >&2
-            done
-            exit 0 ;;
+            exec "$DOTFILES_DIR/wm.sh" "$2" ;;
         *) echo "Usage: $0 --service yabai|aerospace" >&2; exit 64 ;;
     esac
 fi

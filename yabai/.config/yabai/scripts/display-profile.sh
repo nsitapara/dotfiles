@@ -25,7 +25,9 @@ mode=non-docked
 package=sketchybar
 if [ "$count" -gt 1 ]; then mode=docked; package=sketchybar-docked; fi
 pid=$(pgrep -x yabai)
-signature=$(printf '%s\n%s\n' "$pid" "$signature" | cksum)
+# A new pin must re-apply even when it produces the same plan: picking a profile is also "apply now".
+pin=$(cat "$STATE/display-profile.pin" 2>/dev/null || true)
+signature=$(printf '%s\n%s\n%s\n' "$pid" "$signature" "$pin" | cksum)
 live=$(readlink -f "$HOME/.config/sketchybar/sketchybarrc" 2>/dev/null || true)
 bar_running=false
 loaded=""

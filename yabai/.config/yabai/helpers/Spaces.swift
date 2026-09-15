@@ -65,7 +65,7 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
           plan.map(\.id).sorted() == screens.map(\.id).sorted(),
           plan.allSatisfy({ entry in
               screens.contains { $0.id == entry.id && $0.index == entry.index } &&
-              (1...6).contains(entry.workspaces.count)
+              (0...6).contains(entry.workspaces.count)
           }) else { throw Failure(description: "Monitor layout changed; retry after it settles.") }
     let initial = try spaces()
     guard screens.contains(where: { screen in

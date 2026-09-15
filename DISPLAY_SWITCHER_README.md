@@ -1,7 +1,8 @@
 # Automatic display switching
 
-One desktop service starts the saved window manager at login and checks display
-profiles every 30 seconds. Display events also trigger immediate checks. Yabai
+One desktop service starts the saved window manager at login, which applies the
+pinned display profile once. Pick a profile from the bar menu or `./wm.sh profile`;
+nothing polls displays. Yabai
 and AeroSpace share the monitor policy; see [DISPLAY-MODES.md](DISPLAY-MODES.md)
 for display behavior and [YABAI.md](YABAI.md) for installation and recovery.
 
@@ -15,7 +16,9 @@ Run from this checkout:
 ./wm.sh default status      # Show the saved manager
 ./wm.sh default install     # Repair/reinstall, preserving the saved manager
 ./wm.sh default off         # Remove the service; leave the current manager running
-./switch-display-mode.sh   # Check displays once without switching managers
+./wm.sh profile docked      # Pin a profile: auto, docked, single, laptop
+./wm.sh profile             # Show the pinned and applied profile
+./switch-display-mode.sh    # Apply the pinned profile once without switching managers
 ```
 
 For compatibility, `./setup-display-switcher.sh --auto` invokes the same installer.

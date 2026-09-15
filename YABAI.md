@@ -33,10 +33,10 @@ needed to switch managers after the initial macOS Spaces setup below.
 `default` verifies that the selected manager starts before saving the choice.
 It installs one job, `~/Library/LaunchAgents/local.dotfiles.desktop.plist`.
 This directly runs `switch-display-mode.sh --service yabai` or `--service aerospace`.
-The service starts the selected manager once at graphical login, then sleeps
-between display checks every 30 seconds. Periodic checks never start a manager,
-so temporary switches stay in effect. Failed display checks retry at the next
-interval. A failed initial manager startup stops the service and records the error.
+The service starts the selected manager once at graphical login, which applies
+the pinned display profile. Nothing polls displays afterwards; pick a profile from
+the bar menu or `./wm.sh profile NAME` (auto, docked, single, laptop). A failed
+initial manager startup stops the service and records the error.
 
 The installer unloads and archives the former `local.dotfiles.wm-login` and
 `com.user.display-mode-switcher` jobs. `./setup-display-switcher.sh --auto` uses
@@ -149,8 +149,8 @@ and assignments. With only one external connected it always gets 2/4/6,
 regardless of its preferred role. Unknown pairs fall back to physical left-to-right
 order; a recognized monitor keeps its preferred role.
 
-After editing, run `./switch-display-mode.sh`; the automatic check also picks up
-changes within 30 seconds. Workspace roles do not depend on which display is main.
+After editing, run `./switch-display-mode.sh` or pick the profile again from the
+bar menu. Workspace roles do not depend on which display is main.
 The optional `clamshell_repair` section holds the older AeroSpace physical-layout
 snapshot. On replacement hardware, set its `enabled` to `false`, or update its
 UUIDs/settings from `displayplacer list` if you want arrangement repair too.

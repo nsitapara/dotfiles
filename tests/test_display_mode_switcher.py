@@ -134,8 +134,8 @@ class DisplayModeTests(unittest.TestCase):
                                         capture_output=True, text=True, timeout=5)
                 self.assertEqual(result.returncode, 64)
 
-    def test_service_retries_checks_without_undoing_manual_switch(self):
-        self.configure(counts=[2], service_test=True)
+    def test_service_starts_manager_once_without_display_checks(self):
+        self.configure(counts=[2])
         wm = self.path / "wm.sh"
         wm.write_text(f"#!{sys.executable}\n" + MOCK)
         wm.chmod(0o755)
@@ -144,12 +144,9 @@ class DisplayModeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         state = json.loads(self.mock_file.read_text())
         self.assertEqual(state["manager_starts"], 1)
-        self.assertFalse(state["yabai_trial"])
-        self.assertEqual(state["service_ticks"], 3)
-        self.assertIn("Display check failed; retrying", result.stderr)
+        self.assertNotIn("service_ticks", state)
         calls = [json.loads(line) for line in (self.path / "calls.jsonl").read_text().splitlines()]
-        self.assertTrue(any(c[0] == "display-profile.sh" for c in calls))
-        self.assertIn(["display-layout.sh", "--aerospace"], calls)
+        self.assertFalse(any(c[0] in ("display-profile.sh", "display-layout.sh") for c in calls))
 
     def configure(self, mode="docked", counts=None, **overrides):
         suffix = "-docked" if mode == "docked" else ""

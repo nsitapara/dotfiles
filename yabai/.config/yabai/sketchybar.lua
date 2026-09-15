@@ -205,8 +205,7 @@ end
 local observer = sbar.add("item", "yabai.observer", { drawing = false, updates = true })
 observer:subscribe({ "space_change", "space_windows_change",
   "system_woke", "yabai_windows_changed" }, update)
-observer:subscribe("display_change", function()
-  update()
-  sbar.exec(prefix .. '"$HOME/.config/yabai/scripts/display-profile.sh"')
-end)
+-- Profiles are pinned from the bar menu (wm.sh profile); a display change only
+-- refreshes the pills. See DISPLAY-MODES.md.
+observer:subscribe("display_change", update)
 update()

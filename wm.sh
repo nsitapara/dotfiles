@@ -95,6 +95,7 @@ Usage: ./wm.sh COMMAND
   default install      Install/repair the desktop service with the saved choice
   default off          Remove desktop service; keep current manager running
   spaces               Create missing desktops and label odd/even monitors
+  profile [NAME]       Show or pin the display profile: auto, docked, single, laptop
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in
   status               Show running apps and trial jobs
@@ -244,6 +245,20 @@ case "$1" in
         # Release the lock before invoking the existing profile switcher.
         exec 9>&-
         "$ROOT/switch-display-mode.sh" ;;
+    profile)
+        pin="$STATE/display-profile.pin"
+        case "${2:-}" in
+            "")
+                applied=$(jq -r '.[0].profile // "unknown"' "$STATE/display-layout.json" 2>/dev/null || echo unknown)
+                echo "$(cat "$pin" 2>/dev/null || echo auto) $applied"
+                exit 0 ;;
+            auto) rm -f "$pin" ;;
+            docked|single|laptop) printf '%s\n' "$2" > "$pin" ;;
+            *) die "Unknown profile: $2. Use auto, docked, single, or laptop." ;;
+        esac
+        rm -f "$STATE/display-profile.signature"
+        exec 9>&-
+        exec "$ROOT/switch-display-mode.sh" ;;
     spaces|reload)
         loaded "$YABAI_JOB" || die "Start the trial with ./wm.sh yabai first."
         if [ "$1" = spaces ]; then

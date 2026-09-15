@@ -8,7 +8,7 @@ visible in the list.
 
 | Entry | Job | When it runs |
 |---|---|---|
-| `switch-display-mode.sh` | `local.dotfiles.desktop` | Starts the saved manager once at login, then checks display profiles every 30 seconds |
+| `switch-display-mode.sh` | `local.dotfiles.desktop` | Starts the saved manager once at login, which applies the pinned display profile once |
 | `sketchybar` | `homebrew.mxcl.sketchybar` | Continuously, to draw the menu bar |
 | `borders` | `homebrew.mxcl.borders` | Continuously, to draw window borders |
 

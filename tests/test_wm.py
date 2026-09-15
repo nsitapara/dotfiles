@@ -152,7 +152,7 @@ class WmTests(unittest.TestCase):
             helper.chmod(0o755)
         (helpers / "spaces.sh").write_text('#!/bin/bash\necho "Ready: ws1"\n')
         (helpers / "spaces.sh").chmod(0o755)
-        (self.path / "switch-display-mode.sh").write_text("#!/bin/bash\nexit 0\n")
+        (self.path / "switch-display-mode.sh").write_text('#!/bin/bash\ntouch "$WM_TEST_ROOT/switched"\nexit 0\n')
         (self.path / "switch-display-mode.sh").chmod(0o755)
         self.bin = self.path / "bin"
         self.bin.mkdir()
@@ -179,8 +179,8 @@ class WmTests(unittest.TestCase):
         return [c for line in (self.path / "calls.jsonl").read_text().splitlines()
                 if (c := json.loads(line))[0] == name]
 
-    def run_wm(self, command, success=True):
-        result = subprocess.run(["/bin/bash", str(self.path / "wm.sh"), command],
+    def run_wm(self, command, success=True, *args):
+        result = subprocess.run(["/bin/bash", str(self.path / "wm.sh"), command, *args],
                                 env=self.env, capture_output=True, text=True, timeout=30)
         self.refresh()
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
@@ -263,6 +263,18 @@ class WmTests(unittest.TestCase):
         self.run_wm("yabai", success=False)
         self.assertIn("skhd", self.state["running"])
         self.assertEqual(self.calls("osascript"), [])
+
+    def test_profile_pin_applies_immediately(self):
+        pin = self.path / "state/display-profile.pin"
+        self.run_wm("profile", True, "docked")
+        self.assertEqual(pin.read_text().strip(), "docked")
+        self.assertTrue((self.path / "switched").exists())
+        self.assertEqual(self.run_wm("profile").stdout.split()[0], "docked")
+        self.run_wm("profile", False, "bogus")
+        self.assertEqual(pin.read_text().strip(), "docked")
+        self.run_wm("profile", True, "auto")
+        self.assertFalse(pin.exists())
+        self.assertEqual(self.run_wm("profile").stdout.split()[0], "auto")
 
     def test_prepare_is_repeatable_and_restores_absent_values(self):
         self.state["prefs"] = {"spans-displays": 1}

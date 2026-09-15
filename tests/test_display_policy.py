@@ -19,8 +19,9 @@ def screen(index, name, builtin=False, x=0):
 
 
 class PolicyTests(unittest.TestCase):
-    def plan(self, screens, prefs=None, success=True):
-        result = subprocess.run(["jq", "-e", "--argjson", "prefs", json.dumps(prefs or PREFS),
+    def plan(self, screens, prefs=None, success=True, profile="auto"):
+        result = subprocess.run(["jq", "-e", "--arg", "profile", profile,
+                                 "--argjson", "prefs", json.dumps(prefs or PREFS),
                                  "-f", str(SCRIPTS / "display-layout.jq")],
                                 input=json.dumps(screens), text=True, capture_output=True)
         self.assertEqual(result.returncode == 0, success, result.stderr)
@@ -42,6 +43,29 @@ class PolicyTests(unittest.TestCase):
                 self.assertEqual({s['id']:s['workspaces'] for s in plan}, expected)
                 for entry in plan:
                     self.assertEqual(entry['top_padding'], 16 if entry['builtin'] else 50)
+
+    def test_auto_plan_names_the_layout_it_applied(self):
+        laptop = screen(1, "Built-in Retina Display", True)
+        lg = screen(2, "LG HDR QHD", x=2560)
+        pa = screen(3, "PA278QV", x=-2560)
+        for screens, applied in [([laptop], "laptop"), ([laptop, lg], "single"),
+                                 ([pa, lg], "docked"), ([pa, laptop, lg], "docked")]:
+            self.assertEqual({s['profile'] for s in self.plan(screens)}, {applied})
+
+    def test_pinned_profiles_apply_only_when_screens_allow(self):
+        laptop = screen(1, "Built-in Retina Display", True)
+        lg = screen(2, "LG HDR QHD", x=2560)
+        pa = screen(3, "PA278QV", x=-2560)
+        cases = [("laptop", [laptop, lg], {101:[1,2,3,4,5,6],102:[]}, "laptop"),
+                 ("single", [pa, laptop, lg], {101:[1,3,5],102:[2,4,6],103:[]}, "single"),
+                 ("docked", [pa, laptop, lg], {101:[7,8,9],102:[1,3,5],103:[2,4,6]}, "docked"),
+                 ("docked", [laptop], {101:[1,2,3,4,5,6]}, "laptop"),
+                 ("single", [laptop], {101:[1,2,3,4,5,6]}, "laptop")]
+        for profile, screens, expected, applied in cases:
+            with self.subTest(profile=profile, screens=len(screens)):
+                plan = self.plan(screens, profile=profile)
+                self.assertEqual({s['id']:s['workspaces'] for s in plan}, expected)
+                self.assertEqual({s['profile'] for s in plan}, {applied})
 
     def test_replacing_monitors_requires_only_preference_change(self):
         left, right = screen(1, 'New Left'), screen(2, 'New Right', x=2560)
@@ -150,6 +174,12 @@ class NativeProfileTests(unittest.TestCase):
         self.run_profile()
         self.assertEqual(before,(self.calls('stow'),self.calls('ensure-spaces.sh'),self.signature.stat().st_mtime_ns))
         self.assertFalse(any('aerospace' in arg for call in self.calls('stow') for arg in call))
+
+    def test_pin_change_reapplies_profile(self):
+        self.run_profile()
+        (self.signature.parent/'display-profile.pin').write_text('laptop\n')
+        self.run_profile()
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
 
     def test_three_screens_apply_both_padding_values_and_nine_slots(self):
         self.state['plan'][0]['workspaces'] = [7,8,9]

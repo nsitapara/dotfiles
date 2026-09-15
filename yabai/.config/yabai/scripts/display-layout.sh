@@ -14,8 +14,9 @@ if [ "${1:-}" = --aerospace ]; then
 else
     displays=$(yabai -m query --displays)
 fi
+pin=$(cat "$HOME/.local/state/dotfiles-wm/display-profile.pin" 2>/dev/null || echo auto)
 jq -e --argjson metadata "$metadata" '
   map(. as $display | [$metadata[] | select(.id == $display.id)][0] as $meta |
     if $meta == null then error("Display metadata has not settled") else . + $meta end)
 ' <<< "$displays" |
-  jq -e --argjson prefs "$(cat "$HERE/../display-preferences.json")" -f "$HERE/display-layout.jq"
+  jq -e --arg profile "${pin:-auto}" --argjson prefs "$(cat "$HERE/../display-preferences.json")" -f "$HERE/display-layout.jq"
