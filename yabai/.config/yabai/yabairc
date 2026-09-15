@@ -40,6 +40,13 @@ for event in window_created window_destroyed window_focused window_title_changed
         action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed'
 done
 
+# Native Space/display activation can leave Finder active with no focused window.
+# Keyboard/bar switches also run this guard, including clicks on the current Space.
+for event in space_changed display_changed; do
+    yabai -m signal --add label="dotfiles-focus-$event" event="$event" \
+        action='/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" --restore'
+done
+
 # Hotplug works even if SketchyBar is stopped. The helper debounces geometry
 # changes and never switches the window manager or repairs physical displays.
 for event in display_added display_removed display_moved display_resized; do

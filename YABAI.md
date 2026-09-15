@@ -227,6 +227,12 @@ Space navigation stop at boundaries; only the display-send helper wraps.
 Modes stay active until Escape/Space, or F15 in service mode. The old
 close-all-other-windows action is not bound in this trial.
 
+Switching a yabai workspace also checks window focus. If macOS leaves Finder or
+another workspace active, the helper focuses a visible window in the destination.
+An existing valid selection is preserved, floating windows are eligible, and
+empty workspaces remain empty. This covers keyboard shortcuts, bar clicks, and
+native Space/display-change events.
+
 ### Swap, then make the window large
 
 In both managers, **Cmd + Shift + arrow** first swaps the selected tiled window

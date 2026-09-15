@@ -62,7 +62,7 @@ end
 events["yabai.space.5:mouse.clicked"]({BUTTON="left"})
 assert(commands[#commands]:match("ensure%-spaces.sh"), "Missing desktop retries setup")
 events["yabai.space.3:mouse.clicked"]({BUTTON="left"})
-assert(commands[#commands]:match("space %-%-focus 1$"), "Click must use native index, not label digit")
+assert(commands[#commands]:match("focus%-space.py.* 1$"), "Click must use native index, not label digit")
 events["yabai.mode:yabai_mode_changed"]({MODE="resize"})
 assert(items["yabai.mode"].props.label.string == "resize")
 assert(items["yabai.mode"].props.drawing == true)
