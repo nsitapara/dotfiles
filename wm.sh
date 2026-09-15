@@ -81,7 +81,8 @@ Usage: ./wm.sh COMMAND
   aerospace            Stop the trial, open AeroSpace, reload SketchyBar
   default MANAGER      Switch now and at login: yabai or aerospace
   default status       Show the saved login default
-  default off          Remove login launcher; keep current manager running
+  default install      Install/repair the desktop service with the saved choice
+  default off          Remove desktop service; keep current manager running
   spaces               Create missing desktops and label odd/even monitors
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in

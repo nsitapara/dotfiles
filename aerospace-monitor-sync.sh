@@ -12,7 +12,7 @@
 # relative AeroSpace command has to hop through a screen nobody can see.
 #
 # Why the profile switch needs this event: switch-display-mode.sh runs on a 30s
-# launchd StartInterval, so until it fires the wrong profile stays stowed —
+# desktop-service interval, so until it fires the wrong profile stays stowed —
 # workspaces force-assigned to a monitor that isn't there, space pills pinned to a
 # dead display index. This makes it immediate; the launchd interval remains the
 # backstop. Ordering matters: repair the arrangement first, so the profile switch

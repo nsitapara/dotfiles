@@ -17,7 +17,7 @@ per-monitor split" is exactly right. No third profile exists.
 | Piece | Role |
 |---|---|
 | `switch-display-mode.sh` | Counts displays, unstows/stows the matching profile, reloads AeroSpace + sketchybar. Idempotent — exits early when the mode and the stowed config already agree. |
-| `com.user.display-mode-switcher` (launchd) | Runs the above every 30s. The backstop. |
+| `local.dotfiles.desktop` (launchd) | Starts the saved manager once at login, then checks displays every 30s. The single service is installed by `./wm.sh default yabai` or `aerospace`. |
 | `aerospace-monitor-sync.sh` | Runs it *immediately*, off sketchybar's built-in `display_change` event, and repairs the arrangement first. |
 
 The switcher waits for two matching display snapshots before applying a profile.

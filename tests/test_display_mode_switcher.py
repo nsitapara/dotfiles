@@ -63,11 +63,23 @@ elif name == "sketchybar":
 elif name == "display-layout.sh":
     print(json.dumps(state["plan"]))
 elif name == "display-profile.sh":
-    pass
+    if state.get("service_test") and state.get("service_ticks") == 1:
+        sys.exit(1)
+elif name == "wm.sh":
+    state["manager_starts"] = state.get("manager_starts", 0) + 1
+    state["yabai_trial"] = args[0] == "yabai"
+    save()
 elif name == "launchctl":
     sys.exit(0 if state.get("yabai_trial") else 1)
 elif name == "sleep":
-    pass
+    if args == ["30"] and state.get("service_test"):
+        state["service_ticks"] = state.get("service_ticks", 0) + 1
+        # Simulate a manual switch to AeroSpace after the first failed check.
+        if state["service_ticks"] == 2:
+            state["yabai_trial"] = False
+        save()
+        if state["service_ticks"] > 2:
+            sys.exit(1)
 elif name == "aerospace" and args[0] == "list-workspaces":
     print(state.get("assignments", ""))
 elif name != "aerospace":
@@ -103,24 +115,41 @@ class DisplayModeTests(unittest.TestCase):
             file.chmod(0o755)
         self.configure()
 
-    def test_login_delegates_to_window_manager_before_display_checks(self):
+    def test_service_propagates_startup_failure_before_display_checks(self):
         wm = self.path / "wm.sh"
         wm.write_text('#!/bin/bash\nprintf "%s" "$1" > "$DISPLAY_TEST_DIR/login-manager"\nexit 7\n')
         wm.chmod(0o755)
         for manager in ("yabai", "aerospace"):
             with self.subTest(manager=manager):
-                result = subprocess.run([str(self.script), "--login", manager], env=self.env,
+                result = subprocess.run([str(self.script), "--service", manager], env=self.env,
                                         capture_output=True, text=True, timeout=5)
                 self.assertEqual(result.returncode, 7)
                 self.assertEqual((self.path / "login-manager").read_text(), manager)
                 self.assertFalse(Path(str(self.state_file) + ".lock").exists())
 
-    def test_login_rejects_missing_or_invalid_manager(self):
-        for args in (["--login"], ["--login", "other"], ["--login", "yabai", "extra"]):
+    def test_service_rejects_missing_or_invalid_manager(self):
+        for args in (["--service"], ["--service", "other"], ["--service", "yabai", "extra"]):
             with self.subTest(args=args):
                 result = subprocess.run([str(self.script), *args], env=self.env,
                                         capture_output=True, text=True, timeout=5)
                 self.assertEqual(result.returncode, 64)
+
+    def test_service_retries_checks_without_undoing_manual_switch(self):
+        self.configure(counts=[2], service_test=True)
+        wm = self.path / "wm.sh"
+        wm.write_text(f"#!{sys.executable}\n" + MOCK)
+        wm.chmod(0o755)
+        result = subprocess.run([str(self.script), "--service", "yabai"], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        state = json.loads(self.mock_file.read_text())
+        self.assertEqual(state["manager_starts"], 1)
+        self.assertFalse(state["yabai_trial"])
+        self.assertEqual(state["service_ticks"], 3)
+        self.assertIn("Display check failed; retrying", result.stderr)
+        calls = [json.loads(line) for line in (self.path / "calls.jsonl").read_text().splitlines()]
+        self.assertTrue(any(c[0] == "display-profile.sh" for c in calls))
+        self.assertIn(["display-layout.sh", "--aerospace"], calls)
 
     def configure(self, mode="docked", counts=None, **overrides):
         suffix = "-docked" if mode == "docked" else ""

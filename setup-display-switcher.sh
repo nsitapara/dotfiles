@@ -130,50 +130,11 @@ echo ""
 
 # Install LaunchAgent if --auto flag is passed
 if [ "$AUTO_MODE" = true ]; then
-    echo "Setting up automatic mode (LaunchAgent)..."
+    # Use the same installer as wm.sh; never recreate a separate polling job.
+    /usr/bin/python3 "$SCRIPT_DIR/wm-startup.py" install
+    echo "Desktop service enabled. It starts the saved manager and checks displays every 30 seconds."
+    echo "Disable with: $SCRIPT_DIR/wm.sh default off"
 
-    CURRENT_USER=$(whoami)
-    HOME_DIR="$HOME"
-
-    if [ ! -f "$SCRIPT_DIR/com.user.display-mode-switcher.plist" ]; then
-        echo -e "${RED}ERROR: com.user.display-mode-switcher.plist not found${NC}"
-        exit 1
-    fi
-
-    # Create a temporary plist with updated paths
-    sed "s|/Users/nishsitapara|$HOME_DIR|g" "$SCRIPT_DIR/com.user.display-mode-switcher.plist" > /tmp/display-switcher-temp.plist
-
-    # Copy to LaunchAgents directory
-    mkdir -p "$HOME_DIR/Library/LaunchAgents"
-    cp /tmp/display-switcher-temp.plist "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-    rm /tmp/display-switcher-temp.plist
-
-    # Unload existing agent if it exists
-    launchctl unload "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist" 2>/dev/null || true
-
-    # Load the LaunchAgent
-    launchctl load "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-
-    # Check if it loaded successfully
-    if launchctl list | grep -q "com.user.display-mode-switcher"; then
-        echo -e "${GREEN}✓ LaunchAgent installed and running${NC}"
-        echo ""
-        echo "========================================"
-        echo -e "${GREEN}Setup Complete!${NC}"
-        echo "========================================"
-        echo ""
-        echo "Automatic mode is now enabled."
-        echo "The switcher will check every 30 seconds for display changes."
-        echo ""
-        echo "Commands:"
-        echo "  Run manually:  $SCRIPT_DIR/switch-display-mode.sh"
-        echo "  View logs:     tail -f /tmp/display-mode-switcher.log"
-        echo "  Disable auto:  launchctl unload ~/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-        echo ""
-    else
-        echo -e "${RED}ERROR: Failed to load LaunchAgent${NC}"
-        exit 1
-    fi
 else
     echo "========================================"
     echo -e "${GREEN}Setup Complete!${NC}"

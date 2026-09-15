@@ -8,15 +8,15 @@ visible in the list.
 
 | Entry | Job | When it runs |
 |---|---|---|
-| `switch-display-mode.sh` | `local.dotfiles.wm-login` | Once at login, with `--login yabai` or `--login aerospace`, to start the saved manager |
-| `switch-display-mode.sh` | `com.user.display-mode-switcher` | Every 30 seconds, to check display profiles and retry missed changes |
+| `switch-display-mode.sh` | `local.dotfiles.desktop` | Starts the saved manager once at login, then checks display profiles every 30 seconds |
 | `sketchybar` | `homebrew.mxcl.sketchybar` | Continuously, to draw the menu bar |
 | `borders` | `homebrew.mxcl.borders` | Continuously, to draw window borders |
 
-The old generic `bash` startup command has been replaced with a direct call to
-`switch-display-mode.sh`. The two schedules remain separate: a display check must
-not start the saved manager again after a temporary switch. macOS may retain an
-old entry until it refreshes its background-item inventory.
+There is one desktop startup/checking job. The old `local.dotfiles.wm-login` and
+`com.user.display-mode-switcher` jobs are unloaded and their plists archived under
+`~/.local/state/dotfiles-wm/disabled-launch-agents/`. The service starts the manager
+once, then only checks displays. A temporary manager switch stays in effect.
+macOS may retain old entries until it refreshes its background-item inventory.
 
 Yabai and skhd run as `local.dotfiles.yabai` and `local.dotfiles.skhd`, started by
 the login command through `wm.sh`. Use `./wm.sh default status` to inspect the
@@ -53,9 +53,10 @@ The desktop scripts have active callers. Keep these responsibilities separate:
 - `aerospace-monitor-sync.sh` repairs physical display arrangements for
   AeroSpace. Its polling, retiling, and floating-window helpers remain needed
   for the supported AeroSpace fallback; they are not running while Yabai is active.
-- `setup-display-switcher.sh` installs the periodic job. It only runs on demand.
+- `setup-display-switcher.sh --auto` calls the same installer as `wm.sh default`.
+  It cannot install a separate polling job.
 
-A further cleanup could combine the login and periodic-job installers and replace
-the hard-coded paths in `com.user.display-mode-switcher.plist` with generated
-paths. Combining the runtime jobs themselves would need to preserve their
-different schedules and manual-switch behavior.
+The old hard-coded plist template has been removed. `wm-startup.py` generates the
+single service's paths from the current checkout. Reinstalling preserves the
+saved manager, and `./wm.sh default off` removes the service without stopping the
+current manager or its event-driven display handlers.

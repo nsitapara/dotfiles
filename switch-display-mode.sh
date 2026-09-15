@@ -8,15 +8,20 @@ set -e
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DOTFILES_DIR"
 
-# Login startup and periodic display checks share this named entry point.
-# Dispatch before taking the display lock: wm.sh owns that lock and calls this
-# script without --login after the selected manager is ready.
-if [ "${1:-}" = --login ]; then
+# One launchd service starts the manager once, then checks displays. Dispatch
+# before taking the display lock: wm.sh and each check acquire it themselves.
+if [ "${1:-}" = --service ]; then
     case "${2:-}" in
         yabai|aerospace)
             [ "$#" -eq 2 ] || exit 64
-            exec "$DOTFILES_DIR/wm.sh" "$2" ;;
-        *) echo "Usage: $0 --login yabai|aerospace" >&2; exit 64 ;;
+            "$DOTFILES_DIR/wm.sh" "$2"
+            # No manager startup inside this loop: manual switches must stick.
+            while sleep 30; do
+                "$DOTFILES_DIR/switch-display-mode.sh" ||
+                    echo "Display check failed; retrying in 30 seconds." >&2
+            done
+            exit 0 ;;
+        *) echo "Usage: $0 --service yabai|aerospace" >&2; exit 64 ;;
     esac
 fi
 

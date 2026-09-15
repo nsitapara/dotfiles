@@ -19,23 +19,25 @@ the current session. The saved default returns at the next login. No logout is
 needed to switch managers after the initial macOS Spaces setup below.
 
 `default` verifies that the selected manager starts before saving the choice.
-It installs `~/Library/LaunchAgents/local.dotfiles.wm-login.plist`, which runs
-the existing switcher once per graphical login. The switcher stops the other
-manager before starting the chosen one. Its yabai/skhd jobs are recreated at
-each login; SIP stays enabled. There is no automatic restart loop to undo a
-manual switch. Keep AeroSpace's `start-at-login` false even when it is the
-selected default, so only this launcher controls startup.
+It installs one job, `~/Library/LaunchAgents/local.dotfiles.desktop.plist`.
+This directly runs `switch-display-mode.sh --service yabai` or `--service aerospace`.
+The service starts the selected manager once at graphical login, then sleeps
+between display checks every 30 seconds. Periodic checks never start a manager,
+so temporary switches stay in effect. Failed display checks retry at the next
+interval. A failed initial manager startup stops the service and records the error.
 
-The login entry directly runs `switch-display-mode.sh --login yabai` or
-`--login aerospace`. Regular display checks run the same script without arguments
-and never restart the window manager. This gives macOS a named script to display
-instead of the generic `/bin/bash` executable. See [BACKGROUND-SERVICES.md](BACKGROUND-SERVICES.md)
-for the startup inventory and cleanup notes.
+The installer unloads and archives the former `local.dotfiles.wm-login` and
+`com.user.display-mode-switcher` jobs. `./setup-display-switcher.sh --auto` uses
+the same installer and preserves the saved manager, so it cannot recreate a
+second periodic job. `./wm.sh default install` repairs the service the same way.
+SIP stays enabled. Keep AeroSpace's `start-at-login` false even when it is the
+selected default, so only this service controls startup.
+See [BACKGROUND-SERVICES.md](BACKGROUND-SERVICES.md) for the service inventory.
 
 If startup fails, inspect `~/.local/state/dotfiles-wm/login.err.log` and the
 `yabai.err.log` / `skhd.err.log` files beside it. Run `./wm.sh doctor`, or switch
-back with `./wm.sh default aerospace`. To remove automatic startup while leaving
-the current manager running, use `./wm.sh default off`.
+back with `./wm.sh default aerospace`. To remove login startup and periodic
+display checks while leaving the current manager running, use `./wm.sh default off`.
 
 The launcher refers to this checkout's absolute path. After moving the checkout,
 rerun `./wm.sh default yabai` or `./wm.sh default aerospace` from its new location.
