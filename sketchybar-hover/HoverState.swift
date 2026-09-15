@@ -8,8 +8,9 @@ struct HoverState {
     mutating func update(distance: Double?, menuHeight: Int,
                          mouseDown: Bool, menuVisible: Bool, now: TimeInterval) -> Bool? {
         if !hidden {
-            let atTop = distance.map { $0 >= 0 && $0 <= 2 } ?? false
-            if menuVisible || (atTop && !mouseDown) {
+            // Hide only once macOS reveals its menu bar, so the hand-off follows
+            // the native delay instead of firing on a brush against the edge.
+            if menuVisible {
                 hidden = true
                 leaveTime = nil
                 return true

@@ -73,7 +73,6 @@ timer.setEventHandler {
     autoreleasepool {
         ticks += 1
         if ticks % 30 == 0 && kill(barPID, 0) != 0 { exit(0) }
-        if ticks % 3 == 1 { menuVisible = nativeMenuVisible() }
         let pointer = NSEvent.mouseLocation
         let screen = NSScreen.screens.first {
             $0.frame.insetBy(dx: -1, dy: -1).contains(pointer)
@@ -82,6 +81,10 @@ timer.setEventHandler {
         // Auto-hide can report a zero visible-frame inset. Keep at least 36pt
         // as the native-menu pointer zone, or the notch's safe area if larger.
         let menuHeight = Int(ceil(max(36, screen?.safeAreaInsets.top ?? 0)))
+        // Poll the native menu at 30 Hz while the pointer is in its zone so the
+        // hide lands as the bar appears; 10 Hz elsewhere keeps the cost low.
+        let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
+        if nearTop || ticks % 3 == 1 { menuVisible = nativeMenuVisible() }
         if let hidden = state.update(distance: distance, menuHeight: menuHeight,
                                      mouseDown: NSEvent.pressedMouseButtons != 0,
                                      menuVisible: menuVisible,

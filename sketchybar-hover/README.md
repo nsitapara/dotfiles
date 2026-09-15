@@ -8,14 +8,15 @@ The builder resolves Swift and its SDK through Xcode's `xcrun`, clears inherited
 SDK/deployment overrides, and targets macOS 13 or later. This avoids mixing the
 older Xcode compiler with SDK settings inherited during the OS upgrade.
 
-Move the pointer into the top two points of a display to hide SketchyBar while
-the native menu appears. It stays hidden while the native menu bar is visible,
+SketchyBar hides the moment macOS reveals its auto-hidden menu bar, so the
+hand-off follows the native delay; brushing the top edge alone does nothing.
+It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
-Dragging to the top does not trigger hiding by itself.
 
 The helper checks on-screen window metadata at 10 Hz to detect the native menu
-bar, without capturing screen contents. macOS 27 marks some window layers with
+bar, rising to 30 Hz while the pointer is in the menu zone, without capturing
+screen contents. macOS 27 marks some window layers with
 bit 31; this flag is masked when identifying the menu layer. Pointer polling
 remains 30 Hz. The native menu must be configured to auto-hide.
 
