@@ -1,7 +1,9 @@
 """Directional movement swaps, fills a side, then crosses without wrapping."""
 import importlib.util
+import fcntl
 import json
 from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -19,6 +21,35 @@ def w(id, x, y, width, height, **extra):
 class DirectionTests(unittest.TestCase):
     def setUp(self):
         self.windows = [w(1,0,0,500,1000),w(2,510,0,500,495),w(3,510,505,500,495)]
+
+    def test_focus_runs_while_resize_or_move_is_busy_in_both_managers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            state = home/'.local/state/dotfiles-wm'
+            state.mkdir(parents=True)
+            with (state/'direction.lock').open('w') as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                for manager in ['yabai', 'aerospace']:
+                    with self.subTest(manager=manager), patch.object(wm.Path, 'home', return_value=home), \
+                            patch.object(wm.sys, 'argv', ['wm-direction.py', manager, 'right', '--focus']), \
+                            patch.object(wm, 'focus_'+manager) as focus:
+                        wm.main()
+                    focus.assert_called_once_with('right')
+
+    def test_busy_moves_and_duplicate_focus_still_drop_without_waiting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            state = home/'.local/state/dotfiles-wm'
+            state.mkdir(parents=True)
+            for name, flags, function in [('direction.lock', [], 'yabai'),
+                                           ('focus.lock', ['--focus'], 'focus_yabai')]:
+                with (state/name).open('w') as lock:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    with patch.object(wm.Path, 'home', return_value=home), \
+                            patch.object(wm.sys, 'argv', ['wm-direction.py', 'yabai', 'right', *flags]), \
+                            patch.object(wm, function) as action:
+                        wm.main()
+                    action.assert_not_called()
 
     def test_neighbors_and_edges_in_screenshot(self):
         a,b,c = self.windows

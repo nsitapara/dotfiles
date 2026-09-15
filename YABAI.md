@@ -150,6 +150,11 @@ deleted. Fullscreen and custom-labelled desktops do not count toward the target.
 & Security > Accessibility. If needed, add `~/Applications/Dotfiles Spaces.app`
 with the `+` button. This is separate from yabai and skhd's permissions. macOS
 may ask again if the locally built helper changes or you reinstall it.
+Open the helper from Finder to request access explicitly. Automated desktop
+setup checks permission without opening a dialog. If access is unavailable
+during hotplug, the display profile still updates SketchyBar, yabai padding,
+and labels for existing desktops. It leaves missing desktops for `./wm.sh spaces`
+after permission is restored, without repeating setup on every display check.
 
 The helper keeps SIP enabled. When desktops are missing, it briefly opens Mission
 Control and presses the Add Desktop button on the appropriate physical display,
@@ -338,6 +343,10 @@ needed.
 The shared `wm-direction.py` helper uses the current window sizes and physical
 monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;
 it does not require yabai to be running.
+
+Focus shortcuts use a separate lock from window moves and size presets. An app
+that delays or refuses a requested size cannot make the layout helper discard
+Cmd + arrow presses. Repeated focus commands still run one at a time.
 
 For yabai, the helper sends commands directly to its local socket to avoid
 starting a separate CLI process for every operation. It falls back to the CLI

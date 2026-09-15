@@ -489,9 +489,12 @@ def main():
     os.environ['PATH'] += ':/opt/homebrew/bin:/usr/local/bin'
     state = Path.home()/'.local/state/dotfiles-wm'
     state.mkdir(parents=True, exist_ok=True)
-    with (state/'direction.lock').open('w') as lock:
+    # Layout changes may wait for app geometry, especially at minimum sizes.
+    # Keep focus independent so those waits never discard Cmd+arrow presses.
+    lock_name = 'focus.lock' if args.focus else 'direction.lock'
+    with (state/lock_name).open('w') as lock:
         try:
-            # Drop auto-repeat while a rearrangement is still running.
+            # Drop overlapping requests of the same kind, never queue repeats.
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return
