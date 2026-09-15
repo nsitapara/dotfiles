@@ -3,11 +3,7 @@ set -euo pipefail
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 case "${1:-}" in
     float)
-        id=$(yabai -m query --windows --window | jq -er '.id')
-        yabai -m window "$id" --toggle float
-        if yabai -m query --windows --window "$id" | jq -e '."is-floating"' >/dev/null; then
-            yabai -m window "$id" --grid 10:10:1:1:8:8
-        fi ;;
+        exec /usr/bin/python3 "$HOME/dotfiles/wm-float.py" ;;
     resize)
         delta=${3:?Missing resize delta}
         if [ "${2:?Missing resize axis}" = width ]; then

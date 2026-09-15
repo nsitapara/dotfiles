@@ -229,12 +229,12 @@ the selected window between monitors. Cmd + G is available to applications.
 | Cmd + F | Fill the tiling area without native fullscreen |
 | Cmd + J | Toggle the focused window's split direction |
 | Cmd + comma | Toggle whole-Space BSP / stack layout |
-| Cmd + Ctrl + Shift + F | Float / tile; center a newly floated window |
+| Cmd + Ctrl + Shift + F | Float / tile; restore the saved floating size and position |
 | Cmd + Ctrl + Alt + Shift + D | Restore BSP layout and balance windows |
 | Cmd + Ctrl + Alt + Shift + R | Resize mode; arrows resize, Shift uses larger steps |
 | Cmd + Ctrl + Alt + Shift + W | Workspace/display navigation mode |
 | Cmd + Ctrl + Alt + Shift + M | Insertion mode; arrows choose where the next window goes |
-| Cmd + Alt + S or F14 | Service mode; F floats, R balances, up/down changes volume |
+| Cmd + Alt + S or F14 | Service mode; F toggles floating and exits, R balances, up/down changes volume |
 | Escape / Space in a mode | Return to normal shortcuts |
 | Alt + Shift + C | Reload yabai rules and skhd shortcuts |
 
@@ -249,6 +249,23 @@ another workspace active, the helper focuses a visible window in the destination
 An existing valid selection is preserved, floating windows are eligible, and
 empty workspaces remain empty. This covers keyboard shortcuts, bar clicks, and
 native Space/display-change events.
+
+### Floating size and position
+
+Float shortcuts in both managers remember each window's last floating size and
+position when you tile it. Floating it again restores that geometry. Moving it
+to another monitor translates and clamps the saved frame to the current screen.
+A new window keeps the existing centered default size until you save a floating
+position. Memory belongs to that window, not every future window of the app.
+
+Use **Cmd + Ctrl + Shift + F**, or enter service mode and press **F**. Service F
+returns to normal mode immediately in both managers, whether floating or tiling.
+The SERVICE badge and help popup close too.
+
+The cache lives in `~/.local/state/dotfiles-wm/float-frames.json`, holds at most
+200 windows, and is shared between the two implementations. No polling or
+background process is added. Yabai uses its existing socket transport; AeroSpace
+uses one Accessibility script invocation per toggle.
 
 ### Previous window
 

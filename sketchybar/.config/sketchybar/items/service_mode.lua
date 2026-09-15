@@ -26,7 +26,7 @@ return function(yabai_active)
       {"SERVICE MODE", yabai_active and "yabai + skhd" or "AeroSpace", true},
       {"?  /  Shift + /", "Show or hide this help"},
       {"Esc / Space / F15", "Close help and return to normal mode"},
-      {"F", yabai_active and "Toggle floating" or "Toggle floating; return to normal mode"},
+      {"F", "Toggle floating; return to normal mode"},
       {"R", yabai_active and "Restore tiled layout and balance sizes" or "Flatten layout; return to normal mode"},
       {"Up / Down", "Volume up / down"},
       {"Shift + Down", "Mute volume"},
