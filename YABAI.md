@@ -257,8 +257,14 @@ AeroSpace uses its swap command and rebuilds the tiling group on an edge press.
 it continues onto the adjacent monitor. Both movement and focus enter from the
 near side: moving left enters the right edge of the left monitor, and moving
 right enters the left edge of the right monitor. Up/down follows the same rule.
+An arriving tiled window gets a full side of the destination, with the existing
+windows grouped opposite it. In yabai, that group is balanced so repeated moves
+do not produce progressively smaller tiles. Movement waits for macOS to report
+the destination before arranging it.
 Focus prefers the same row or column when multiple windows share the incoming
 edge. An empty destination monitor receives focus without opening an application.
+Arrow selection also handles partially overlapping windows when an app refuses
+to shrink to its assigned tile size.
 
 The shared `wm-direction.py` helper uses the current window sizes and physical
 monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;

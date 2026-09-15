@@ -49,12 +49,13 @@ class DirectionTests(unittest.TestCase):
                     dict(id=20,index=2,frame=dict(x=-1010,y=0,w=1010,h=1000))]
         halves = [w(1,0,0,500,1000),w(2,510,0,500,1000)]
         for windows in [halves, self.windows, [self.windows[0]]]:
+            arrived = dict(windows[0],display=2,space=4)
             with self.subTest(count=len(windows)), patch.object(wm,'query',side_effect=[
-                    windows[0],{'type':'bsp'},windows,displays,[{'index':4,'is-visible':True,'type':'bsp'}],[]]), patch.object(wm,'window') as command, patch.object(wm,'run') as run:
+                    windows[0],{'type':'bsp'},windows,displays,[{'index':4,'is-visible':True,'type':'bsp'}],[],arrived,[arrived]]), patch.object(wm,'window') as command, patch.object(wm,'run') as run:
                 wm.yabai('left')
             command.assert_called_once_with(1,'--display',2)
             self.assertEqual([c.args for c in run.call_args_list], [
-                ('yabai','-m','display','--focus',2),('yabai','-m','window','--focus',1)])
+                ('yabai','-m','window','--focus',1)])
 
     def test_native_fullscreen_destination_is_untouched(self):
         displays = [dict(id=10,index=1,frame=dict(x=0,y=0,w=1010,h=1000)),
@@ -85,10 +86,12 @@ class DirectionTests(unittest.TestCase):
         displays = [dict(id=10,index=1,frame=dict(x=1010,y=0,w=1010,h=1000)),
                     dict(id=20,index=2,frame=dict(x=0,y=0,w=1010,h=1000))]
         selected = w(8,1010,505,500,495)
-        with patch.object(wm,'query',side_effect=[displays,[{'index':4,'is-visible':True,'type':'bsp'}],self.windows]), patch.object(wm,'window') as command, patch.object(wm,'run'):
+        arrived = dict(selected,display=2,space=4)
+        destination = self.windows+[arrived]
+        with patch.object(wm,'query',side_effect=[displays,[{'index':4,'is-visible':True,'type':'bsp'}],self.windows,arrived,destination]), patch.object(wm,'window') as command, patch.object(wm,'run'), patch.object(wm,'place_yabai_side') as place:
             wm.cross_yabai(selected,'left')
-        self.assertEqual([c.args for c in command.call_args_list],[
-            (3,'--insert','west'),(3,'--insert','east'),(8,'--display',2)])
+        command.assert_called_once_with(8,'--display',2)
+        place.assert_called_once_with(arrived,destination,'right')
 
     def test_yabai_focus_enters_near_edge_without_moving_windows(self):
         displays = [dict(id=10,index=1,frame=dict(x=1010,y=0,w=1010,h=1000),**{'has-focus':True}),
@@ -98,7 +101,7 @@ class DirectionTests(unittest.TestCase):
         with patch.object(wm,'query',side_effect=[displays,windows]),patch.object(wm,'run') as command:
             wm.focus_yabai('left')
         self.assertEqual([c.args for c in command.call_args_list],[
-            ('yabai','-m','display','--focus',2),('yabai','-m','window','--focus',3)])
+            ('yabai','-m','window','--focus',3)])
 
     def test_yabai_local_focus_and_empty_destination(self):
         displays = [dict(id=10,index=1,frame=dict(x=0,y=0,w=1010,h=1000),**{'has-focus':True}),
@@ -126,7 +129,7 @@ class DirectionTests(unittest.TestCase):
         self.assertEqual(calls[-1],('aerospace','focus','--window-id',3))
         self.assertFalse(any(c[1].startswith('move') for c in calls))
 
-    def test_aerospace_perpendicular_layout_arrives_on_incoming_side(self):
+    def test_aerospace_arrival_gets_its_own_incoming_side(self):
         selected = {'window-id':8,'monitor-id':2}
         for direction, layout, incoming in [('left','v_tiles','right'),('right','v_tiles','left'),
                                             ('up','h_tiles','down'),('down','h_tiles','up')]:
@@ -162,12 +165,43 @@ class DirectionTests(unittest.TestCase):
     def test_edge_promotion_moves_other_leaf_and_preserves_selection(self):
         promoted = dict(self.windows[2], **{'split-type':'vertical','split-child':'second_child'})
         fresh = [w(1,0,0,500,495),w(2,0,505,500,495),w(3,510,0,500,1000)]
-        with patch.object(wm,'query',side_effect=[self.windows[2],{'type':'bsp'},self.windows,promoted,promoted]), patch.object(wm,'window') as command, patch.object(wm,'settled_windows',return_value=fresh):
+        with patch.object(wm,'query',side_effect=[self.windows[2],{'type':'bsp'},self.windows,promoted,promoted]), patch.object(wm,'window') as command, patch.object(wm,'run') as run, patch.object(wm,'settled_windows',return_value=fresh):
             wm.yabai('right')
         calls = [c.args for c in command.call_args_list]
         self.assertIn((2,'--warp',1),calls)
         self.assertIn((3,'--ratio','abs:0.5'),calls)
         self.assertFalse(any('--toggle' in c or '--space' in c for c in calls))
+        run.assert_called_once_with('yabai','-m','space',1,'--balance')
+
+    def test_minimum_width_overlap_does_not_hide_slack_from_focus(self):
+        t3 = w(984,3209,50,840,1382,**{'has-focus':True,'is-visible':True})
+        slack = w(3668,3848,50,1262,1382,**{'is-visible':True})
+        chrome = w(11209,2570,50,623,1382,**{'is-visible':True})
+        windows = [t3,slack,chrome]
+        self.assertEqual(wm.neighbor(t3,windows,'right',allow_overlap=True)['id'],3668)
+        self.assertEqual(wm.neighbor(slack,windows,'left',allow_overlap=True)['id'],984)
+        displays = [dict(id=2,index=1,frame=dict(x=2560,y=0,w=2560,h=1440),**{'has-focus':True})]
+        with patch.object(wm,'query',side_effect=[displays,windows]),patch.object(wm,'run') as run:
+            wm.focus_yabai('right')
+        run.assert_called_once_with('yabai','-m','window','--focus',3668)
+
+    def test_move_waits_for_space_membership_before_rearranging(self):
+        old = w(8,0,0,1000,1000)
+        arrived = dict(old,space=4,display=2)
+        with patch.object(wm,'query',side_effect=[old,[],arrived,[arrived]]),patch.object(wm.time,'sleep') as sleep:
+            self.assertEqual(wm.arrived_yabai_window(8,{'index':4,'display':2}), (arrived,[arrived]))
+        sleep.assert_called_once_with(.04)
+
+    def test_narrow_full_height_arrival_is_rebuilt_and_balanced(self):
+        selected = w(984,3209,50,840,1382,**{'split-type':'vertical','split-child':'first_child'})
+        windows = [w(11209,2570,50,623,1382),selected,w(3668,3848,50,1262,1382)]
+        fresh = [w(984,2570,50,1262,1382),w(11209,3848,50,1262,683),w(3668,3848,749,1262,683)]
+        self.assertTrue(wm.spans_side(selected,windows,'left'))
+        with patch.object(wm,'query',return_value=selected),patch.object(wm,'window') as window,patch.object(wm,'run') as run,patch.object(wm,'settled_windows',return_value=fresh):
+            wm.place_yabai_side(selected,windows,'left')
+        self.assertIn((3668,'--warp',11209),[c.args for c in window.call_args_list])
+        self.assertIn((984,'--ratio','abs:0.5'),[c.args for c in window.call_args_list])
+        run.assert_called_once_with('yabai','-m','space',1,'--balance')
 
     def test_diagonally_separated_tile_is_not_neighbor(self):
         self.assertIsNone(wm.neighbor(w(1,0,0,100,100),[w(2,120,120,100,100)],'right'))

@@ -35,7 +35,7 @@ def eligible(w):
         'is-native-fullscreen', 'has-fullscreen-zoom', 'has-parent-zoom'))
 
 
-def neighbor(selected, windows, direction):
+def neighbor(selected, windows, direction, allow_overlap=False):
     """Only candidates in this tiling area with overlap across the other axis."""
     axis, size, cross, extent = ('x', 'w', 'y', 'h') if direction in ('left', 'right') else ('y', 'h', 'x', 'w')
     positive = direction in ('right', 'down')
@@ -47,9 +47,12 @@ def neighbor(selected, windows, direction):
         g = w['frame']
         overlap = min(f[cross]+f[extent], g[cross]+g[extent]) - max(f[cross], g[cross])
         distance = g[axis]-(f[axis]+f[size]) if positive else f[axis]-(g[axis]+g[size])
-        if overlap > 1 and distance >= -1:
+        forward = (g[axis]+g[size]/2-f[axis]-f[size]/2) * (1 if positive else -1)
+        # Applications can refuse a tile's size and overlap the next tile.
+        # Their centers still identify the direction; don't make them unreachable.
+        if overlap > 1 and (distance >= -1 or (allow_overlap and forward > 1)):
             center = abs(f[cross]+f[extent]/2-g[cross]-g[extent]/2)
-            candidates.append((distance, center, w['id'], w))
+            candidates.append((max(0, distance), center, w['id'], w))
     return min(candidates, key=lambda c: c[:3])[-1] if candidates else None
 
 
@@ -72,6 +75,17 @@ def entry_window(windows, source_frame, direction):
     return min(windows, key=rank) if windows else None
 
 
+def arrived_yabai_window(id, destination):
+    for _ in range(25):
+        arrived = query('--windows', '--window', id)
+        windows = [w for w in query('--windows', '--space', destination['index']) if eligible(w)]
+        if (arrived['display'] == destination['display'] and arrived['space'] == destination['index']
+                and id in {w['id'] for w in windows}):
+            return arrived, windows
+        time.sleep(0.04)
+    raise RuntimeError('Window has not arrived on the destination display; stopped.')
+
+
 def cross_yabai(selected, direction):
     displays = query('--displays')
     source = next((d for d in displays if d['index'] == selected['display']), None)
@@ -87,11 +101,16 @@ def cross_yabai(selected, direction):
         return
     destination = next(s for s in spaces if s['is-visible'])
     candidates = [w for w in query('--windows', '--space', destination['index']) if eligible(w)]
-    anchor = entry_window(candidates, selected['frame'], direction)
-    if anchor:
-        insert(anchor['id'], OPPOSITE[DIRECTIONS[direction]])
+    if destination['type'] != 'bsp' or any(w.get('stack-index') for w in candidates):
+        return
     window(selected['id'], '--display', target['index'])
-    run('yabai', '-m', 'display', '--focus', target['index'])
+    # Split the whole tiling area, not an already-small edge tile. The latter
+    # creates quarter-width columns that apps with minimum widths overlap.
+    incoming = {'left':'right','right':'left','up':'down','down':'up'}[direction]
+    arrived, windows = arrived_yabai_window(selected['id'], dict(destination,display=target['index']))
+    place_yabai_side(arrived, windows, incoming)
+    # Focusing the window also activates its display. A separate display-focus
+    # command can fail as "already focused" after macOS follows the moved app.
     run('yabai', '-m', 'window', '--focus', selected['id'])
 
 
@@ -105,7 +124,7 @@ def focus_yabai(direction):
     selected = next((w for w in windows if w.get('has-focus') and w['display'] == source['index']), None)
     if selected:
         local = [w for w in windows if w['display'] == source['index'] and w['space'] == selected['space']]
-        target_window = neighbor(selected, local, direction)
+        target_window = neighbor(selected, local, direction, allow_overlap=True)
         if target_window:
             run('yabai', '-m', 'window', '--focus', target_window['id'])
             return
@@ -114,9 +133,10 @@ def focus_yabai(direction):
         return
     target_window = entry_window([w for w in windows if w['display'] == target['index']],
                                  selected['frame'] if selected else source['frame'], direction)
-    run('yabai', '-m', 'display', '--focus', target['index'])
     if target_window:
         run('yabai', '-m', 'window', '--focus', target_window['id'])
+    else:
+        run('yabai', '-m', 'display', '--focus', target['index'])
 
 
 def desktop_geometry():
@@ -163,16 +183,12 @@ def cross_aerospace(selected, direction, geometry):
         # The directional form inserts at the incoming edge of the root layout.
         run('aerospace', 'move-node-to-monitor', '--window-id', selected['window-id'],
             '--focus-follows-window', direction)
-        layout = run('aerospace', 'echo', '--window-id', selected['window-id'],
-                     '--', '%{window-layout}').stdout.strip()
-        perpendicular = 'v_' if direction in ('left','right') else 'h_'
-        if layout.startswith(perpendicular):
-            # A perpendicular root would put a horizontal arrival at the bottom
-            # (or a vertical arrival at the right). Lift it onto the incoming side.
-            opposite = {'left':'right','right':'left','up':'down','down':'up'}[direction]
-            run('aerospace', 'move', '--window-id', selected['window-id'],
-                '--boundaries', 'workspace', '--boundaries-action', 'create-implicit-container',
-                '--fail-if-fullscreen', '--fail-if-macos-native-fullscreen', opposite)
+        # Lift the root-level arrival onto its own side, with existing windows
+        # grouped opposite it, matching yabai and avoiding narrow columns.
+        opposite = {'left':'right','right':'left','up':'down','down':'up'}[direction]
+        run('aerospace', 'move', '--window-id', selected['window-id'],
+            '--boundaries', 'workspace', '--boundaries-action', 'create-implicit-container',
+            '--fail-if-fullscreen', '--fail-if-macos-native-fullscreen', opposite)
 
 
 def focus_aerospace(direction):
@@ -258,7 +274,7 @@ def yabai(direction, id=None):
     # Preserve deliberate stacks; promoting a stack needs separate semantics.
     if not windows or any(w.get('stack-index', 0) for w in windows):
         return
-    target = neighbor(selected, windows, direction)
+    target = neighbor(selected, windows, direction, allow_overlap=True)
     if target:
         window(id, '--swap', target['id'])
         settled_windows(selected['space'], {w['id'] for w in windows})
@@ -266,6 +282,14 @@ def yabai(direction, id=None):
     if spans_side(selected, windows, direction):
         cross_yabai(selected, direction)
         return
+    place_yabai_side(selected, windows, direction)
+
+
+def place_yabai_side(selected, windows, direction):
+    """Give this window a root-level side, even if it already spans a narrow column."""
+    if len(windows) < 2:
+        return
+    id = selected['id']
 
     horizontal = direction in ('left', 'right')
     order = ('y', 'x') if horizontal else ('x', 'y')
@@ -285,6 +309,9 @@ def yabai(direction, id=None):
     desired_child = 'first_child' if direction in ('left', 'up') else 'second_child'
     if current['split-child'] != desired_child:
         run('yabai', '-m', 'space', selected['space'], '--mirror', 'y-axis' if horizontal else 'x-axis')
+    # Repeated warps make an uneven chain (1/2, 1/4, 1/8 ...). Give the
+    # grouped windows equal room before setting the selected side's ratio.
+    run('yabai', '-m', 'space', selected['space'], '--balance')
     window(id, '--ratio', 'abs:0.5')
 
     # Natural warp chooses the nearest half. Restore the other apps' reading order
