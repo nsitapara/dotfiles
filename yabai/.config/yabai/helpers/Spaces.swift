@@ -1,15 +1,18 @@
 import AppKit
 import ApplicationServices
 
-// A short-lived, separately permissioned app. Only presses Mission Control's
-// Add Desktop buttons; never closes desktops or moves existing windows.
+// A short-lived, separately permissioned app. Presses Mission Control's Add
+// Desktop buttons and removes surplus desktops that are unlabelled and empty.
+// Labelled desktops and desktops with windows are never touched.
 struct Failure: Error, CustomStringConvertible { let description: String }
 struct Space: Decodable {
+    let index: Int
     let display: Int
     let label: String
+    let windows: [Int]
     let fullscreen: Bool
     enum CodingKeys: String, CodingKey {
-        case display, label
+        case index, display, label, windows
         case fullscreen = "is-native-fullscreen"
     }
 }
@@ -47,18 +50,25 @@ func waitFor<T>(_ action: () throws -> T?) rethrows -> T? {
     } while Date() < deadline
     return nil
 }
-func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
+func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> (Int, Int) {
     func displays() throws -> [Display] {
         try JSONDecoder().decode([Display].self, from: run(yabai, ["-m", "query", "--displays"]))
     }
     func spaces() throws -> [Space] {
         try JSONDecoder().decode([Space].self, from: run(yabai, ["-m", "query", "--spaces"]))
     }
-    func count(_ all: [Space], _ display: Display) -> Int {
+    func ordinary(_ all: [Space], _ display: Display) -> [Space] {
         all.filter {
             $0.display == display.index && !$0.fullscreen &&
             ($0.label.isEmpty || $0.label.range(of: "^ws[1-9]$", options: .regularExpression) != nil)
-        }.count
+        }
+    }
+    func count(_ all: [Space], _ display: Display) -> Int { ordinary(all, display).count }
+    // The last unlabelled, empty desktop beyond the target, if any.
+    func surplus(_ all: [Space], _ display: Display, _ target: Int) -> Space? {
+        let desktops = ordinary(all, display)
+        guard desktops.count > target else { return nil }
+        return desktops.reversed().first { $0.label.isEmpty && $0.windows.isEmpty }
     }
     let screens = try displays()
     guard !plan.isEmpty, plan.count <= 3,
@@ -68,9 +78,10 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
               (0...6).contains(entry.workspaces.count)
           }) else { throw Failure(description: "Monitor layout changed; retry after it settles.") }
     let initial = try spaces()
+    func target(_ screen: Display) -> Int { plan.first(where: { $0.id == screen.id })!.workspaces.count }
     guard screens.contains(where: { screen in
-        count(initial, screen) < plan.first(where: { $0.id == screen.id })!.workspaces.count
-    }) else { return 0 }
+        count(initial, screen) < target(screen) || surplus(initial, screen, target(screen)) != nil
+    }) else { return (0, 0) }
     // Display events and periodic checks must never open permission dialogs.
     // Opening this app explicitly from Finder still requests access below.
     guard AXIsProcessTrusted() else {
@@ -101,9 +112,12 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
     guard waitFor({ displayGroups().isEmpty ? nil : true }) != nil else {
         throw Failure(description: "Mission Control did not expose its Accessibility controls.")
     }
-    var created = 0
+    func displayGroup(_ screen: Display) -> AXUIElement? {
+        displayGroups().first { (attribute($0, "AXDisplayID") as? NSNumber)?.intValue == screen.id }
+    }
+    var created = 0, removed = 0
     for screen in screens {
-        let target = plan.first(where: { $0.id == screen.id })!.workspaces.count
+        let target = target(screen)
         // Requery after each click: native indices can change as Spaces appear.
         for _ in 0..<target {
             guard try displays().map(\.id) == screens.map(\.id) else {
@@ -112,9 +126,7 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
             let before = try count(spaces(), screen)
             if before >= target { break }
             let add: AXUIElement? = waitFor {
-                guard let display = displayGroups().first(where: {
-                          (attribute($0, "AXDisplayID") as? NSNumber)?.intValue == screen.id
-                      }), let group = child(display, "mc.spaces") else { return nil }
+                guard let display = displayGroup(screen), let group = child(display, "mc.spaces") else { return nil }
                 return child(group, "mc.spaces.add")
             }
             guard let button = add,
@@ -126,8 +138,35 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> Int {
             }
             created += 1
         }
+        // Remove surplus desktops from the end. Mission Control lists a display's
+        // desktops in yabai's order, so the thumbnail position matches the space.
+        for _ in 0..<12 {
+            guard try displays().map(\.id) == screens.map(\.id) else {
+                throw Failure(description: "Monitors changed during setup; retry once they settle.")
+            }
+            let all = try spaces()
+            guard let victim = surplus(all, screen, target) else { break }
+            let desktops = all.filter { $0.display == screen.index && !$0.fullscreen }
+            let position = desktops.firstIndex { $0.index == victim.index }!
+            let thumbnail: AXUIElement? = waitFor {
+                guard let display = displayGroup(screen), let group = child(display, "mc.spaces"),
+                      let list = child(group, "mc.spaces.list") else { return nil }
+                let thumbnails = children(list).filter {
+                    (attribute($0, "AXDescription") as? String)?.hasPrefix("exit to Desktop") == true
+                }
+                return position < thumbnails.count ? thumbnails[position] : nil
+            }
+            guard let button = thumbnail,
+                  AXUIElementPerformAction(button, "AXRemoveDesktop" as CFString) == .success else {
+                throw Failure(description: "Could not remove desktop \(victim.index) on display \(screen.index).")
+            }
+            guard try waitFor({ try spaces().count < all.count ? true : nil }) != nil else {
+                throw Failure(description: "macOS did not remove the desktop; stopped to avoid repeated clicks.")
+            }
+            removed += 1
+        }
     }
-    return created
+    return (created, removed)
 }
 
 let arguments = CommandLine.arguments
@@ -153,7 +192,8 @@ if arguments.count == 2 && arguments[1] == "--display-info" {
     let message: String
     do {
         let plan = try JSONDecoder().decode([DisplayPlan].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[3])))
-        message = "OK Created \(try ensureSpaces(yabai: arguments[1], plan: plan)) missing desktops.\n"
+        let (created, removed) = try ensureSpaces(yabai: arguments[1], plan: plan)
+        message = "OK Created \(created) missing and removed \(removed) surplus desktops.\n"
     }
     catch { message = "ERROR \(error)\n" }
     try? message.write(toFile: resultPath, atomically: true, encoding: .utf8)

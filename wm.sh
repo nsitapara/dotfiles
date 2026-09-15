@@ -94,7 +94,7 @@ Usage: ./wm.sh COMMAND
   default status       Show the saved login default
   default install      Install/repair the desktop service with the saved choice
   default off          Remove desktop service; keep current manager running
-  spaces               Create missing desktops and label odd/even monitors
+  spaces               Create missing desktops, remove empty spares, label monitors
   profile [NAME]       Show or pin the display profile: auto, docked, single, laptop
   reload               Reload yabai/skhd configuration and SketchyBar
   restore-preferences  Restore preferences saved by prepare; then log out and in
