@@ -17,13 +17,24 @@ skhd_log_offset() {
 check_skhd() {
     local offset=$1 errors
     sleep 1
-    running skhd || die "skhd exited. Grant Accessibility access and try again."
-    # skhd remains alive when parsing fails, so process presence is insufficient.
     errors=$(tail -c "+$((offset + 1))" "$STATE/skhd.err.log" 2>/dev/null || true)
+    running skhd || die "skhd exited: ${errors:-no output}. Check Accessibility access."
+    # skhd remains alive when parsing fails, so process presence is insufficient.
     if printf '%s\n' "$errors" | grep -Eq '^#[0-9]+:[0-9]+|could not open config'; then
         printf '%s\n' "$errors" >&2
         die "skhd could not load its shortcuts. Fix skhdrc before retrying."
     fi
+}
+wait_secure_input() {
+    # Right after login, securityagent still holds Secure Keyboard Entry for a
+    # moment. skhd aborts at startup while it is held, so wait for the release.
+    local holder
+    for _ in {1..150}; do
+        holder=$(ioreg -l -w 0 | grep -o 'kCGSSessionSecureInputPID[^,}]*' || true)
+        [ -n "$holder" ] || return 0
+        sleep 0.2
+    done
+    die "Secure Keyboard Entry is enabled ($holder). Disable it in that app and retry."
 }
 reload_bar() {
     if running sketchybar; then
@@ -197,6 +208,7 @@ case "$1" in
             sleep 0.2
         done
         $ready || die "yabai did not become ready. Grant Accessibility access and try again."
+        wait_secure_input
         skhd_offset=$(skhd_log_offset)
         if ! loaded "$SKHD_JOB"; then
             launchctl submit -l "$SKHD_JOB" -o "$STATE/skhd.log" -e "$STATE/skhd.err.log" -- \
@@ -206,10 +218,15 @@ case "$1" in
             skhd --reload
         fi
         check_skhd "$skhd_offset"
-        "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"
+        if "$ROOT/yabai/.config/yabai/scripts/ensure-spaces.sh"; then
+            echo "All configured desktop slots are ready."
+        else
+            # Missing desktops must not take the whole window manager down.
+            echo "Desktop creation unavailable; labelling the existing desktops." >&2
+            "$ROOT/yabai/.config/yabai/scripts/spaces.sh"
+        fi
         reload_bar
         echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
-        echo "All configured desktop slots are ready."
         trap - EXIT
         exec 9>&-
         "$ROOT/switch-display-mode.sh" ;;

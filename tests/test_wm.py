@@ -129,6 +129,9 @@ elif name == "open":
     assert "yabai" not in state["running"] and "skhd" not in state["running"], "Unsafe restore!"
     if "AeroSpace" not in state["running"]: state["running"].append("AeroSpace")
     save()
+elif name == "ioreg":
+    if state.get("secure_input", 0) > 0:
+        state["secure_input"] -= 1; save(); print('"kCGSSessionSecureInputPID"=2102')
 elif name in ("sleep", "sketchybar", "stow", "brew"): pass
 else: raise AssertionError((name, args))
 '''
@@ -147,12 +150,14 @@ class WmTests(unittest.TestCase):
             helper = helpers / name
             helper.write_text('#!/bin/bash\nexit "${WM_TEST_SETUP_EXIT:-0}"\n')
             helper.chmod(0o755)
+        (helpers / "spaces.sh").write_text('#!/bin/bash\necho "Ready: ws1"\n')
+        (helpers / "spaces.sh").chmod(0o755)
         (self.path / "switch-display-mode.sh").write_text("#!/bin/bash\nexit 0\n")
         (self.path / "switch-display-mode.sh").chmod(0o755)
         self.bin = self.path / "bin"
         self.bin.mkdir()
         for name in ("uname", "pgrep", "defaults", "readlink", "launchctl", "yabai", "skhd",
-                     "osascript", "open", "sleep", "sketchybar", "stow", "brew"):
+                     "osascript", "open", "sleep", "sketchybar", "stow", "brew", "ioreg"):
             file = self.bin / name
             file.write_text(f"#!{sys.executable}\n" + MOCK)
             file.chmod(0o755)
@@ -211,11 +216,18 @@ class WmTests(unittest.TestCase):
         self.assertEqual(self.state["jobs"], [])
         self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
 
-    def test_desktop_setup_failure_restores_aerospace(self):
+    def test_desktop_setup_failure_keeps_yabai_with_existing_desktops(self):
         self.env["WM_TEST_SETUP_EXIT"] = "1"
-        self.run_wm("yabai", success=False)
-        self.assertEqual(self.state["jobs"], [])
-        self.assertIn("AeroSpace", self.state["running"])
+        result = self.run_wm("yabai")
+        self.assertIn("Desktop creation unavailable", result.stderr)
+        self.assertEqual(set(self.state["running"]), {"yabai", "skhd", "sketchybar"})
+
+    def test_waits_for_secure_keyboard_entry_before_starting_skhd(self):
+        self.state["secure_input"] = 3
+        self.save()
+        self.run_wm("yabai")
+        self.assertIn("skhd", self.state["running"])
+        self.assertEqual(len(self.calls("ioreg")), 4)
 
     def test_skhd_parser_failure_restores_aerospace_even_while_process_runs(self):
         self.state["skhd_parse_failure"] = True
