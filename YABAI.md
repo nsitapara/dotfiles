@@ -202,8 +202,8 @@ the selected window between monitors. Cmd + G is available to applications.
 
 | Shortcut | yabai action |
 |---|---|
-| Cmd + arrow | Focus neighboring window |
-| Cmd + Shift + arrow | Swap with a neighbor; at an edge, fill that side |
+| Cmd + arrow | Focus neighboring window, continuing across monitors |
+| Cmd + Shift + arrow | Swap, fill the side, then move to the neighboring monitor |
 | Cmd + 1–9, including keypad | Focus labelled desktop |
 | Cmd + Shift + 1–9 | Send window to desktop and follow it |
 | Cmd + Page Up / Page Down | Previous / next native Space |
@@ -236,19 +236,33 @@ An existing valid selection is preserved, floating windows are eligible, and
 empty workspaces remain empty. This covers keyboard shortcuts, bar clicks, and
 native Space/display-change events.
 
-### Swap, then make the window large
+### Directional focus and movement
 
 In both managers, **Cmd + Shift + arrow** first swaps the selected tiled window
 with a neighbor without changing the tile sizes. At the workspace edge, pressing
 toward that edge gives the selected window its own side, with the other windows
 grouped opposite it. Right/left makes a full-height column; up/down makes a
-full-width row. Cmd + arrow still only changes focus.
+full-width row. Once the window fills that side, another press moves it to the
+neighboring monitor's visible workspace and follows it. A window already filling
+the side crosses immediately, including two side-by-side windows or a sole window.
+With no monitor in that direction, it stays put. These shortcuts never wrap around.
 
 For example, select the bottom-right window in a three-window layout and press
 Cmd + Shift + Right. It fills the right half and the other two share the left.
-The shared `wm-direction.py` helper keeps the operation in the same workspace.
+Press Right again to move it to the monitor on the right, if one is connected.
 Yabai leaves floating/fullscreen/zoomed windows and deliberate stacks alone.
 AeroSpace uses its swap command and rebuilds the tiling group on an edge press.
+
+**Cmd + arrow** changes focus without moving or resizing windows. At an edge,
+it continues onto the adjacent monitor. Both movement and focus enter from the
+near side: moving left enters the right edge of the left monitor, and moving
+right enters the left edge of the right monitor. Up/down follows the same rule.
+Focus prefers the same row or column when multiple windows share the incoming
+edge. An empty destination monitor receives focus without opening an application.
+
+The shared `wm-direction.py` helper uses the current window sizes and physical
+monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;
+it does not require yabai to be running.
 
 ### Raycast
 

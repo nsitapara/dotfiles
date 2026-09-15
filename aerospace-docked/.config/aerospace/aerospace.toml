@@ -72,10 +72,10 @@ outer.right =      10
     cmd-h = [] # Disable "hide application"
     cmd-alt-h = [] # Disable "hide others"
 
-    cmd-left     =   'focus --boundaries-action wrap-around-the-workspace left'
-    cmd-down     =   'focus --boundaries-action wrap-around-the-workspace down'
-    cmd-up       =   'focus --boundaries-action wrap-around-the-workspace up'
-    cmd-right    =   'focus --boundaries-action wrap-around-the-workspace right'
+    cmd-left = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace left --focus'
+    cmd-down = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace down --focus'
+    cmd-up = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace up --focus'
+    cmd-right = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace right --focus'
 
     cmd-shift-left = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace left'
     cmd-shift-down = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace down'
