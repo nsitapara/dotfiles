@@ -122,9 +122,9 @@ for i = 1, WORKSPACE_COUNT, 1 do
       space_popup:set({ background = { image = "space." .. env.SID } })
       space:set({ popup = { drawing = "toggle" } })
     elseif env.BUTTON == "right" then
-      sbar.exec("aerospace workspace " .. i .. " && aerospace close-all-windows-but-current")
+      sbar.exec('/usr/bin/python3 "$HOME/dotfiles/wm-bar-workspace.py" aerospace ' .. i .. ' --close-others')
     else
-      sbar.exec("aerospace workspace " .. i)
+      sbar.exec('/usr/bin/python3 "$HOME/dotfiles/wm-bar-workspace.py" aerospace ' .. i)
     end
   end
   space:subscribe("mouse.clicked", on_click)

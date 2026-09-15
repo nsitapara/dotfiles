@@ -313,8 +313,10 @@ Focus prefers the same row or column when multiple windows share the incoming
 edge. An empty destination monitor receives focus without opening an application.
 Arrow selection also handles partially overlapping windows when an app refuses
 to shrink to its assigned tile size.
-The mouse pointer follows the focused window in yabai and both AeroSpace
-profiles. AeroSpace also centers it on an empty monitor when switching there.
+Keyboard focus changes move the pointer to the focused window in yabai and
+both AeroSpace profiles. AeroSpace also centers it on an empty monitor when
+switching there. Clicking a workspace number or app icon in SketchyBar keeps
+the pointer in place. This applies to docked and undocked bars.
 
 The shared `wm-direction.py` helper uses the current window sizes and physical
 monitor arrangement. AeroSpace reads window bounds through macOS CoreGraphics;

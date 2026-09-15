@@ -47,11 +47,11 @@ default-root-container-orientation = "auto"
 key-mapping.preset = 'qwerty'
 
 # Keep the pointer with keyboard focus, including empty destination monitors.
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-focused-monitor-changed = ['exec-and-forget /bin/zsh $HOME/dotfiles/aerospace-mouse-follow.sh monitor-lazy-center']
 
 # Workaround for delayed re-tiling on window open/close since 0.20/0.21 async rewrite.
 # Single-flight re-poll script — see comments in ~/dotfiles/aerospace-retile.sh.
-on-focus-changed = ['move-mouse window-force-center', 'exec-and-forget $HOME/dotfiles/aerospace-retile.sh']
+on-focus-changed = ['exec-and-forget /bin/zsh $HOME/dotfiles/aerospace-mouse-follow.sh window-force-center', 'exec-and-forget $HOME/dotfiles/aerospace-retile.sh']
 
 [gaps]
 inner.horizontal = 15

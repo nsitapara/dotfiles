@@ -36,7 +36,7 @@ local function create_pill(index)
   local function clicked()
     -- The index comes from yabai's numeric JSON, never from an app title.
     if pill.index then
-      sbar.exec(prefix .. '/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ' .. pill.index)
+      sbar.exec(prefix .. '/usr/bin/python3 "$HOME/dotfiles/wm-bar-workspace.py" yabai ' .. pill.index)
     else
       sbar.exec(prefix .. '"$HOME/.config/yabai/scripts/ensure-spaces.sh" && sketchybar --trigger yabai_windows_changed')
     end
