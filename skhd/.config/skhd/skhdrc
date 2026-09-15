@@ -10,7 +10,6 @@
 :: service : "$HOME/.config/skhd/mode.sh" service
 
 cmd - h : true
-cmd - m : true
 cmd + alt - h : true
 cmd - left : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai left --focus
 cmd + shift - left : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai left

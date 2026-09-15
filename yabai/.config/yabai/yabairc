@@ -50,10 +50,10 @@ yabai -m signal --add label=dotfiles-focus-new-app-window event=window_created \
 yabai -m signal --add label=dotfiles-unhide-front-app event=application_front_switched \
     action='"$HOME/.config/yabai/scripts/reveal-app.sh" "$YABAI_PROCESS_ID"'
 
-# The yellow button leaves the app frontmost with no window, and reselecting it
-# in Cmd+Tab fires no event. Minimize is disabled: windows bounce straight back.
-yabai -m signal --add label=dotfiles-no-minimize event=window_minimized \
-    action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; yabai -m window --deminimize "$YABAI_WINDOW_ID"; yabai -m window --focus "$YABAI_WINDOW_ID"'
+# Minimizing an app's last window leaves it frontmost, and reselecting the front
+# app in Cmd+Tab fires no event. Move focus away so Cmd+Tab back is a real switch.
+yabai -m signal --add label=dotfiles-minimize-refocus event=window_minimized \
+    action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" --restore; [ "$(yabai -m query --windows --window 2>/dev/null | jq -r ".\"is-minimized\"")" = false ] || yabai -m window --focus recent'
 
 # Native 'recent' excludes floating windows, so retain a pair from focus events.
 /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" reset
