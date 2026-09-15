@@ -46,7 +46,7 @@ return function(yabai_active)
       {"Ctrl + Tab", "Return to the previously focused window"},
       {"Cmd + F", "Toggle window fullscreen within the workspace"},
       {"Cmd + Ctrl + Shift + F", "Toggle floating"},
-      {"Cmd + 0", "Balance window sizes"},
+      {"Cmd + 0 / Cmd + Shift + 0", "Balance window sizes"},
       {"Cmd + J", "Change split orientation"},
       {"Cmd + comma", yabai_active and "Toggle tiled / stacked layout" or "Toggle tiles / accordion layout"},
       {"Cmd + = / minus", "Increase / decrease width"},
