@@ -18,6 +18,25 @@ def frame(x=0, y=0, w=1000, h=800):
 
 
 class RiftTests(unittest.TestCase):
+    def test_all_crossing_directions_use_yabai_incoming_side_policy(self):
+        for direction,dx,dy,incoming in [('left',-1000,0,'right'),('right',1000,0,'left'),
+                                        ('up',0,-800,'down'),('down',0,800,'up')]:
+            with self.subTest(direction=direction):
+                source=dict(uuid='source',screen_id=1,space=11,frame=frame())
+                target=dict(uuid='target',screen_id=2,space=22,frame=frame(x=dx,y=dy))
+                selected=dict(id=1,rift_id=dict(pid=1,idx=1),display='source',workspace=1,
+                              visible=True,focused=True,floating=False,frame=rift.rect(source['frame']))
+                arrived=dict(selected,display='target',workspace=2,frame=rift.rect(target['frame']))
+                api=Mock();api.rect.side_effect=rift.rect
+                api.snapshot.side_effect=[dict(windows=[selected],displays=[source,target]),dict(windows=[arrived])]
+                api.current_slot.return_value=(source,dict(layout_mode='bsp'))
+                api.read_state.return_value=[dict(uuid='target',workspaces=[2])]
+                api.query.return_value=[dict(index=1,is_active=True)]
+                with patch.object(geometry,'place_side') as place:
+                    geometry.directional(api,direction,move=True)
+                api.move_window.assert_called_once_with(selected,2,True)
+                place.assert_called_once_with(api,arrived,[arrived],incoming)
+
     def test_follow_refocuses_the_moved_window_after_workspace_activation(self):
         selected=dict(id=8,rift_id=dict(pid=1,idx=8),display='left')
         plan=[dict(uuid='left',workspaces=[1]),dict(uuid='right',workspaces=[2])]

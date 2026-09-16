@@ -174,8 +174,27 @@ class DirectionTests(unittest.TestCase):
         destination = self.windows+[arrived]
         with patch.object(wm,'query',side_effect=[displays,[{'index':4,'is-visible':True,'type':'bsp'}],self.windows,arrived,destination]), patch.object(wm,'window') as command, patch.object(wm,'run'), patch.object(wm,'place_yabai_side') as place:
             wm.cross_yabai(selected,'left')
-        command.assert_called_once_with(8,'--display',2)
+        self.assertEqual([call.args for call in command.call_args_list], [
+            (3,'--insert','west'),(3,'--insert','east'),(8,'--display',2)])
         place.assert_called_once_with(arrived,destination,'right')
+
+    def test_failed_monitor_send_clears_prepared_insertion_and_does_not_focus(self):
+        displays=[dict(w(10,0,0,1000,1000),index=1),dict(w(20,1000,0,1000,1000),index=2)]
+        anchor=w(2,1000,0,1000,1000)
+        hint=None
+        def window(id,action,value):
+            nonlocal hint
+            if action=='--insert':hint=None if hint==value else value
+            if action=='--display':
+                self.assertEqual(hint,'west')
+                raise RuntimeError('send failed')
+        with patch.object(wm,'query',side_effect=[displays,
+                [{'index':4,'is-visible':True,'type':'bsp'}],[anchor]]), \
+                patch.object(wm,'window',side_effect=window),patch.object(wm,'run') as focus:
+            with self.assertRaisesRegex(RuntimeError,'send failed'):
+                wm.cross_yabai(self.windows[0],'right')
+        self.assertIsNone(hint)
+        focus.assert_not_called()
 
     def test_yabai_focus_enters_near_edge_without_moving_windows(self):
         displays = [dict(id=10,index=1,frame=dict(x=1010,y=0,w=1010,h=1000),**{'has-focus':True}),

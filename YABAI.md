@@ -534,7 +534,9 @@ took about 66–70 ms. See [recorded check data](reports/float-restoration-2026-
 
 Cmd+Shift+arrow keeps the swap → expand → cross sequence. Crossing right enters
 on the destination's left side; crossing left enters on its right side. The moved
-window receives focus before destination rearrangement begins.
+window receives focus before destination rearrangement begins. The incoming
+insertion edge is selected before moving, rather than relying on yabai's default
+second-child placement. A failed send clears that prepared hint too.
 
 Space queries can include non-AX windows that yabai cannot manipulate. Movement
 and the shared resize policy exclude these records. Failed warps clear their
@@ -545,4 +547,7 @@ send also follows the moved window by ID.
 The [September 16 movement check](reports/monitor-movement-2026-09-16.json) passed
 16 crossings and four swap/expand checks with disposable windows. Four-window
 BSP rebuilding still took 0.6–1.2 seconds; this fix addresses failure recovery,
-not that existing layout cost.
+not that existing layout cost. Preselecting the incoming edge has regression
+coverage; a separate live check of that follow-up is pending. Yabai's native
+insertion API splits a leaf, so destinations with multiple tiles can still need
+regrouping to preserve the full-side arrival policy.

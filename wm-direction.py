@@ -102,13 +102,23 @@ def cross_yabai(selected, direction):
     candidates = [w for w in query('--windows', '--space', destination['index']) if eligible(w)]
     if destination['type'] != 'bsp' or any(w.get('stack-index') for w in candidates):
         return
-    window(selected['id'], '--display', target['index'])
+    incoming = {'left':'right','right':'left','up':'down','down':'up'}[direction]
+    anchor = entry_window(candidates, selected['frame'], direction)
+    try:
+        # Choose the incoming edge before sending the window. Otherwise yabai's
+        # default second-child insertion visibly places it on the wrong side.
+        if anchor:
+            insert(anchor['id'], DIRECTIONS[incoming])
+        window(selected['id'], '--display', target['index'])
+    except RuntimeError:
+        if anchor:
+            clear_insert(anchor['id'], DIRECTIONS[incoming])
+        raise
     # Follow immediately, before any fallible layout work. Otherwise a failed
     # warp leaves keyboard focus behind on the source monitor.
     run('yabai', '-m', 'window', '--focus', selected['id'])
     # Split the whole tiling area, not an already-small edge tile. The latter
     # creates quarter-width columns that apps with minimum widths overlap.
-    incoming = {'left':'right','right':'left','up':'down','down':'up'}[direction]
     arrived, windows = arrived_yabai_window(selected['id'], dict(destination,display=target['index']))
     place_yabai_side(arrived, windows, incoming)
 
@@ -231,6 +241,15 @@ def insert(id, direction):
     # --insert toggles an existing identical hint off. Set a different hint first.
     window(id, '--insert', OPPOSITE[direction])
     window(id, '--insert', direction)
+
+
+def clear_insert(id, direction):
+    # Force a known hint, then toggle off; also safe if a move consumed it.
+    try:
+        insert(id, direction)
+        window(id, '--insert', direction)
+    except RuntimeError:
+        pass  # The anchor may have closed too. Preserve the original error.
 
 
 def settled_windows(space, ids):
@@ -409,12 +428,7 @@ def place_yabai_side(selected, windows, direction):
         except RuntimeError:
             # A closed/unmanageable leaf must not leave an insertion overlay
             # that also redirects the user's next newly opened window.
-            # Force a known hint, then toggle it off; safe even if warp consumed it.
-            try:
-                insert(anchor, direction_hint)
-                window(anchor, '--insert', direction_hint)
-            except RuntimeError:
-                pass  # The anchor may have closed too. Preserve the original error.
+            clear_insert(anchor, direction_hint)
             raise
     current = query('--windows', '--window', id)
     desired_split = 'vertical' if horizontal else 'horizontal'
