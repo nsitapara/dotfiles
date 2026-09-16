@@ -15,7 +15,8 @@ case "${1:-}" in
             case "$selector" in next) selector=first ;; prev) selector=last ;; *) exit 1 ;; esac
             target=$(yabai -m query --displays --display "$selector" | jq -er '.index')
         fi
-        yabai -m window --display "$target" && yabai -m display --focus "$target" ;;
+        selected=$(yabai -m query --windows --window | jq -er '.id')
+        yabai -m window "$selected" --display "$target" && yabai -m window --focus "$selected" ;;
     layout)
         current=$(yabai -m query --spaces --space | jq -r '.type')
         if [ "$current" = stack ]; then yabai -m space --layout bsp; else yabai -m space --layout stack; fi ;;

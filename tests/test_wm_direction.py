@@ -22,6 +22,59 @@ class DirectionTests(unittest.TestCase):
     def setUp(self):
         self.windows = [w(1,0,0,500,1000),w(2,510,0,500,495),w(3,510,505,500,495)]
 
+    def test_non_ax_window_is_not_a_tiled_neighbor_or_resize_candidate(self):
+        # Real query shape: Activity Monitor lists this window, but commands
+        # addressed to its ID fail with "could not locate window".
+        ghost = w(44041,510,0,1728,1085, **{'has-ax-reference':False,
+                  'can-move':False, 'is-floating':False, 'is-visible':False})
+        self.assertFalse(wm.eligible(ghost))
+        for key in ['has-ax-reference', 'can-move', 'root-window']:
+            self.assertFalse(wm.eligible(dict(self.windows[0], **{key:False})))
+        with patch.object(wm,'query',side_effect=[self.windows[0],{'type':'bsp'},
+                [self.windows[0],ghost]]), patch.object(wm,'cross_yabai') as cross, \
+                patch.object(wm,'window') as command:
+            wm.yabai('right')
+        cross.assert_called_once_with(self.windows[0],'right')
+        command.assert_not_called()
+
+    def test_failed_destination_layout_keeps_focus_on_moved_window(self):
+        displays = [dict(w(10,0,0,1010,1000),index=1),
+                    dict(w(20,1010,0,1010,1000),index=2)]
+        selected = self.windows[0]
+        arrived = dict(selected,space=4,display=2)
+        events = []
+        def place(*args):
+            events.append(('layout',args[-1]))
+            raise RuntimeError('window closed during warp')
+        with patch.object(wm,'query',side_effect=[displays,
+                [{'index':4,'is-visible':True,'type':'bsp'}],[],arrived,[arrived]]), \
+                patch.object(wm,'window',side_effect=lambda *a:events.append(a)), \
+                patch.object(wm,'run',side_effect=lambda *a:events.append(a)), \
+                patch.object(wm,'place_yabai_side',side_effect=place):
+            with self.assertRaisesRegex(RuntimeError,'closed during warp'):
+                wm.cross_yabai(selected,'right')
+        self.assertEqual(events,[(1,'--display',2),
+            ('yabai','-m','window','--focus',1),('layout','left')])
+
+    def test_warp_failure_clears_hint_even_if_it_was_already_consumed(self):
+        for consumed in [False,True]:
+            with self.subTest(consumed=consumed):
+                hint = None
+                def window(id,action,value):
+                    nonlocal hint
+                    if action == '--insert':
+                        hint = None if hint == value else value
+                    if action == '--warp':
+                        if consumed:
+                            hint = None
+                        raise RuntimeError('warp failed')
+                with patch.object(wm,'side_plan',return_value=None), \
+                        patch.object(wm,'window',side_effect=window),patch.object(wm,'query') as query:
+                    with self.assertRaisesRegex(RuntimeError,'warp failed'):
+                        wm.place_yabai_side(self.windows[2],self.windows,'right')
+                self.assertIsNone(hint)
+                query.assert_not_called()
+
     def test_focus_runs_while_resize_or_move_is_busy_in_both_managers(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

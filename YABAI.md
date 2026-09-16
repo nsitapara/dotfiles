@@ -529,3 +529,20 @@ uses a cached full frame, so a move sent immediately after resize could restore
 the old tiled dimensions. No background watcher is added. A targeted live recheck
 passed six exact restores at two custom positions and sizes; total restore calls
 took about 66–70 ms. See [recorded check data](reports/float-restoration-2026-09-16.json).
+
+### Monitor movement failure recovery
+
+Cmd+Shift+arrow keeps the swap → expand → cross sequence. Crossing right enters
+on the destination's left side; crossing left enters on its right side. The moved
+window receives focus before destination rearrangement begins.
+
+Space queries can include non-AX windows that yabai cannot manipulate. Movement
+and the shared resize policy exclude these records. Failed warps clear their
+insertion hint, preventing a stuck red overlay and unintended later insertion.
+This adds no background worker or polling. The separate Cmd+Ctrl+arrow monitor
+send also follows the moved window by ID.
+
+The [September 16 movement check](reports/monitor-movement-2026-09-16.json) passed
+16 crossings and four swap/expand checks with disposable windows. Four-window
+BSP rebuilding still took 0.6–1.2 seconds; this fix addresses failure recovery,
+not that existing layout cost.

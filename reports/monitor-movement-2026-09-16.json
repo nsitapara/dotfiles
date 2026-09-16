@@ -1,0 +1,176 @@
+{
+  "date": "2026-09-16",
+  "manager": "yabai",
+  "root_cause": "A non-AX Activity Monitor window (44041) was treated as a tiled leaf. Its warp failed before the final focus command, leaving an insertion hint.",
+  "history": "Directional behavior unchanged by a1cd270; latest prior behavior change d10149a (2026-09-14).",
+  "validation": {
+    "crossings_passed": 16,
+    "swap_then_expand_passed": 4,
+    "observations": "Both populated arrival edges and empty destinations; independent CoreGraphics bounds for crossings; selected window retained focus. Disposable AppKit windows, not a live PyCharm-specific test.",
+    "first_run_ms": [
+      1186.029,
+      246.294,
+      666.22,
+      197.304,
+      288.207,
+      200.858,
+      333.176,
+      181.642
+    ],
+    "second_run": [
+      {
+        "stage": "four_window_destination",
+        "direction": "left",
+        "ms": 693.5529999900609,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 236.96441600623075,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "four_window_destination",
+        "direction": "left",
+        "ms": 620.5788340012077,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 210.00800000911113,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "left",
+        "ms": 316.7238339956384,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 218.95604199380614,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "left",
+        "ms": 364.759124990087,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 191.19741700706072,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      }
+    ]
+  },
+  "limitations": [
+    "This is a behavior regression check, not a new comparative benchmark.",
+    "Four-window BSP rebuilding remains slower (620\u20131186 ms end-to-end).",
+    "No live Rift or AeroSpace switch in this check."
+  ]
+}

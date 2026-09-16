@@ -25,6 +25,10 @@ def window(id, *args):
 
 
 def eligible(w):
+    # Space queries include non-AX windows with is-floating=false. They are
+    # not controllable BSP leaves (for example Activity Monitor's helper window).
+    if any(w.get(key, True) is False for key in ('has-ax-reference', 'can-move', 'root-window')):
+        return False
     return not any(w.get(key, False) for key in (
         'is-floating', 'is-minimized', 'is-hidden', 'is-sticky',
         'is-native-fullscreen', 'has-fullscreen-zoom', 'has-parent-zoom'))
@@ -99,14 +103,14 @@ def cross_yabai(selected, direction):
     if destination['type'] != 'bsp' or any(w.get('stack-index') for w in candidates):
         return
     window(selected['id'], '--display', target['index'])
+    # Follow immediately, before any fallible layout work. Otherwise a failed
+    # warp leaves keyboard focus behind on the source monitor.
+    run('yabai', '-m', 'window', '--focus', selected['id'])
     # Split the whole tiling area, not an already-small edge tile. The latter
     # creates quarter-width columns that apps with minimum widths overlap.
     incoming = {'left':'right','right':'left','up':'down','down':'up'}[direction]
     arrived, windows = arrived_yabai_window(selected['id'], dict(destination,display=target['index']))
     place_yabai_side(arrived, windows, incoming)
-    # Focusing the window also activates its display. A separate display-focus
-    # command can fail as "already focused" after macOS follows the moved app.
-    run('yabai', '-m', 'window', '--focus', selected['id'])
 
 
 def focus_yabai(direction):
@@ -398,8 +402,20 @@ def place_yabai_side(selected, windows, direction):
     # Gather every other leaf beside the anchor. The selected leaf is never
     # removed, floated, or sent to another Space. It becomes a root-level tile.
     for other in others[1:]:
-        insert(anchor, 'south' if horizontal else 'east')
-        window(other['id'], '--warp', anchor)
+        direction_hint = 'south' if horizontal else 'east'
+        try:
+            insert(anchor, direction_hint)
+            window(other['id'], '--warp', anchor)
+        except RuntimeError:
+            # A closed/unmanageable leaf must not leave an insertion overlay
+            # that also redirects the user's next newly opened window.
+            # Force a known hint, then toggle it off; safe even if warp consumed it.
+            try:
+                insert(anchor, direction_hint)
+                window(anchor, '--insert', direction_hint)
+            except RuntimeError:
+                pass  # The anchor may have closed too. Preserve the original error.
+            raise
     current = query('--windows', '--window', id)
     desired_split = 'vertical' if horizontal else 'horizontal'
     if current['split-type'] != desired_split:
