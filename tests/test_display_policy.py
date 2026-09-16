@@ -109,7 +109,8 @@ elif name == 'ensure-spaces.sh':
     if state.get('change_during_setup'):
         state['plan'][0]['frame']['x'] += 1
         save()
-elif name == 'spaces.sh': pass
+elif name == 'spaces.sh':
+    if '--check' in args and state.get('labels_invalid'): sys.exit(1)
 elif name == 'yabai':
     if args == ['-m','query','--spaces']:
         print(json.dumps([{'index':i+1,'display':s['index'],'is-native-fullscreen':False}
@@ -154,9 +155,9 @@ class NativeProfileTests(unittest.TestCase):
         self.state = dict(package='sketchybar-docked',loaded='docked',
                           plan=[dict(screen(1,'Built-in',True),workspaces=[1,2,3,4,5,6],top_padding=16)])
 
-    def run_profile(self, success=True):
+    def run_profile(self, success=True, force=False):
         self.statefile.write_text(json.dumps(self.state))
-        result = subprocess.run(['/bin/bash', str(self.script)],env=self.env,
+        result = subprocess.run(['/bin/bash', str(self.script)] + (['--force'] if force else []),env=self.env,
                                 capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode == 0,success,result.stdout+result.stderr)
         self.state = json.loads(self.statefile.read_text())
@@ -197,7 +198,7 @@ class NativeProfileTests(unittest.TestCase):
         self.run_profile()
         self.assertEqual(self.state['package'], 'sketchybar')
         self.assertEqual(self.state['loaded'], 'non-docked')
-        self.assertEqual(len(self.calls('spaces.sh')), 1)
+        self.assertEqual(len([c for c in self.calls('spaces.sh') if '--check' not in c]), 1)
         self.assertIn(['yabai','-m','config','--space','1','top_padding','16'], self.calls('yabai'))
         self.assertTrue(self.signature.exists())
         self.run_profile()
@@ -217,6 +218,29 @@ class NativeProfileTests(unittest.TestCase):
         self.state['reload_failure'] = False
         self.run_profile()
         self.assertTrue(self.signature.exists())
+
+
+    def test_forced_restore_during_bar_reload_does_not_skip_labels(self):
+        self.state['loaded'] = ''
+        self.run_profile()
+        self.assertEqual(self.calls('ensure-spaces.sh'), [])
+        self.assertFalse(self.signature.exists())
+        self.run_profile(force=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 1)
+        self.assertIn(['spaces.sh', '--check'], self.calls('spaces.sh'))
+        self.assertEqual(self.state['loaded'], 'non-docked')
+        self.assertTrue(self.signature.exists())
+
+    def test_forced_restore_bypasses_cached_signature(self):
+        self.run_profile()
+        self.run_profile(force=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 2)
+
+    def test_label_verification_failure_does_not_cache_success(self):
+        self.state['labels_invalid'] = True
+        self.run_profile(success=False, force=True)
+        self.assertFalse(self.signature.exists())
+        self.assertEqual(self.calls('stow'), [])
 
 
 if __name__ == '__main__':

@@ -294,17 +294,27 @@ class WmTests(unittest.TestCase):
                     display=display, label="", **{"is-native-fullscreen":False}))
         self.save()
 
-    def run_spaces(self, success=True, plan=None):
+    def run_spaces(self, success=True, plan=None, check=False):
         if plan is None:
             plan = ([dict(index=1,workspaces=[1,2,3,4,5,6])]
                     if len(self.state["displays"]) == 1 else
                     [dict(index=1,workspaces=[1,3,5]),dict(index=2,workspaces=[2,4,6])])
         plan_path = self.path / "plan.json"
         plan_path.write_text(json.dumps(plan))
-        result = subprocess.run(["/bin/bash", str(ROOT / "yabai/.config/yabai/scripts/spaces.sh"), "--plan", str(plan_path)],
+        result = subprocess.run(["/bin/bash", str(ROOT / "yabai/.config/yabai/scripts/spaces.sh"), "--plan", str(plan_path)] + (["--check"] if check else []),
                                 env=self.env, capture_output=True, text=True, timeout=10)
         self.refresh()
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
+
+    def test_label_check_rejects_missing_labels_without_changing_spaces(self):
+        self.native_spaces([3,3])
+        self.run_spaces(success=False, check=True)
+        self.assertTrue(all(s['label'] == '' for s in self.state['spaces']))
+        self.assertFalse(any('--label' in c for c in self.calls('yabai')))
+        self.run_spaces()
+        before = len([c for c in self.calls('yabai') if '--label' in c])
+        self.run_spaces(check=True)
+        self.assertEqual(len([c for c in self.calls('yabai') if '--label' in c]), before)
 
     def test_six_laptop_desktops_are_labelled(self):
         self.native_spaces([6])

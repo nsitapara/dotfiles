@@ -3,9 +3,11 @@ set -euo pipefail
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 plan_file=""
+check_only=false
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --plan) plan_file=$2; shift 2 ;;
+        --check) check_only=true; shift ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
@@ -24,6 +26,10 @@ mapping=$(jq -cn --argjson spaces "$spaces" --argjson plan "$plan" '
 [ "$mapping" != '[]' ] || { echo 'No ordinary desktops are available to label.' >&2; exit 1; }
 current=$(jq -c '[.[] | select(.label | test("^ws[1-9]$")) | {index,label}] | sort_by(.index)' <<< "$spaces")
 if [ "$current" != "$mapping" ]; then
+    if $check_only; then
+        echo 'Workspace labels do not match the display profile.' >&2
+        exit 1
+    fi
     # Clear our old aliases first, avoiding collisions when swapping ws2/ws3.
     while read -r index; do
         [ -n "$index" ] && yabai -m space "$index" --label

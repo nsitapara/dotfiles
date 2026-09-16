@@ -45,7 +45,7 @@ def restart(link):
                 if signals.returncode == 0 and configured:
                     # Labels live in the daemon, so activation AND rollback lose
                     # them. Reapply the profile after yabairc finishes its defaults.
-                    subprocess.run([str(PROFILE)], check=True, timeout=90)
+                    subprocess.run([str(PROFILE), "--force"], check=True, timeout=90)
                     return
         time.sleep(0.1)
     raise RuntimeError("yabai did not respond; check Device Control and Data Access")
@@ -80,7 +80,7 @@ def main(action):
     replace_link(link, target)
     try:
         restart(link)
-    except (RuntimeError, subprocess.SubprocessError):
+    except (OSError, RuntimeError, subprocess.SubprocessError):
         replace_link(link, previous)
         restart(link)
         raise

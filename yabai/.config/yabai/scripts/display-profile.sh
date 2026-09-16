@@ -1,13 +1,22 @@
 #!/bin/bash
 # Apply the native-Space profile under the same lock as wm.sh and AeroSpace.
 set -euo pipefail
+force=false
+case "${1:-}" in
+    --force) force=true ;;
+    "") ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+esac
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 STATE="$HOME/.local/state/dotfiles-wm"
 exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
 lockf -s -t 10 9 || exit 1
-launchctl list local.dotfiles.yabai >/dev/null 2>&1 || exit 0
+if ! launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
+    $force && exit 1
+    exit 0
+fi
 mkdir -p "$STATE"
 
 previous=""
@@ -36,10 +45,10 @@ if pgrep -x sketchybar >/dev/null; then
     loaded=$(sketchybar --query display_mode 2>/dev/null |
         sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p') || exit 1
     # Don't interrupt a bar reload in progress; the next event/interval retries.
-    [ -n "$loaded" ] || exit 0
+    if [ -z "$loaded" ] && ! $force; then exit 0; fi
 fi
 old=$(cat "$STATE/display-profile.signature" 2>/dev/null || true)
-if [ "$signature" = "$old" ] && [[ "$live" == *"/$package/.config/"* ]] &&
+if ! $force && [ "$signature" = "$old" ] && [[ "$live" == *"/$package/.config/"* ]] &&
    { ! $bar_running || [ "$loaded" = "$mode" ]; }; then exit 0; fi
 
 echo "Applying yabai $mode profile ($count active screens)"
@@ -47,6 +56,7 @@ if ! "$HERE/ensure-spaces.sh"; then
     echo 'Desktop creation unavailable; applying the display profile with existing desktops.' >&2
     "$HERE/spaces.sh"
 fi
+"$HERE/spaces.sh" --check
 # The helper can take time to create Spaces. Don't record a different topology.
 after=$("$HERE/display-layout.sh")
 [ "$(jq -cS . <<< "$after")" = "$(jq -cS . <<< "$plan")" ] || {
