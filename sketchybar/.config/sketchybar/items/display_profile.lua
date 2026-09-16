@@ -55,7 +55,7 @@ local function refresh()
 end
 for _, id in ipairs(order) do
   local row = sbar.add("item", "display.profile." .. id, {
-    position = "popup.display.profile", width = 160,
+    position = "popup.display.profile", width = 180,
     icon = { drawing = false },
     label = {
       string = titles[id], align = "left", padding_left = 14, padding_right = 14,
@@ -79,8 +79,16 @@ for _, entry in ipairs({ {"yabai", "Use yabai"}, {"aerospace", "Use AeroSpace"},
   local id, title = entry[1], entry[2]
   local row = sbar.add("item", "display.profile.manager." .. id, {
     position = "popup.display.profile", width = 180,
-    icon = { string = letters[id], width = 28, color = colors.white },
-    label = { string = title, align = "left", color = colors.white, padding_right = 14, font = { size = 12 } },
+    icon = {
+      string = letters[id], width = 12, align = "center",
+      padding_left = 14, padding_right = 10, color = colors.white,
+      font = { family = "SF Pro", style = "Semibold", size = 12 },
+    },
+    label = {
+      string = title, align = "left", padding_left = 0, padding_right = 14,
+      color = colors.white, font = { family = "SF Pro", style = "Semibold", size = 12 },
+    },
+    background = { drawing = false },
   })
   managers[id] = row
   row:subscribe("mouse.clicked", function()
