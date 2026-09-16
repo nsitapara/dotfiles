@@ -8,6 +8,9 @@ local topology
 local topology_epoch = 0
 local retry_count, retry_token = 0, 0
 local retry_delays = { 0.1, 0.25, 0.5 }
+local last_snapshot
+local removed_windows = {}
+local window_epoch, settle_token = 0, 0
 
 -- sbar.exec runs in a launchd environment that may omit Homebrew.
 local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
@@ -160,7 +163,7 @@ local function render(spaces, windows, displays, bar_displays, layout)
       } })
       set_changed(pill.bracket, { drawing = visible, display = display or "active" })
       if not pill.present or pill.focused ~= focused then
-        sbar.animate("sin", 14, function()
+        sbar.animate("sin", 6, function()
           set_changed(pill.item, { icon = { color = focused and colors.mauve or colors.white,
             font = { size = focused and 18.0 or 14.0 },
           } })
@@ -205,6 +208,20 @@ local function render(spaces, windows, displays, bar_displays, layout)
   end
 end
 
+local function remaining_windows(windows, prune)
+  local remaining, seen = {}, {}
+  for _, window in ipairs(windows) do
+    if window.id then seen[window.id] = true end
+    if not removed_windows[window.id] then remaining[#remaining + 1] = window end
+  end
+  if prune then
+    for id in pairs(removed_windows) do
+      if not seen[id] then removed_windows[id] = nil end
+    end
+  end
+  return remaining
+end
+
 local update
 update = function()
   if busy then pending = true; return end
@@ -212,6 +229,7 @@ update = function()
   retry_token = retry_token + 1
   local token = retry_token
   local epoch = topology_epoch
+  local windows_at_start = window_epoch
   local refresh_topology = topology == nil
   -- Combine JSON once, and let SbarLua decode it. A failed query leaves the
   -- last complete frame visible instead of clearing the bar during a hotplug.
@@ -230,8 +248,7 @@ update = function()
   ]]
   else
     command = command .. [[
-      jq -n --argjson spaces "$spaces" --argjson windows "$windows" \
-        '{spaces:$spaces, windows:$windows}'
+      printf '{"spaces":%s,"windows":%s}\n' "$spaces" "$windows"
     ]]
   end
   sbar.exec(command, function(result)
@@ -246,7 +263,9 @@ update = function()
           layout = result.layout }
       end
       if topology then
-        render(result.spaces, result.windows, topology.displays, topology.bar_displays, topology.layout)
+        local windows = remaining_windows(result.windows, windows_at_start == window_epoch)
+        last_snapshot = { spaces = result.spaces, windows = windows }
+        render(result.spaces, windows, topology.displays, topology.bar_displays, topology.layout)
         valid = true
       end
     end
@@ -270,7 +289,34 @@ local function requested_update()
   update()
 end
 observer:subscribe({ "space_change", "space_windows_change",
-  "yabai_windows_changed" }, requested_update)
+  "yabai_windows_changed" }, function(env)
+  local event = env.EVENT or env.SENDER
+  local id, pid = tonumber(env.WINDOW_ID), tonumber(env.PROCESS_ID)
+  if event == "window_created" and id then removed_windows[id] = nil end
+  if event == "window_destroyed" and id then removed_windows[id] = true end
+  if event == "application_terminated" and pid and last_snapshot then
+    for _, window in ipairs(last_snapshot.windows) do
+      if window.pid == pid and window.id then removed_windows[window.id] = true end
+    end
+  end
+  if event == "window_destroyed" or event == "application_terminated"
+    or event == "space_windows_change" then
+    window_epoch = window_epoch + 1
+    if topology and last_snapshot then
+      last_snapshot.windows = remaining_windows(last_snapshot.windows, false)
+      render(last_snapshot.spaces, last_snapshot.windows,
+        topology.displays, topology.bar_displays, topology.layout)
+    end
+    -- CoreGraphics can list a closing window during its exit animation. Recheck
+    -- once after the burst; never wait for the user to change Space or focus.
+    settle_token = settle_token + 1
+    local token = settle_token
+    sbar.delay(0.12, function()
+      if token == settle_token then requested_update() end
+    end)
+  end
+  requested_update()
+end)
 observer:subscribe({ "display_change", "system_woke" }, function()
   topology_epoch = topology_epoch + 1
   topology = nil

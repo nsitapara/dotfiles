@@ -62,9 +62,9 @@ yabai -m signal --add label=dotfiles-focus-history event=window_focused \
 
 # Pills show apps, not titles. Retire the title signal on config reload too.
 yabai -m signal --remove dotfiles-window_title_changed 2>/dev/null || true
-for event in window_created window_destroyed window_focused application_hidden application_visible; do
+for event in window_created window_destroyed window_focused application_hidden application_visible application_terminated; do
     yabai -m signal --add label="dotfiles-$event" event="$event" \
-        action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed'
+        action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed EVENT='"$event"' WINDOW_ID="${YABAI_WINDOW_ID:-}" PROCESS_ID="${YABAI_PROCESS_ID:-}"'
 done
 
 # Native Space/display activation can leave Finder active with no focused window.
