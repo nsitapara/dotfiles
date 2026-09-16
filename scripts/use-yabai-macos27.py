@@ -11,6 +11,7 @@ APP = Path.home() / "Applications/Yabai macOS 27.app"
 BINARY = APP / "Contents/MacOS/yabai"
 STATE = Path.home() / ".local/state/dotfiles-wm/yabai-macos27-backup.json"
 SERVICE = f"gui/{os.getuid()}/local.dotfiles.yabai"
+PROFILE = Path(__file__).resolve().parents[1] / "yabai/.config/yabai/scripts/display-profile.sh"
 
 
 def replace_link(link, target):
@@ -29,7 +30,23 @@ def restart(link):
             [str(link), "-m", "query", "--spaces"], capture_output=True, text=True, timeout=2
         )
         if result.returncode == 0:
-            return
+            try:
+                spaces = json.loads(result.stdout)
+            except ValueError:
+                spaces = None
+            if isinstance(spaces, list) and spaces:
+                signals = subprocess.run([str(link), "-m", "signal", "--list"],
+                                         capture_output=True, text=True, timeout=2)
+                try:
+                    configured = any(signal.get('label') == 'dotfiles-display_resized'
+                                     for signal in json.loads(signals.stdout))
+                except (ValueError, TypeError, AttributeError):
+                    configured = False
+                if signals.returncode == 0 and configured:
+                    # Labels live in the daemon, so activation AND rollback lose
+                    # them. Reapply the profile after yabairc finishes its defaults.
+                    subprocess.run([str(PROFILE)], check=True, timeout=90)
+                    return
         time.sleep(0.1)
     raise RuntimeError("yabai did not respond; check Device Control and Data Access")
 
