@@ -60,9 +60,17 @@ def toggle(run):
     if window.get('is-native-fullscreen') or window.get('has-fullscreen-zoom'):
         raise RuntimeError('Leave fullscreen before toggling floating')
     display = query('--displays', '--display', window['display'])['frame']
-    # Match yabai's configured clearance: 50 top, 8 bottom, 10 on each side.
-    area = dict(x=display['x'] + 10, y=display['y'] + 50,
-                w=display['w'] - 20, h=display['h'] - 58)
+    # Use the applied per-space padding, including the laptop's notch clearance.
+    padding = {edge: float(run('yabai', '-m', 'config', '--space', window['space'],
+                               edge + '_padding').stdout)
+               for edge in ('top', 'bottom', 'left', 'right')}
+    if any(not math.isfinite(value) or value < 0 for value in padding.values()):
+        raise RuntimeError('Invalid workspace padding')
+    area = dict(x=display['x'] + padding['left'], y=display['y'] + padding['top'],
+                w=display['w'] - padding['left'] - padding['right'],
+                h=display['h'] - padding['top'] - padding['bottom'])
+    if not valid(area):
+        raise RuntimeError('Workspace padding leaves no room for a floating window')
     key = str(window['pid']) + ':' + str(window['id'])
     cache = load_cache()
     if window['is-floating']:

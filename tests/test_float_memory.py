@@ -37,13 +37,14 @@ class FloatMemoryTests(unittest.TestCase):
                                  dict(x=264, y=188, w=2032, h=1106))
 
     def test_float_tile_float_uses_saved_geometry(self):
-        window = dict(id=1, pid=42, display=1, frame=dict(x=150, y=190, w=1000, h=800),
+        window = dict(id=1, pid=42, display=1, space=1, frame=dict(x=150, y=190, w=1000, h=800),
                       **{'is-floating': True})
         calls = []
         def run(*args):
             calls.append(args)
             if args[2:4] == ('query', '--windows'): data = window
             elif args[2:4] == ('query', '--displays'): data = dict(frame=dict(x=0,y=0,w=2560,h=1440))
+            elif args[2] == 'config': data = {'top_padding':50,'bottom_padding':8,'left_padding':10,'right_padding':10}[args[-1]]
             else: data = {}
             return subprocess.CompletedProcess(args, 0, json.dumps(data), '')
         with tempfile.TemporaryDirectory() as directory, patch.object(floating, 'CACHE', Path(directory)/'frames.json'):
@@ -57,6 +58,26 @@ class FloatMemoryTests(unittest.TestCase):
         self.assertEqual(calls[-1],
             ('yabai','-m','window',1,'--toggle','float','--move','abs:150:190',
              '--resize','abs:1000:800','--move','abs:150:190'))
+
+    def test_float_uses_applied_laptop_and_custom_padding(self):
+        for top in [16, 50, 72]:
+            calls = []
+            def run(*args):
+                calls.append(args)
+                if args[2:4] == ('query', '--windows'):
+                    data = dict(id=1, pid=42, space=3, display=2, **{'is-floating':False})
+                elif args[2:4] == ('query', '--displays'):
+                    data = dict(frame=dict(x=-1440,y=0,w=1440,h=900))
+                elif args[2] == 'config':
+                    self.assertEqual(args[3:5], ('--space', 3))
+                    data = {'top_padding':top,'bottom_padding':8,'left_padding':20,'right_padding':30}[args[-1]]
+                else: data = {}
+                return subprocess.CompletedProcess(args, 0, json.dumps(data), '')
+            with patch.object(floating, 'load_cache', return_value={}):
+                floating.toggle(run)
+            expected = floating.restore_frame(None, dict(x=-1420,y=top,w=1390,h=892-top))
+            self.assertIn(f"abs:{expected['x']}:{expected['y']}", calls[-1])
+            self.assertIn(f"abs:{expected['w']}:{expected['h']}", calls[-1])
 
     def test_cache_separates_windows_and_bounds_growth(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(floating, 'CACHE', Path(directory)/'frames.json'):
