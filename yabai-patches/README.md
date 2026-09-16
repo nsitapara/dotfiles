@@ -6,6 +6,15 @@ This local patch restores the Dock gesture payload and keeps window management
 on yabai's modern macOS paths. It does not install a scripting addition or
 change SIP.
 
+`query-json.patch` fixes the pinned build's array serialization. With zero active
+displays, its queries wrote `[` and a newline, returning success without closing
+the array. Skipped space views could also leave trailing commas or omit the
+closing bracket. The patch closes arrays outside the loops and writes separators
+only between emitted entries. The build tests the actual patched C functions
+against empty, skipped, and unavailable display/space fixtures before compiling.
+SketchyBar separately preserves its last valid frame and retries transient query
+failures, including failures from an older installed build.
+
 ## Sources
 
 - yabai base: `dd845723416f5fe92af49fad5ebab00369e07edd`, version 7.1.25.

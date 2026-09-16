@@ -1,6 +1,8 @@
 #!/bin/bash
 # Build the reviewed, pinned macOS 27 workaround without changing the live service.
 set -euo pipefail
+# Keep the SDK paired with xcrun's selected toolchain when CLT and Xcode differ.
+export SDKROOT="${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path)}"
 
 repo_dir=$(cd "$(dirname "$0")/.." && pwd)
 revision=dd845723416f5fe92af49fad5ebab00369e07edd
@@ -16,6 +18,8 @@ git init -q "$build_dir/source"
 git -C "$build_dir/source" fetch -q --depth=1 https://github.com/asmvik/yabai.git "$revision"
 git -C "$build_dir/source" checkout -q --detach FETCH_HEAD
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/macos27.patch"
+git -C "$build_dir/source" apply "$repo_dir/yabai-patches/query-json.patch"
+python3 "$repo_dir/tests/check_yabai_query_json.py" "$build_dir/source"
 make -C "$build_dir/source" install
 
 # Exercise serialization without sending any desktop-switching events.

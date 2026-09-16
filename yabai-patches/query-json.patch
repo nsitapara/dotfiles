@@ -1,0 +1,86 @@
+diff --git a/src/display_manager.c b/src/display_manager.c
+index c460b8f..cab1f33 100644
+--- a/src/display_manager.c
++++ b/src/display_manager.c
+@@ -12,10 +12,10 @@ bool display_manager_query_displays(FILE *rsp, uint64_t flags)
+ 
+     fprintf(rsp, "[");
+     for (int i = 0; i < count; ++i) {
++        if (i) fprintf(rsp, ",");
+         display_serialize(rsp, display_list[i], flags);
+-        fprintf(rsp, "%c", i < count - 1 ? ',' : ']');
+     }
+-    fprintf(rsp, "\n");
++    fprintf(rsp, "]\n");
+ 
+     return true;
+ }
+diff --git a/src/space_manager.c b/src/space_manager.c
+index dbf755b..f0778cf 100644
+--- a/src/space_manager.c
++++ b/src/space_manager.c
+@@ -31,15 +31,17 @@ bool space_manager_query_spaces_for_window(FILE *rsp, struct window *window, uin
+     uint64_t *space_list = window_space_list(window->id, &space_count);
+     if (!space_list) return false;
+ 
++    bool first = true;
+     fprintf(rsp, "[");
+     for (int i = 0; i < space_count; ++i) {
+         struct view *view = space_manager_query_view(&g_space_manager, space_list[i]);
+         if (!view) continue;
+ 
++        if (!first) fprintf(rsp, ",");
++        first = false;
+         view_serialize(rsp, view, flags);
+-        fprintf(rsp, "%c", i < space_count - 1 ? ',' : ']');
+     }
+-    fprintf(rsp, "\n");
++    fprintf(rsp, "]\n");
+ 
+     return true;
+ }
+@@ -52,15 +54,17 @@ bool space_manager_query_spaces_for_display(FILE *rsp, uint32_t did, uint64_t fl
+     uint64_t *space_list = display_space_list(did, &space_count);
+     if (!space_list) return false;
+ 
++    bool first = true;
+     fprintf(rsp, "[");
+     for (int i = 0; i < space_count; ++i) {
+         struct view *view = space_manager_query_view(&g_space_manager, space_list[i]);
+         if (!view) continue;
+ 
++        if (!first) fprintf(rsp, ",");
++        first = false;
+         view_serialize(rsp, view, flags);
+-        fprintf(rsp, "%c", i < space_count - 1 ? ',' : ']');
+     }
+-    fprintf(rsp, "\n");
++    fprintf(rsp, "]\n");
+ 
+     return true;
+ }
+@@ -73,6 +77,7 @@ bool space_manager_query_spaces_for_displays(FILE *rsp, uint64_t flags)
+     uint32_t *display_list = display_manager_active_display_list(&display_count);
+     if (!display_list) return false;
+ 
++    bool first = true;
+     fprintf(rsp, "[");
+     for (int i = 0; i < display_count; ++i) {
+         int space_count;
+@@ -83,13 +88,13 @@ bool space_manager_query_spaces_for_displays(FILE *rsp, uint64_t flags)
+             struct view *view = space_manager_query_view(&g_space_manager, space_list[j]);
+             if (!view) continue;
+ 
++            if (!first) fprintf(rsp, ",");
++            first = false;
+             view_serialize(rsp, view, flags);
+-            if (j < space_count - 1) fprintf(rsp, ",");
+         }
+ 
+-        fprintf(rsp, "%c", i < display_count - 1 ? ',' : ']');
+     }
+-    fprintf(rsp, "\n");
++    fprintf(rsp, "]\n");
+ 
+     return true;
+ }
