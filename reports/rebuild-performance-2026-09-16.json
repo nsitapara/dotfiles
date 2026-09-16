@@ -1,0 +1,4289 @@
+{
+  "date": "2026-09-16",
+  "manager": "yabai",
+  "baseline_commit": "7bb7d313ddb1fd0f1c407c7fe5017510738e1a02",
+  "method": [
+    "Four disposable AppKit windows on the empty ws5/ws6 pair; real user windows were untouched.",
+    "Before every timed action, place one resident on the incoming half and two on the opposite half. Verify exact ID-to-frame assignments match for both implementations within each direction.",
+    "Alternate implementations before/after/after/before/before/after, then repeat in the opposite direction. Six samples per implementation.",
+    "Time the in-process shortcut entry point with per-request tracing. Timing excludes fixture setup and independent CoreGraphics verification after the operation; unlike previous CLI timings it excludes helper process startup.",
+    "Check selected focus, arrival edge/full side, resident reading order, non-overlap and native balanced sizes. Restore original visible workspaces and focus; close every fixture."
+  ],
+  "validation": {
+    "matched_crossings_passed": 12,
+    "repeat_crossings_passed": 16,
+    "swap_expand_sequences_passed": 8,
+    "automated_wm_tests_passed": 102
+  },
+  "setup_correction": "The first baseline attempt stopped on a 2px equal-height assertion. Native BSP balance subtracts gaps at each split, producing small height differences. The check permits one configured 15px gap plus rounding, while still requiring non-overlap. This change applied to both implementations; the aborted attempt is excluded.",
+  "summary": {
+    "before": {
+      "n": 6,
+      "median_ms": 670.7399370061466,
+      "min_ms": 598.2605830067769,
+      "max_ms": 800.3829169902019,
+      "request_counts": [
+        25,
+        25,
+        25,
+        24,
+        24,
+        24
+      ],
+      "focus_median_ms": 223.72822950273985
+    },
+    "after": {
+      "n": 6,
+      "median_ms": 500.417125003878,
+      "min_ms": 434.35308399784844,
+      "max_ms": 552.4751250050031,
+      "request_counts": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "focus_median_ms": 207.62664549693
+    }
+  },
+  "median_reduction_percent": 25.393271312053656,
+  "samples": [
+    {
+      "implementation": "before",
+      "direction": "right",
+      "index": 0,
+      "ms": 657.5050829997053,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 3209.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 3848,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.5165839975234121
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 16.027583013055846
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.4766670026583597
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.33837500086519867
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 3.2917920034378767
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 5.05299998621922
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "east",
+            "--insert",
+            "west"
+          ],
+          "ms": 36.30741599772591
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 19.424334008363076
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 237.93020899756812
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 1.7329160036752
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.4481250109383836
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 46.080750005785376
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--warp",
+            45792
+          ],
+          "ms": 7.40166699688416
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 46.27420799806714
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45792
+          ],
+          "ms": 23.875958999269642
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 1.6487079992657527
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 4.110292007680982
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance"
+          ],
+          "ms": 3.4482500050216913
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 5.226541994488798
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 9.640292002586648
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 5.465750000439584
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45794
+          ],
+          "ms": 2.778791997116059
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--swap",
+            45796
+          ],
+          "ms": 3.7297500093700364
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 6.454791990108788
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 3.372624996700324
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "right",
+      "index": 1,
+      "ms": 552.4751250050031,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 2570.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 75.44545800192282
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 0.5002090038033202
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.6749590102117509
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.4080420039827004
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 0.9989169921027496
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.630041006137617
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 12.889125006040558
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 50.39941599534359
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 257.7458750020014
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 3.469875009614043
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.0986249981215224
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 41.0138330043992
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 7.949375009047799
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 3.9676250016782433
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.2070419907104224
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.490250000846572
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "right",
+      "index": 2,
+      "ms": 539.1897500085179,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 2570.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 87.04133400169667
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 0.40962500497698784
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.4598340019583702
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.4769589868374169
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 0.7215410005301237
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 4.5630420063389465
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 41.408916004002094
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 18.999540989170782
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 240.57437499868684
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 4.321333006373607
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.7155420064227656
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 27.5172089895932
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 7.386749988654628
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 8.861958005581982
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.3995420013088733
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.7465419989312068
+        }
+      ]
+    },
+    {
+      "implementation": "before",
+      "direction": "right",
+      "index": 3,
+      "ms": 800.3829169902019,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 3209.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 3848,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 73.77187500242144
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 1.2986250076210126
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.7838750025257468
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.46608300181105733
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 1.2062919995514676
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 6.471250002505258
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "east",
+            "--insert",
+            "west"
+          ],
+          "ms": 79.44412500364706
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 36.45458300889004
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 242.14345899235923
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.5376659973990172
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.6347079983679578
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 38.28925000561867
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--warp",
+            45792
+          ],
+          "ms": 12.370124997687526
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 54.34837500797585
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45792
+          ],
+          "ms": 22.459250001702458
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 14.436958997976035
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.3676250053104013
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance"
+          ],
+          "ms": 8.21175001328811
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 4.65970799268689
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 5.450708995340392
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 4.6891669917386025
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45794
+          ],
+          "ms": 7.957875001011416
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--swap",
+            45796
+          ],
+          "ms": 5.750750002334826
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 5.353415996069089
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 3.2543749985052273
+        }
+      ]
+    },
+    {
+      "implementation": "before",
+      "direction": "right",
+      "index": 4,
+      "ms": 658.6045410076622,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 3209.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 3848,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 72.42654099536594
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 0.5654169945046306
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.6747089937562123
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.5215830024098977
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 0.8592499943915755
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.6899999900488183
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "east",
+            "--insert",
+            "west"
+          ],
+          "ms": 9.893709007883444
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 40.64816598838661
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 215.39599999960046
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.5061249976279214
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.3549589968752116
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 6.631041003856808
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--warp",
+            45792
+          ],
+          "ms": 8.386333007365465
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 23.90949999971781
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45792
+          ],
+          "ms": 40.90645800170023
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 14.440958999330178
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.48600000445730984
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance"
+          ],
+          "ms": 9.40075000107754
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 5.53579100233037
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.76920800388325
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 5.355625005904585
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45794
+          ],
+          "ms": 7.148541990318336
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--swap",
+            45796
+          ],
+          "ms": 1.9664169958559796
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 2.5202919932780787
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 3.5151659976691008
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "right",
+      "index": 5,
+      "ms": 441.7282499925932,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 2570.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 3848.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 3848.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 2570.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 3848,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 3848,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 3848,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 3848.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 88.0861250043381
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            3
+          ],
+          "ms": 0.4074999887961894
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.38995800423435867
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.33566600177437067
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            2
+          ],
+          "ms": 0.5900420073885471
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.7887500105425715
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 9.984582997276448
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            2
+          ],
+          "ms": 27.49516599578783
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 170.07612499583047
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.4656249948311597
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.4496669900836423
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 38.23920899594668
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 5.634625005768612
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            6,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 4.253999999491498
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 4.270666991942562
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 1.1099590046796948
+        }
+      ]
+    },
+    {
+      "implementation": "before",
+      "direction": "left",
+      "index": 0,
+      "ms": 683.6612499901094,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1927.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 10,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 5.003583006327972
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 6.460541990236379
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.47995800559874624
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.8662910113343969
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 4.724166996311396
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.2066659983247519
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "west",
+            "--insert",
+            "east"
+          ],
+          "ms": 48.699291990487836
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 22.737042003427632
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 232.06045900587924
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.44316600542515516
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 2.664832994923927
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 49.03675000241492
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 10.948375012958422
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 42.30616599670611
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45794
+          ],
+          "ms": 32.73504199751187
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 23.966666994965635
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.8202499884646386
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance"
+          ],
+          "ms": 5.012624998926185
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 2.974542003357783
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 4.116416996112093
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 2.583957990282215
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45796
+          ],
+          "ms": 4.871166995144449
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 4.220875009195879
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 2.8077080060029402
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "left",
+      "index": 1,
+      "ms": 540.8415839920053,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45792": {
+          "x": 10,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 70.52662500063889
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 1.3662499986821786
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.5116660031490028
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.3047500067623332
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 1.6704169975128025
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.9839169943006709
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 34.288165988982655
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 46.078333994955756
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 221.03662499284837
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 1.7006670095724985
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.0593750048428774
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 49.838582999655046
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45796
+          ],
+          "ms": 11.384000012185425
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 7.318583011510782
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.5034159878268838
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 4.390167014207691
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "left",
+      "index": 2,
+      "ms": 434.35308399784844,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45792": {
+          "x": 10,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 75.17508399905637
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 2.9701660096179694
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.49154199950862676
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.27237500762566924
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 0.7962919917190447
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.8970000053523108
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 9.124332995270379
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 34.18770800635684
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 194.21666600101162
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 3.6314999888418242
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.2528750085039064
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 7.290875000762753
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45796
+          ],
+          "ms": 4.947541994624771
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 3.044083990971558
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.731000011204742
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.356165994773619
+        }
+      ]
+    },
+    {
+      "implementation": "before",
+      "direction": "left",
+      "index": 3,
+      "ms": 598.2605830067769,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1927.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 10,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 61.65250000776723
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 1.833542002714239
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.6467079947469756
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.5120419955346733
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 0.7067920087138191
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.4957919920561835
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "west",
+            "--insert",
+            "east"
+          ],
+          "ms": 34.8370830033673
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 19.154334004269913
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 202.96262500050943
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.4625420115189627
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 2.742291006143205
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 7.401958995615132
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 5.490249997819774
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 18.717541999649256
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45794
+          ],
+          "ms": 29.13687500404194
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 10.175332994549535
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.5464580026455224
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance"
+          ],
+          "ms": 3.428583004279062
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 3.693541992106475
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 5.530041002202779
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 4.32383400038816
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45796
+          ],
+          "ms": 3.990291996160522
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.73333299648948
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 2.3567500029457733
+        }
+      ]
+    },
+    {
+      "implementation": "before",
+      "direction": "left",
+      "index": 4,
+      "ms": 682.8753330046311,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1927.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 623.0,
+            "h": 1382.0
+          },
+          "split-type": "vertical",
+          "split-child": "first_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 976,
+          "w": 1262,
+          "h": 455
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 448
+        },
+        "45792": {
+          "x": 10,
+          "y": 513,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 58.451083008549176
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 0.8462500118184835
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.49308399320580065
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.3602499928092584
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 0.8118340047076344
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.011125001241453
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "west",
+            "--insert",
+            "east"
+          ],
+          "ms": 48.03941599675454
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 20.170959003735334
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 206.7742920044111
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.4503329982981086
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.1864170082844794
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 38.110458001028746
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45794
+          ],
+          "ms": 8.197125003789552
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45794,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 58.56933299219236
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--warp",
+            45794
+          ],
+          "ms": 19.48412500496488
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 22.81204200698994
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.8662500040372834
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance"
+          ],
+          "ms": 4.180000003543682
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--ratio",
+            "abs:0.5"
+          ],
+          "ms": 2.8072919958503917
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.1056670122779906
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 6.990249996306375
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--swap",
+            45796
+          ],
+          "ms": 3.1874169944785535
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.4917500015581027
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.380416994332336
+        }
+      ]
+    },
+    {
+      "implementation": "after",
+      "direction": "left",
+      "index": 5,
+      "ms": 461.6444999992382,
+      "focus": true,
+      "reading_order": true,
+      "balanced": true,
+      "arrival": [
+        {
+          "id": 45789,
+          "frame": {
+            "x": 1288.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45796,
+          "frame": {
+            "x": 10.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        },
+        {
+          "id": 45794,
+          "frame": {
+            "x": 10.0,
+            "y": 50.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "first_child"
+        },
+        {
+          "id": 45792,
+          "frame": {
+            "x": 1288.0,
+            "y": 749.0,
+            "w": 1262.0,
+            "h": 683.0
+          },
+          "split-type": "horizontal",
+          "split-child": "second_child"
+        }
+      ],
+      "native_frames": {
+        "45796": {
+          "x": 10,
+          "y": 521,
+          "w": 1262,
+          "h": 448
+        },
+        "45794": {
+          "x": 10,
+          "y": 50,
+          "w": 1262,
+          "h": 455
+        },
+        "45792": {
+          "x": 10,
+          "y": 984,
+          "w": 1262,
+          "h": 448
+        },
+        "45789": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        }
+      },
+      "initial_frames": {
+        "45796": {
+          "x": 10.0,
+          "y": 749.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45794": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 683.0
+        },
+        "45792": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      "commands": [
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 63.43974999617785
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--space",
+            6
+          ],
+          "ms": 0.45091600622981787
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            6
+          ],
+          "ms": 0.40683300176169723
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--displays"
+          ],
+          "ms": 0.28733299404848367
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--spaces",
+            "--display",
+            1
+          ],
+          "ms": 0.6162499921629205
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 0.800124995294027
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--insert",
+            "south",
+            "--insert",
+            "north"
+          ],
+          "ms": 33.39587499795016
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45789,
+            "--display",
+            1
+          ],
+          "ms": 39.118417000281624
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            "--focus",
+            45789
+          ],
+          "ms": 177.94166700332426
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--window",
+            45789
+          ],
+          "ms": 0.5146670009708032
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 3.117915999609977
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45796,
+            "--insert",
+            "north",
+            "--insert",
+            "south"
+          ],
+          "ms": 32.50279100029729
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "window",
+            45792,
+            "--warp",
+            45796
+          ],
+          "ms": 7.778957995469682
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "space",
+            3,
+            "--balance",
+            "x-axis"
+          ],
+          "ms": 4.712833004305139
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 1.2619169865502045
+        },
+        {
+          "command": [
+            "yabai",
+            "-m",
+            "query",
+            "--windows",
+            "--space",
+            3
+          ],
+          "ms": 4.788791993632913
+        }
+      ]
+    }
+  ],
+  "repeated_crossing_checks": {
+    "left": [
+      {
+        "stage": "four_window_destination",
+        "direction": "left",
+        "ms": 736.4874170016265,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 244.6312090032734,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "four_window_destination",
+        "direction": "left",
+        "ms": 684.1379160032375,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 232.84387499734294,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "left",
+        "ms": 431.1067910020938,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 219.59216700633988,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "left",
+        "ms": 394.7164160053944,
+        "focused": true,
+        "frame": {
+          "x": 1288,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 10.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 1288.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "right",
+        "ms": 213.54795900697354,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      }
+    ],
+    "right": [
+      {
+        "stage": "four_window_destination",
+        "direction": "right",
+        "ms": 489.14145899470896,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "left",
+        "ms": 208.77270799246617,
+        "focused": true,
+        "frame": {
+          "x": 10,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "four_window_destination",
+        "direction": "right",
+        "ms": 824.9284579942469,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 4
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "left",
+        "ms": 194.70100000035018,
+        "focused": true,
+        "frame": {
+          "x": 10,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "right",
+        "ms": 420.6959999864921,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "left",
+        "ms": 174.73266698652878,
+        "focused": true,
+        "frame": {
+          "x": 10,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      },
+      {
+        "stage": "three_window_destination",
+        "direction": "right",
+        "ms": 435.27008399541955,
+        "focused": true,
+        "frame": {
+          "x": 2570,
+          "y": 50,
+          "w": 1262,
+          "h": 1382
+        },
+        "windows": 3
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "right",
+        "focused": true,
+        "frame": {
+          "x": 3848.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "swap_then_expand",
+        "direction": "left",
+        "focused": true,
+        "frame": {
+          "x": 2570.0,
+          "y": 50.0,
+          "w": 1262.0,
+          "h": 1382.0
+        }
+      },
+      {
+        "stage": "empty_destination",
+        "direction": "left",
+        "ms": 197.3914170084754,
+        "focused": true,
+        "frame": {
+          "x": 10,
+          "y": 50,
+          "w": 2540,
+          "h": 1382
+        },
+        "windows": 1
+      }
+    ]
+  },
+  "limitations": [
+    "Small alternated sample, not a broad application benchmark or a PyCharm-specific claim.",
+    "Speedup applies to the guarded four-window grid produced by the matched destination setup. Other shapes retain the fallback, and repeated-crossing samples include slower fallback runs.",
+    "Refocusing the window remains a substantial cost, with a new-path median near 208ms. Focus handling was not weakened to reduce timing.",
+    "No new background worker or idle polling. This run did not measure CPU, memory or energy."
+  ]
+}

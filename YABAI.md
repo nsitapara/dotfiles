@@ -558,3 +558,21 @@ three-window arrivals took 303–396 ms, close to the earlier 288–365 ms range
 about 45% lower rightward median latency than the regression. Four-window
 arrivals still took 689–1273 ms. These are small sequential samples, not a
 randomized benchmark; larger destinations still require regrouping.
+
+### Four-window rebuild optimization
+
+For a confirmed 2x2 BSP grid, promotion moves only the selected tile's sibling
+into the opposite column or row. Balancing only that column leaves the selected
+half intact. The parent split metadata must agree with the geometry; clamped,
+stacked or differently structured layouts keep the existing fallback. Existing
+aligned layouts with more tiles can also reuse their slots when they satisfy the
+same geometry checks.
+
+The [matched rebuild comparison](reports/rebuild-performance-2026-09-16.json)
+measured a median of 671 ms before and 500 ms after, about 25% lower latency.
+Native requests fell from 24–25 to 16. All 12 matched crossings retained focus,
+reading order and balanced sizing; 16 further crossings and eight swap/expand
+sequences passed. This improvement applies to the tested grid, not every layout.
+The refocus request still took about 208 ms median. There is no new background
+work. The timings exclude helper process startup and are not directly comparable
+to the earlier CLI timings.

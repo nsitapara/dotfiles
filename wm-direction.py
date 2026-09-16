@@ -125,13 +125,12 @@ def cross_yabai(selected, direction):
 
 
 def arrival_hint(anchor, windows, incoming, source_frame):
-    if anchor and len(windows) == 2:
+    if anchor and len(windows) in (2, 3):
         plan = side_plan(anchor, [anchor] + [w for w in windows if w['id'] != anchor['id']], incoming)
         if plan is not None and not plan[0]:
-            # With two equal side-by-side tiles, splitting another narrow column
-            # forces a full tree rebuild. Split across the other axis instead:
-            # arrival stays on the incoming edge and promotion reuses the three
-            # existing slots through mirror/swap, without warping or balancing.
+            # Split a full-side leaf across the other axis. With two residents
+            # promotion reuses three slots; with three it creates a grid that
+            # needs only one warp. Avoid introducing an extra narrow column.
             axis, size = ('y', 'h') if incoming in ('left', 'right') else ('x', 'w')
             f = anchor['frame']
             first = source_frame[axis] + source_frame[size]/2 <= f[axis] + f[size]/2
@@ -268,6 +267,15 @@ def clear_insert(id, direction):
         pass  # The anchor may have closed too. Preserve the original error.
 
 
+def warp_at(id, anchor, direction):
+    try:
+        insert(anchor, direction)
+        window(id, '--warp', anchor)
+    except RuntimeError:
+        clear_insert(anchor, direction)
+        raise
+
+
 def settled_windows(space, ids):
     # macOS sends frame updates after yabai acknowledges a layout command.
     # Wait for stable frames before deriving another action.
@@ -336,7 +344,7 @@ def wait_for_frames(space, expected):
 
 def side_plan(selected, windows, direction):
     """Reuse an existing two-column/row layout instead of rebuilding its tree."""
-    if len(windows) not in (2, 3):
+    if len(windows) < 2:
         return None
     axis, size, cross, extent = ('x','w','y','h') if direction in ('left','right') else ('y','h','x','w')
     low = {a:min(w['frame'][a] for w in windows) for a in ('x','y')}
@@ -355,10 +363,10 @@ def side_plan(selected, windows, direction):
         # Reject overlaps/minimum-size clamping and layouts with extra columns.
         if not (f[axis]+f[size] <= g[axis]+2 or g[axis]+g[size] <= f[axis]+2):
             continue
-        if len(group) == 2:
-            a,b = sorted(group,key=lambda w:w['frame'][cross])
-            if a['frame'][cross]+a['frame'][extent] > b['frame'][cross]+2:
-                continue
+        ordered = sorted(group,key=lambda w:w['frame'][cross])
+        if any(a['frame'][cross]+a['frame'][extent] > b['frame'][cross]+2
+               for a,b in zip(ordered,ordered[1:])):
+            continue
         correct_side = (abs(f[axis]-low[axis]) <= 2 if direction in ('left','up')
                         else abs(f[axis]+f[size]-high[axis]) <= 2)
         plans = []
@@ -384,6 +392,47 @@ def side_plan(selected, windows, direction):
             plans.append((commands,expected))
         return min(plans,key=lambda plan:len(plan[0]))
     return None
+
+
+def grid_promotion(selected, windows, direction):
+    """Find the one leaf to move out of a selected half of a 2x2 BSP grid."""
+    if len(windows) != 4:
+        return None
+    horizontal = direction in ('left', 'right')
+    axis,size,cross,extent = ('x','w','y','h') if horizontal else ('y','h','x','w')
+    # Identical geometry can represent a row-rooted or column-rooted tree.
+    # Require the actual parent split; geometry alone cannot justify this warp.
+    split = 'horizontal' if horizontal else 'vertical'
+    if any(w.get('split-type') != split or not eligible(w) or w.get('stack-index') for w in windows):
+        return None
+    f = selected['frame']
+    if any(abs(w['frame'][key]-f[key]) > 2 for w in windows for key in (size,extent)):
+        return None
+    local = [w for w in windows if abs(w['frame'][axis]-f[axis]) <= 2]
+    opposite = [w for w in windows if w not in local]
+    if len(local) != 2 or len(opposite) != 2:
+        return None
+    local.sort(key=lambda w:w['frame'][cross])
+    opposite.sort(key=lambda w:w['frame'][cross])
+    g = opposite[0]['frame']
+    if abs(opposite[1]['frame'][axis]-g[axis]) > 2:
+        return None
+    if not (f[axis]+f[size] <= g[axis]+2 if direction in ('left','up')
+            else g[axis]+g[size] <= f[axis]+2):
+        return None
+    if local[0]['frame'][cross]+f[extent] > local[1]['frame'][cross]+2:
+        return None
+    if any(abs(a['frame'][cross]-b['frame'][cross]) > 2 for a,b in zip(local,opposite)):
+        return None
+    displaced = next(w for w in local if w['id'] != selected['id'])
+    others = sorted((w for w in windows if w['id'] != selected['id']),
+                    key=lambda w:(w['frame'][cross],w['frame'][axis]))
+    index = others.index(displaced)
+    first = displaced['id'] == local[0]['id']
+    anchor = others[index+1] if first and index+1 < len(others) else others[max(0,index-1)]
+    before = index < others.index(anchor)
+    hint = ('north' if before else 'south') if horizontal else ('west' if before else 'east')
+    return displaced,anchor,hint
 
 
 def yabai(direction, id=None):
@@ -433,19 +482,20 @@ def place_yabai_side(selected, windows, direction):
     order = ('y', 'x') if horizontal else ('x', 'y')
     others = sorted((w for w in windows if w['id'] != id),
                     key=lambda w: tuple(w['frame'][a] for a in order))
+    grid = grid_promotion(selected, windows, direction)
+    if grid:
+        displaced,anchor,hint = grid
+        warp_at(displaced['id'], anchor['id'], hint)
+        # Balance the three remaining leaves along their column/row. The root
+        # half is already correct, so don't shrink and re-expand the selection.
+        run('yabai', '-m', 'space', selected['space'], '--balance', 'x-axis' if horizontal else 'y-axis')
+        restore_order(selected, windows, others, order)
+        return
     anchor = others[0]['id']
     # Gather every other leaf beside the anchor. The selected leaf is never
     # removed, floated, or sent to another Space. It becomes a root-level tile.
     for other in others[1:]:
-        direction_hint = 'south' if horizontal else 'east'
-        try:
-            insert(anchor, direction_hint)
-            window(other['id'], '--warp', anchor)
-        except RuntimeError:
-            # A closed/unmanageable leaf must not leave an insertion overlay
-            # that also redirects the user's next newly opened window.
-            clear_insert(anchor, direction_hint)
-            raise
+        warp_at(other['id'], anchor, 'south' if horizontal else 'east')
     current = query('--windows', '--window', id)
     desired_split = 'vertical' if horizontal else 'horizontal'
     if current['split-type'] != desired_split:
@@ -458,7 +508,10 @@ def place_yabai_side(selected, windows, direction):
     # grouped windows equal room before setting the selected side's ratio.
     run('yabai', '-m', 'space', selected['space'], '--balance')
     window(id, '--ratio', 'abs:0.5')
+    restore_order(selected, windows, others, order)
 
+
+def restore_order(selected, windows, others, order):
     # Natural warp chooses the nearest half. Restore the other apps' reading order
     # with swaps, which preserve the new geometry and keep focus on the selection.
     fresh = settled_windows(selected['space'], {w['id'] for w in windows})

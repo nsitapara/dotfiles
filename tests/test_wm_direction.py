@@ -216,6 +216,54 @@ class DirectionTests(unittest.TestCase):
         unequal=[halves[0],w(2,510,0,400,1000)]
         self.assertEqual(wm.arrival_hint(unequal[0],unequal,'left',halves[0]['frame']),'west')
 
+    def test_four_window_grid_promotion_moves_only_the_sibling_all_directions(self):
+        grid=[w(1,0,0,500,495),w(2,0,505,500,495),
+              w(3,510,0,500,495),w(4,510,505,500,495)]
+        for transpose in (False,True):
+            windows=[dict(row,**{'split-type':'horizontal'}) for row in grid]
+            if transpose:
+                windows=[dict(row,frame=dict(x=row['frame']['y'],y=row['frame']['x'],
+                         w=row['frame']['h'],h=row['frame']['w']),**{'split-type':'vertical'}) for row in windows]
+            for selected in windows:
+                axis,cross=('y','x') if transpose else ('x','y')
+                direction=('up' if selected['frame'][axis]==0 else 'down') if transpose else (
+                           'left' if selected['frame'][axis]==0 else 'right')
+                with self.subTest(direction=direction,selected=selected['id']):
+                    displaced,anchor,hint=wm.grid_promotion(selected,windows,direction)
+                    self.assertNotEqual(selected['id'],displaced['id'])
+                    self.assertEqual(displaced['frame'][axis],selected['frame'][axis])
+                    self.assertNotEqual(anchor['frame'][axis],selected['frame'][axis])
+                    with patch.object(wm,'window') as command,patch.object(wm,'run') as run, \
+                            patch.object(wm,'restore_order') as restore:
+                        wm.place_yabai_side(selected,windows,direction)
+                    self.assertEqual([c.args for c in command.call_args_list],[
+                        (anchor['id'],'--insert',wm.OPPOSITE[hint],'--insert',hint),
+                        (displaced['id'],'--warp',anchor['id'])])
+                    run.assert_called_once_with('yabai','-m','space',1,'--balance','y-axis' if transpose else 'x-axis')
+                    restore.assert_called_once()
+
+    def test_grid_requires_native_parent_orientation_and_unclamped_geometry(self):
+        grid=[dict(w(i,x,y,500,495),**{'split-type':'horizontal'})
+              for i,x,y in [(1,0,0),(2,0,505),(3,510,0),(4,510,505)]]
+        for mutation in [{'split-type':'vertical'},{'has-ax-reference':False},
+                         {'stack-index':1},{'frame':dict(x=510,y=505,w=600,h=495)}]:
+            changed=grid[:3]+[dict(grid[3],**mutation)]
+            self.assertIsNone(wm.grid_promotion(changed[0],changed,'left'))
+        self.assertIsNone(wm.grid_promotion(grid[0],grid,'right'))
+
+    def test_balanced_four_window_side_reuses_existing_slots(self):
+        windows=[w(1,0,0,500,1000),w(2,510,0,500,326),
+                 w(3,510,337,500,326),w(4,510,674,500,326)]
+        commands,expected=wm.side_plan(windows[3],windows,'left')
+        self.assertTrue(commands)
+        self.assertTrue(all(command[2]=='--swap' for command in commands))
+        self.assertEqual(expected[4],windows[0]['frame'])
+        self.assertEqual(wm.side_plan(windows[0],windows,'left')[0],[])
+
+    def test_three_residents_prepare_a_grid_at_the_incoming_edge(self):
+        anchor=self.windows[0]
+        self.assertEqual(wm.arrival_hint(anchor,self.windows,'left',anchor['frame']),'north')
+
     def test_yabai_focus_enters_near_edge_without_moving_windows(self):
         displays = [dict(id=10,index=1,frame=dict(x=1010,y=0,w=1010,h=1000),**{'has-focus':True}),
                     dict(id=20,index=2,frame=dict(x=0,y=0,w=1010,h=1000))]
