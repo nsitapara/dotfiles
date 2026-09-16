@@ -60,14 +60,15 @@ class DirectionTests(unittest.TestCase):
         for consumed in [False,True]:
             with self.subTest(consumed=consumed):
                 hint = None
-                def window(id,action,value):
+                def window(id,*commands):
                     nonlocal hint
-                    if action == '--insert':
-                        hint = None if hint == value else value
-                    if action == '--warp':
-                        if consumed:
-                            hint = None
-                        raise RuntimeError('warp failed')
+                    for action,value in zip(commands[::2],commands[1::2]):
+                        if action == '--insert':
+                            hint = None if hint == value else value
+                        if action == '--warp':
+                            if consumed:
+                                hint = None
+                            raise RuntimeError('warp failed')
                 with patch.object(wm,'side_plan',return_value=None), \
                         patch.object(wm,'window',side_effect=window),patch.object(wm,'query') as query:
                     with self.assertRaisesRegex(RuntimeError,'warp failed'):
@@ -175,19 +176,20 @@ class DirectionTests(unittest.TestCase):
         with patch.object(wm,'query',side_effect=[displays,[{'index':4,'is-visible':True,'type':'bsp'}],self.windows,arrived,destination]), patch.object(wm,'window') as command, patch.object(wm,'run'), patch.object(wm,'place_yabai_side') as place:
             wm.cross_yabai(selected,'left')
         self.assertEqual([call.args for call in command.call_args_list], [
-            (3,'--insert','west'),(3,'--insert','east'),(8,'--display',2)])
+            (3,'--insert','west','--insert','east'),(8,'--display',2)])
         place.assert_called_once_with(arrived,destination,'right')
 
     def test_failed_monitor_send_clears_prepared_insertion_and_does_not_focus(self):
         displays=[dict(w(10,0,0,1000,1000),index=1),dict(w(20,1000,0,1000,1000),index=2)]
         anchor=w(2,1000,0,1000,1000)
         hint=None
-        def window(id,action,value):
+        def window(id,*commands):
             nonlocal hint
-            if action=='--insert':hint=None if hint==value else value
-            if action=='--display':
-                self.assertEqual(hint,'west')
-                raise RuntimeError('send failed')
+            for action,value in zip(commands[::2],commands[1::2]):
+                if action=='--insert':hint=None if hint==value else value
+                if action=='--display':
+                    self.assertEqual(hint,'west')
+                    raise RuntimeError('send failed')
         with patch.object(wm,'query',side_effect=[displays,
                 [{'index':4,'is-visible':True,'type':'bsp'}],[anchor]]), \
                 patch.object(wm,'window',side_effect=window),patch.object(wm,'run') as focus:
@@ -195,6 +197,24 @@ class DirectionTests(unittest.TestCase):
                 wm.cross_yabai(self.windows[0],'right')
         self.assertIsNone(hint)
         focus.assert_not_called()
+
+    def test_arrival_preserves_fast_three_tile_promotion_instead_of_narrow_columns(self):
+        halves=[w(1,0,0,500,1000),w(2,510,0,500,1000)]
+        self.assertEqual(wm.arrival_hint(halves[0],halves,'left',halves[0]['frame']),'north')
+        self.assertEqual(wm.arrival_hint(halves[1],halves,'right',dict(x=1200,y=600,w=500,h=300)),'south')
+        # Simulate native insertion in the left half. It stays on the near
+        # edge and the resulting layout has a mirror/swap-only promotion.
+        arrival=[w(8,0,0,500,495),w(1,0,505,500,495),halves[1]]
+        commands,expected=wm.side_plan(arrival[0],arrival,'left')
+        self.assertLessEqual(len(commands),3)
+        self.assertFalse(any('--warp' in c or '--balance' in c for c in commands))
+        self.assertEqual(expected[8],dict(x=0,y=0,w=500,h=1000))
+        stacked=[w(1,0,0,1000,500),w(2,0,510,1000,500)]
+        self.assertEqual(wm.arrival_hint(stacked[0],stacked,'up',stacked[0]['frame']),'west')
+        self.assertEqual(wm.arrival_hint(stacked[1],stacked,'down',dict(x=600,y=1200,w=300,h=500)),'east')
+        # Preserve the generic edge insertion for unequal or complex layouts.
+        unequal=[halves[0],w(2,510,0,400,1000)]
+        self.assertEqual(wm.arrival_hint(unequal[0],unequal,'left',halves[0]['frame']),'west')
 
     def test_yabai_focus_enters_near_edge_without_moving_windows(self):
         displays = [dict(id=10,index=1,frame=dict(x=1010,y=0,w=1010,h=1000),**{'has-focus':True}),

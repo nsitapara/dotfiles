@@ -547,7 +547,14 @@ send also follows the moved window by ID.
 The [September 16 movement check](reports/monitor-movement-2026-09-16.json) passed
 16 crossings and four swap/expand checks with disposable windows. Four-window
 BSP rebuilding still took 0.6–1.2 seconds; this fix addresses failure recovery,
-not that existing layout cost. Preselecting the incoming edge has regression
-coverage; a separate live check of that follow-up is pending. Yabai's native
-insertion API splits a leaf, so destinations with multiple tiles can still need
-regrouping to preserve the full-side arrival policy.
+not that existing layout cost. A follow-up verified all 16 observed incoming
+edges before normalization. However, direct edge insertion created narrow
+columns and slowed three-window arrivals to 609–776 ms. The corrected planner
+uses a perpendicular insertion for two equal destination tiles, preserving the
+fast mirror/swap path while staying on the incoming edge. Hint commands share
+one native request. The correction passed 32 crossings and 16 swap/expand
+sequences, with 16 independently observed incoming edges. Uninstrumented
+three-window arrivals took 303–396 ms, close to the earlier 288–365 ms range and
+about 45% lower rightward median latency than the regression. Four-window
+arrivals still took 689–1273 ms. These are small sequential samples, not a
+randomized benchmark; larger destinations still require regrouping.

@@ -104,15 +104,16 @@ def cross_yabai(selected, direction):
         return
     incoming = {'left':'right','right':'left','up':'down','down':'up'}[direction]
     anchor = entry_window(candidates, selected['frame'], direction)
+    hint = arrival_hint(anchor, candidates, incoming, selected['frame'])
     try:
         # Choose the incoming edge before sending the window. Otherwise yabai's
         # default second-child insertion visibly places it on the wrong side.
         if anchor:
-            insert(anchor['id'], DIRECTIONS[incoming])
+            insert(anchor['id'], hint)
         window(selected['id'], '--display', target['index'])
     except RuntimeError:
         if anchor:
-            clear_insert(anchor['id'], DIRECTIONS[incoming])
+            clear_insert(anchor['id'], hint)
         raise
     # Follow immediately, before any fallible layout work. Otherwise a failed
     # warp leaves keyboard focus behind on the source monitor.
@@ -121,6 +122,21 @@ def cross_yabai(selected, direction):
     # creates quarter-width columns that apps with minimum widths overlap.
     arrived, windows = arrived_yabai_window(selected['id'], dict(destination,display=target['index']))
     place_yabai_side(arrived, windows, incoming)
+
+
+def arrival_hint(anchor, windows, incoming, source_frame):
+    if anchor and len(windows) == 2:
+        plan = side_plan(anchor, [anchor] + [w for w in windows if w['id'] != anchor['id']], incoming)
+        if plan is not None and not plan[0]:
+            # With two equal side-by-side tiles, splitting another narrow column
+            # forces a full tree rebuild. Split across the other axis instead:
+            # arrival stays on the incoming edge and promotion reuses the three
+            # existing slots through mirror/swap, without warping or balancing.
+            axis, size = ('y', 'h') if incoming in ('left', 'right') else ('x', 'w')
+            f = anchor['frame']
+            first = source_frame[axis] + source_frame[size]/2 <= f[axis] + f[size]/2
+            return ('north' if first else 'south') if axis == 'y' else ('west' if first else 'east')
+    return DIRECTIONS[incoming]
 
 
 def focus_yabai(direction):
@@ -239,8 +255,8 @@ def focus_aerospace(direction):
 
 def insert(id, direction):
     # --insert toggles an existing identical hint off. Set a different hint first.
-    window(id, '--insert', OPPOSITE[direction])
-    window(id, '--insert', direction)
+    # Both hints use one native request, avoiding an extra IPC round trip.
+    window(id, '--insert', OPPOSITE[direction], '--insert', direction)
 
 
 def clear_insert(id, direction):
