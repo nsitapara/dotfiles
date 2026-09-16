@@ -222,6 +222,19 @@ class DirectionTests(unittest.TestCase):
             self.assertEqual(command.call_args.args[-1],incoming)
             self.assertIn('create-implicit-container',command.call_args.args)
 
+    def test_aerospace_layout_failure_happens_after_focus_follows_move(self):
+        calls = []
+        def run(*args):
+            calls.append(args)
+            if args[1] == 'move':
+                raise RuntimeError('layout failed')
+        with patch.object(wm,'aerospace_monitor_target',return_value={'id':1}), \
+                patch.object(wm,'run',side_effect=run):
+            with self.assertRaisesRegex(RuntimeError,'layout failed'):
+                wm.cross_aerospace({'window-id':8,'monitor-id':2},'right',{})
+        self.assertIn('--focus-follows-window',calls[0])
+        self.assertEqual(calls[1][-1],'left')
+
     def test_all_profiles_bind_focus_and_movement_to_shared_helper(self):
         import tomllib
         for profile in ['aerospace','aerospace-docked']:

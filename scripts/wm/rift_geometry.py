@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import sys
 import time
 
 
@@ -147,9 +148,27 @@ def place_side(rift, selected, windows, direction):
             orientation(w, 'vertical' if horizontal else 'horizontal')
             anchor = w
     finally:
+        original_error = sys.exc_info()[1]
+        recovery_errors = []
         for w in list(floated):
-            tile(w)
-        rift.focus_window(selected)
+            try:
+                # A timed-out retile may actually have completed. Never toggle
+                # it back to floating; skip windows that closed during the move.
+                current = next((x for x in rift.snapshot()['windows'] if x['id'] == w['id']), None)
+                if current and current['floating']:
+                    tile(w)
+            except (RuntimeError, ValueError, KeyError) as error:
+                recovery_errors.append(str(error))
+        try:
+            rift.focus_window(selected)
+        except (RuntimeError, ValueError, KeyError) as error:
+            recovery_errors.append(str(error))
+        if recovery_errors:
+            message = 'Rift rearrangement recovery: ' + '; '.join(recovery_errors)
+            if original_error is not None:
+                print(message, file=sys.stderr)
+            else:
+                raise RuntimeError(message)
     rift.wait_for(lambda: geometry.spans_side(
         next(w for w in rift.snapshot()['windows'] if w['id'] == selected['id']),
         [w for w in rift.snapshot()['windows'] if w['id'] in {x['id'] for x in windows}], direction),

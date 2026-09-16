@@ -198,6 +198,9 @@ def move_window(window, number, follow=False):
                         for w in snapshot()['windows']), 'Window did not reach the requested workspace')
     if follow:
         switch(number, remember=False)
+        # Switching the workspace can select another resident window. Follow
+        # this exact window before any caller starts rearranging the layout.
+        focus_window(window)
     else:
         focus_display(original['uuid'])
         execute('workspace', 'switch', original_ws['index'])

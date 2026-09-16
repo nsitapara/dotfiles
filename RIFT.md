@@ -174,3 +174,14 @@ python3 scripts/render-wm-benchmark.py reports/new-run.json
 The original measurements are retained in the report's adjacent JSON file.
 The separate notes file adds interpretations and qualifications without changing
 those measurements. A future run should use its own output path.
+
+### Move focus and recovery
+
+Follow-moves explicitly refocus the moved window after workspace activation,
+before directional placement. If rearrangement fails, recovery tries every
+remaining detached window and still restores selection. A completed retile is
+not toggled back to floating, and windows closed during the operation are skipped.
+The incoming edge matches yabai: rightward crossing enters left, and vice versa.
+These recovery cases have isolated regression coverage; this follow-up did not
+switch the live desktop to Rift or AeroSpace. AeroSpace already requests
+`--focus-follows-window` before adjusting its incoming side.

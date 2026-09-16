@@ -18,6 +18,46 @@ def frame(x=0, y=0, w=1000, h=800):
 
 
 class RiftTests(unittest.TestCase):
+    def test_follow_refocuses_the_moved_window_after_workspace_activation(self):
+        selected=dict(id=8,rift_id=dict(pid=1,idx=8),display='left')
+        plan=[dict(uuid='left',workspaces=[1]),dict(uuid='right',workspaces=[2])]
+        events=[]
+        with patch.object(rift,'read_state',return_value=plan), \
+                patch.object(rift,'current_slot',return_value=(dict(uuid='left'),dict(index=0))), \
+                patch.object(rift,'execute'),patch.object(rift,'wait_for'), \
+                patch.object(rift,'focus_display'), \
+                patch.object(rift,'focus_window',side_effect=lambda w:events.append(('focus',w['id'],w['display']))), \
+                patch.object(rift,'switch',side_effect=lambda *a,**kw:events.append(('switch',a[0]))):
+            rift.move_window(selected,2,True)
+        self.assertEqual(events,[('focus',8,'left'),('switch',2),('focus',8,'right')])
+
+    def test_recovery_retiles_remaining_windows_and_restores_focus_after_failure(self):
+        selected=dict(id=1,rift_id=dict(pid=1,idx=1),frame=dict(x=0,y=0,w=500,h=800))
+        others=[dict(selected,id=i,rift_id=dict(pid=1,idx=i),frame=dict(x=515,y=i*200,w=485,h=200)) for i in (2,3)]
+        api=Mock()
+        # Both were detached; first retile fails, including its cleanup attempt.
+        # The second must still be attempted and selection restored.
+        api.execute.side_effect=[None,None,RuntimeError('first retile failed'),
+                                 RuntimeError('first recovery failed'),None]
+        api.snapshot.return_value=dict(windows=[dict(w,floating=True) for w in others])
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            with self.assertRaisesRegex(RuntimeError,'first retile failed'):
+                geometry.place_side(api,selected,[selected,*others],'left')
+        self.assertEqual(api.execute.call_count,5)
+        self.assertEqual(api.focus_window.call_args.args,(selected,))
+        self.assertIn('first recovery failed',stderr.getvalue())
+
+    def test_recovery_does_not_refloat_a_completed_retile_or_touch_a_closed_window(self):
+        selected=dict(id=1,rift_id=dict(pid=1,idx=1),frame=dict(x=0,y=0,w=500,h=800))
+        others=[dict(selected,id=i,rift_id=dict(pid=1,idx=i),frame=dict(x=515,y=i*200,w=485,h=200)) for i in (2,3)]
+        api=Mock()
+        api.wait_for.side_effect=[None,None,RuntimeError('retile observation timed out')]
+        api.snapshot.return_value=dict(windows=[dict(others[0],floating=False)])
+        with self.assertRaisesRegex(RuntimeError,'observation timed out'):
+            geometry.place_side(api,selected,[selected,*others],'left')
+        self.assertEqual(api.execute.call_count,3)  # Two detaches and one retile only.
+        self.assertEqual(api.focus_window.call_args.args,(selected,))
+
     def test_workspace_mapping_uses_global_number_across_displays(self):
         plan = [dict(uuid='left', workspaces=[1,3,5]), dict(uuid='right', workspaces=[2,4,6])]
         mapping = rift.mappings(plan)
