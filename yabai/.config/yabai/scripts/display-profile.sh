@@ -78,14 +78,26 @@ temp=$(mktemp "$STATE/display-layout.XXXXXX")
 printf '%s\n' "$plan" > "$temp"
 mv "$temp" "$STATE/display-layout.json"
 if $bar_running; then
-    sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc"
+    # Invalidate the old config's marker before requesting the asynchronous
+    # reload, so it cannot be mistaken for the new config being ready.
+    previous_loaded=$loaded
+    rm -f "$STATE/display-profile.signature"
+    sketchybar --set display_mode label=reloading 2>/dev/null || true
+    if ! sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc"; then
+        sketchybar --set display_mode label="$previous_loaded" 2>/dev/null || true
+        exit 1
+    fi
     loaded=""
-    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    for attempt in {1..30}; do
         loaded=$(sketchybar --query display_mode 2>/dev/null |
             sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p') || true
         [ "$loaded" = "$mode" ] && break
         sleep 0.5
     done
-    [ "$loaded" = "$mode" ] || { echo 'SketchyBar profile did not load; will retry.' >&2; exit 1; }
+    if [ "$loaded" != "$mode" ]; then
+        sketchybar --set display_mode label="$previous_loaded" 2>/dev/null || true
+        echo 'SketchyBar profile did not load; will retry.' >&2
+        exit 1
+    fi
 fi
 printf '%s\n' "$signature" > "$STATE/display-profile.signature"

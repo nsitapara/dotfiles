@@ -120,11 +120,21 @@ elif name == 'stow':
         state['package'] = args[-1]
         save()
 elif name == 'sketchybar':
-    if args[0] == '--reload':
+    if args[0] == '--set':
+        state['loaded'] = args[-1].split('=', 1)[1]
+        save()
+    elif args[0] == '--reload':
         if state.get('reload_failure'): sys.exit(1)
         state['loaded'] = 'docked' if state['package'].endswith('-docked') else 'non-docked'
+        state['queries_remaining'] = state.get('reload_delay', 0)
         save()
-    else: print(json.dumps({'label':{'value':state['loaded']}},indent=2))
+    else:
+        loaded = state['loaded']
+        if state.get('queries_remaining', 0):
+            state['queries_remaining'] -= 1
+            save()
+            loaded = ''
+        print(json.dumps({'label':{'value':loaded}},indent=2))
 else: raise AssertionError((name,args))
 '''
 
@@ -218,6 +228,15 @@ class NativeProfileTests(unittest.TestCase):
         self.state['reload_failure'] = False
         self.run_profile()
         self.assertTrue(self.signature.exists())
+
+    def test_slow_reload_waits_for_the_new_config(self):
+        self.state['reload_delay'] = 12
+        self.run_profile(force=True)
+        self.assertTrue(self.signature.exists())
+        calls = self.calls('sketchybar')
+        self.assertLess(calls.index(['sketchybar', '--set', 'display_mode', 'label=reloading']),
+                        next(i for i, c in enumerate(calls) if c[1] == '--reload'))
+        self.assertEqual(self.state['queries_remaining'], 0)
 
 
     def test_forced_restore_during_bar_reload_does_not_skip_labels(self):

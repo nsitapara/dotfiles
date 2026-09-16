@@ -152,6 +152,10 @@ class WmTests(unittest.TestCase):
             helper.chmod(0o755)
         (helpers / "spaces.sh").write_text('#!/bin/bash\necho "Ready: ws1"\n')
         (helpers / "spaces.sh").chmod(0o755)
+        profile = helpers / "display-profile.sh"
+        profile.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$WM_TEST_ROOT/profile-args"\n'
+                           'exit "${WM_TEST_PROFILE_EXIT:-0}"\n')
+        profile.chmod(0o755)
         (self.path / "switch-display-mode.sh").write_text('#!/bin/bash\ntouch "$WM_TEST_ROOT/switched"\nexit 0\n')
         (self.path / "switch-display-mode.sh").chmod(0o755)
         self.bin = self.path / "bin"
@@ -195,6 +199,18 @@ class WmTests(unittest.TestCase):
         self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
         self.assertEqual(self.state["jobs"], [])
         self.assertFalse(any("--start-service" in c for c in self.calls("yabai") + self.calls("skhd")))
+
+    def test_start_applies_profile_without_an_earlier_bar_reload(self):
+        self.run_wm("yabai")
+        self.assertEqual((self.path / "profile-args").read_text().strip(), "--force")
+        self.assertEqual(self.calls("sketchybar"), [])
+        self.assertFalse((self.path / "switched").exists())
+
+    def test_profile_failure_rolls_back_startup(self):
+        self.env["WM_TEST_PROFILE_EXIT"] = "1"
+        self.run_wm("yabai", success=False)
+        self.assertEqual(self.state["jobs"], [])
+        self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
 
     def test_disabled_separate_spaces_does_not_quit_aerospace(self):
         self.state["prefs"]["spans-displays"] = 1
@@ -311,7 +327,9 @@ class WmTests(unittest.TestCase):
         self.run_spaces(success=False, check=True)
         self.assertTrue(all(s['label'] == '' for s in self.state['spaces']))
         self.assertFalse(any('--label' in c for c in self.calls('yabai')))
+        self.assertEqual(self.calls('sketchybar'), [])
         self.run_spaces()
+        self.assertEqual(self.calls('sketchybar'), [['sketchybar', '--trigger', 'yabai_windows_changed']])
         before = len([c for c in self.calls('yabai') if '--label' in c])
         self.run_spaces(check=True)
         self.assertEqual(len([c for c in self.calls('yabai') if '--label' in c]), before)

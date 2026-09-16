@@ -223,6 +223,27 @@ local function remaining_windows(windows, prune)
 end
 
 local update
+local function labels_ready(spaces, layout)
+  -- During daemon startup and profile changes, managed desktops temporarily
+  -- lose their labels. Keep the previous frame until spaces.sh finishes;
+  -- otherwise these desktops create duplicate D pills beside the fixed slots.
+  for _, screen in ipairs(layout or {}) do
+    local managed = {}
+    for _, space in ipairs(spaces) do
+      local label = space.label or ""
+      if space.display == screen.index and not space["is-native-fullscreen"]
+        and (label == "" or label:match("^ws[1-9]$")) then
+        managed[#managed + 1] = space
+      end
+    end
+    table.sort(managed, function(a, b) return a.index < b.index end)
+    for i, workspace in ipairs(screen.workspaces or {}) do
+      if managed[i] and managed[i].label ~= "ws" .. workspace then return false end
+    end
+  end
+  return true
+end
+
 update = function()
   if busy then pending = true; return end
   busy = true
@@ -262,7 +283,7 @@ update = function()
         topology = { displays = result.displays, bar_displays = result.bar_displays,
           layout = result.layout }
       end
-      if topology then
+      if topology and labels_ready(result.spaces, topology.layout) then
         local windows = remaining_windows(result.windows, windows_at_start == window_epoch)
         last_snapshot = { spaces = result.spaces, windows = windows }
         render(result.spaces, windows, topology.displays, topology.bar_displays, topology.layout)

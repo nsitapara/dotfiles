@@ -196,4 +196,30 @@ assert(items["yabai.space.3.app.1"].props.drawing == true, "Reused IDs can show 
 events["yabai.observer:yabai_windows_changed"]({EVENT="application_terminated", PROCESS_ID="100"})
 assert(items["yabai.space.3.app.1"].props.drawing == false, "App termination also removes its icons")
 callbacks[#callbacks](closed)
+-- A daemon restart first exposes unlabeled desktops, then labels them one by
+-- one. Neither intermediate snapshot may create fallback D pills.
+events["yabai.observer:display_change"]({})
+local restarting = fixture()
+restarting.layout = {{index=1,id=100,workspaces={3}},{index=2,id=200,workspaces={2}}}
+restarting.spaces[1].label, restarting.spaces[2].label = "", ""
+callbacks[#callbacks](restarting)
+assert(items["yabai.space.native1"] == nil and items["yabai.space.native2"] == nil,
+       "Unlabeled managed desktops must not create duplicate D pills")
+timers[#timers].callback()
+restarting.spaces[1].label = "ws3"
+callbacks[#callbacks](restarting)
+assert(items["yabai.space.native2"] == nil, "Partially restored labels are also rejected")
+-- Completion is explicit, even if the short query retries already expired.
+events["yabai.observer:yabai_windows_changed"]({})
+restarting.spaces[2].label = "ws2"
+callbacks[#callbacks](restarting)
+assert(items["yabai.space.3.app.1"].props.drawing == true, "Label completion restores app icons")
+assert(items["yabai.space.2"].props.icon.color == 2, "Restored desktop is no longer a placeholder")
+-- Real extra/custom desktops still have fallback pills.
+events["yabai.observer:yabai_windows_changed"]({})
+restarting.spaces[#restarting.spaces+1] = {index=8,display=1,label="custom",["is-native-fullscreen"]=false}
+restarting.spaces[#restarting.spaces+1] = {index=9,display=1,label="",["is-native-fullscreen"]=false}
+callbacks[#callbacks](restarting)
+assert(items["yabai.space.native8"].props.drawing == true)
+assert(items["yabai.space.native9"].props.drawing == true)
 print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")

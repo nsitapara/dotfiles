@@ -37,6 +37,9 @@ if [ "$current" != "$mapping" ]; then
     while IFS=$'\t' read -r index label; do
         yabai -m space "$index" --label "$label"
     done < <(jq -r '.[] | [.index,.label] | @tsv' <<< "$mapping")
+    # Label changes do not emit a window/focus event. Wake a bar that rejected
+    # the intermediate startup snapshot, without requiring a Space switch.
+    sketchybar --trigger yabai_windows_changed 2>/dev/null || true
 fi
 labels=$(jq -r '[.[].label] | sort | join(", ")' <<< "$mapping")
 echo "Ready: $labels. Cmd+number selects the matching workspace."

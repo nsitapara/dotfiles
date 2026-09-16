@@ -226,11 +226,12 @@ case "$1" in
             echo "Desktop creation unavailable; labelling the existing desktops." >&2
             "$ROOT/yabai/.config/yabai/scripts/spaces.sh"
         fi
-        reload_bar
-        echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
-        trap - EXIT
+        # Apply the complete profile before its single bar reload. Reloading
+        # here first races the old Lua snapshot callbacks with the next config.
         exec 9>&-
-        "$ROOT/switch-display-mode.sh" ;;
+        "$ROOT/yabai/.config/yabai/scripts/display-profile.sh" --force
+        echo "yabai + skhd active for this login. Return with: $ROOT/wm.sh aerospace"
+        trap - EXIT ;;
     aerospace)
         check_external_services
         stop_trial
