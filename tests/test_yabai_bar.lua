@@ -5,6 +5,7 @@ package.preload.colors = function()
 end
 package.preload.settings = function() return { font={numbers="Test"} } end
 local items, callbacks, commands, events = {}, {}, {}, {}
+local set_count, animation_count = 0, 0
 local function merge(target, values)
   for key, value in pairs(values) do
     if type(value) == "table" then
@@ -14,11 +15,11 @@ local function merge(target, values)
   end
 end
 sbar = {
-  animate = function(_, _, callback) callback() end,
+  animate = function(_, _, callback) animation_count = animation_count + 1; callback() end,
   add = function(kind, name, props, bracket_props)
     if kind == "event" then return end
     local item = { name=name, props=bracket_props or props or {} }
-    function item:set(values) merge(self.props, values) end
+    function item:set(values) set_count = set_count + 1; merge(self.props, values) end
     function item:subscribe(event, callback)
       if type(event) ~= "table" then event = {event} end
       for _, value in ipairs(event) do events[name .. ":" .. value] = callback end
@@ -129,4 +130,18 @@ callbacks[11](fixture())
 events["yabai.observer:system_woke"]({})
 assert(commands[#commands]:find("query --displays", 1, true), "Wake refreshes topology")
 callbacks[12](fixture())
+set_count, animation_count = 0, 0
+events["yabai.observer:yabai_windows_changed"]({})
+callbacks[13](fixture())
+assert(set_count == 0 and animation_count == 0, "Identical snapshots must not update or animate items")
+events["yabai.observer:space_change"]({})
+local focused = fixture()
+focused.spaces[1]["has-focus"], focused.spaces[2]["has-focus"] = false, true
+callbacks[14](focused)
+assert(set_count == 4 and animation_count == 2, "Focus change updates only the two affected pills")
+set_count, animation_count = 0, 0
+events["yabai.observer:yabai_windows_changed"]({})
+focused.windows = {{space=1,app="Terminal"}}
+callbacks[15](focused)
+assert(set_count == 2 and animation_count == 0, "Only removed app slots should change")
 print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")

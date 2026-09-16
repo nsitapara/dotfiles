@@ -83,6 +83,27 @@ end
 -- Creating these only in the asynchronous query callback put them at the end.
 for index = 1, 9 do create_pill(index) end
 
+-- Remember the properties sent to each item, including nested image/style fields.
+local rendered = {}
+local function changed_properties(previous, values)
+  local changed = {}
+  for key, value in pairs(values) do
+    if type(value) == "table" then
+      if type(previous[key]) ~= "table" then previous[key] = {} end
+      local nested = changed_properties(previous[key], value)
+      if next(nested) then changed[key] = nested end
+    elseif previous[key] ~= value then
+      previous[key], changed[key] = value, value
+    end
+  end
+  return changed
+end
+local function set_changed(item, values)
+  rendered[item.name] = rendered[item.name] or {}
+  local changed = changed_properties(rendered[item.name], values)
+  if next(changed) then item:set(changed) end
+end
+
 local function render(spaces, windows, displays, bar_displays, layout)
   -- Join by CoreGraphics display ID. Yabai's arrangement order need not match
   -- SketchyBar's arrangement order, especially when the laptop lid opens.
@@ -130,27 +151,30 @@ local function render(spaces, windows, displays, bar_displays, layout)
       local focused = space["has-focus"]
       local label = (space.label or ""):match("^ws([1-9])$") or ("D" .. space.index)
       local apps = apps_by_space[space.index] or {}
-      pill.item:set({ drawing = visible, display = display or "active", icon = {
+      set_changed(pill.item, { drawing = visible, display = display or "active", icon = {
         string = label,
         padding_left = #apps == 0 and 12 or 10,
         padding_right = #apps == 0 and 12 or 5,
       } })
-      pill.bracket:set({ drawing = visible, display = display or "active" })
-      sbar.animate("sin", 14, function()
-        pill.item:set({ icon = { color = focused and colors.mauve or colors.white,
-        font = { size = focused and 18.0 or 14.0 },
-        } })
-        pill.bracket:set({ background = {
-        color = focused and colors.bg2 or colors.bg1,
-        border_color = focused and colors.mauve or colors.bg2,
-        height = focused and 36 or 30, corner_radius = focused and 11 or 9,
-        } })
-      end)
-      pill.trail:set({ drawing = visible and #apps > 0, display = display or "active" })
-      pill.padding:set({ drawing = visible, display = display or "active" })
+      set_changed(pill.bracket, { drawing = visible, display = display or "active" })
+      if not pill.present or pill.focused ~= focused then
+        sbar.animate("sin", 14, function()
+          set_changed(pill.item, { icon = { color = focused and colors.mauve or colors.white,
+            font = { size = focused and 18.0 or 14.0 },
+          } })
+          set_changed(pill.bracket, { background = {
+            color = focused and colors.bg2 or colors.bg1,
+            border_color = focused and colors.mauve or colors.bg2,
+            height = focused and 36 or 30, corner_radius = focused and 11 or 9,
+          } })
+        end)
+      end
+      pill.present, pill.focused = true, focused
+      set_changed(pill.trail, { drawing = visible and #apps > 0, display = display or "active" })
+      set_changed(pill.padding, { drawing = visible, display = display or "active" })
       for i, slot in ipairs(pill.slots) do
         local app = (apps_by_space[space.index] or {})[i]
-        slot:set({ drawing = visible and app ~= nil, display = display or "active",
+        set_changed(slot, { drawing = visible and app ~= nil, display = display or "active",
           background = { image = app and ("app." .. app) or "" } })
       end
     end
@@ -164,16 +188,17 @@ local function render(spaces, windows, displays, bar_displays, layout)
       if not layout or #layout == 0 then display = target and display_map[target.index] end
       local visible = display ~= nil
       pill.index = nil
-      pill.item:set({ drawing = visible, display = display or "active", icon = {
+      pill.present = false
+      set_changed(pill.item, { drawing = visible, display = display or "active", icon = {
         string = tostring(index), color = colors.grey or colors.white,
         font = { size = 14.0 }, padding_left = 12, padding_right = 12,
       } })
-      pill.bracket:set({ drawing = visible, display = display or "active", background = {
+      set_changed(pill.bracket, { drawing = visible, display = display or "active", background = {
         color = colors.bg1, border_color = colors.bg2, height = 30, corner_radius = 9,
       } })
-      pill.trail:set({ drawing = false })
-      pill.padding:set({ drawing = visible, display = display or "active" })
-      for _, slot in ipairs(pill.slots) do slot:set({ drawing = false }) end
+      set_changed(pill.trail, { drawing = false })
+      set_changed(pill.padding, { drawing = visible, display = display or "active" })
+      for _, slot in ipairs(pill.slots) do set_changed(slot, { drawing = false }) end
     end
   end
 end
