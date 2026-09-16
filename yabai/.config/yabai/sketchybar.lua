@@ -6,6 +6,8 @@ local busy = false
 local pending = false
 local topology
 local topology_epoch = 0
+local retry_count, retry_token = 0, 0
+local retry_delays = { 0.1, 0.25, 0.5 }
 
 -- sbar.exec runs in a launchd environment that may omit Homebrew.
 local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
@@ -207,6 +209,8 @@ local update
 update = function()
   if busy then pending = true; return end
   busy = true
+  retry_token = retry_token + 1
+  local token = retry_token
   local epoch = topology_epoch
   local refresh_topology = topology == nil
   -- Combine JSON once, and let SbarLua decode it. A failed query leaves the
@@ -231,27 +235,45 @@ update = function()
     ]]
   end
   sbar.exec(command, function(result)
+    local valid = false
     if epoch == topology_epoch and type(result) == "table"
-      and type(result.spaces) == "table" and type(result.windows) == "table" then
+      and type(result.spaces) == "table" and #result.spaces > 0
+      and type(result.windows) == "table" then
       if refresh_topology and type(result.displays) == "table"
-        and type(result.bar_displays) == "table" then
+        and #result.displays > 0 and type(result.bar_displays) == "table"
+        and #result.bar_displays > 0 then
         topology = { displays = result.displays, bar_displays = result.bar_displays,
           layout = result.layout }
       end
       if topology then
         render(result.spaces, result.windows, topology.displays, topology.bar_displays, topology.layout)
+        valid = true
       end
     end
     busy = false
-    if pending then pending = false; update() end
+    if valid then retry_count = 0 end
+    if pending then
+      pending = false
+      update()
+    elseif not valid and retry_count < #retry_delays then
+      retry_count = retry_count + 1
+      sbar.delay(retry_delays[retry_count], function()
+        -- A newer query supersedes this timer. There is no idle polling.
+        if token == retry_token then update() end
+      end)
+    end
   end)
 end
 local observer = sbar.add("item", "yabai.observer", { drawing = false, updates = true })
+local function requested_update()
+  retry_count = 0
+  update()
+end
 observer:subscribe({ "space_change", "space_windows_change",
-  "yabai_windows_changed" }, update)
+  "yabai_windows_changed" }, requested_update)
 observer:subscribe({ "display_change", "system_woke" }, function()
   topology_epoch = topology_epoch + 1
   topology = nil
-  update()
+  requested_update()
 end)
 update()

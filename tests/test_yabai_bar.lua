@@ -6,6 +6,7 @@ end
 package.preload.settings = function() return { font={numbers="Test"} } end
 local items, callbacks, commands, events = {}, {}, {}, {}
 local set_count, animation_count = 0, 0
+local timers = {}
 local function merge(target, values)
   for key, value in pairs(values) do
     if type(value) == "table" then
@@ -15,6 +16,7 @@ local function merge(target, values)
   end
 end
 sbar = {
+  delay = function(seconds, callback) timers[#timers+1] = {seconds=seconds, callback=callback} end,
   animate = function(_, _, callback) animation_count = animation_count + 1; callback() end,
   add = function(kind, name, props, bracket_props)
     if kind == "event" then return end
@@ -144,4 +146,29 @@ events["yabai.observer:yabai_windows_changed"]({})
 focused.windows = {{space=1,app="Terminal"}}
 callbacks[15](focused)
 assert(set_count == 2 and animation_count == 0, "Only removed app slots should change")
+
+events["yabai.observer:yabai_windows_changed"]({})
+callbacks[#callbacks]("[\n")
+local count = #callbacks
+timers[#timers].callback()
+assert(#callbacks == count + 1, "Malformed JSON retries without another event")
+local empty = fixture()
+empty.windows = {}
+callbacks[#callbacks](empty)
+assert(items["yabai.space.3.app.1"].props.drawing == false, "Retry removes a closed app without changing spaces")
+count = #callbacks
+timers[#timers].callback()
+assert(#callbacks == count, "Completed query cancels old retry timers")
+
+events["yabai.observer:display_change"]({})
+for i=1,3 do
+  callbacks[#callbacks]({spaces={}, windows={}, displays={}, bar_displays={}})
+  timers[#timers].callback()
+end
+local timer_count = #timers
+callbacks[#callbacks]("")
+assert(#timers == timer_count, "Persistent failures stop after three retries")
+assert(items["yabai.space.3"].props.drawing == true, "Unavailable displays preserve the last valid frame")
+events["yabai.observer:system_woke"]({})
+callbacks[#callbacks](fixture())
 print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")
