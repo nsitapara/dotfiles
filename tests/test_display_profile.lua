@@ -33,14 +33,14 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   assert(#callbacks == 1, "one status query at load")
   assert(menu.props.icon.string == "\u{100657}", "monitor icon")
   assert(items["display.profile.bracket"] and items["display.profile.padding"], "bordered pill and spacer like other widgets")
-  callbacks[1]("docked laptop\n") -- pinned docked, but only the laptop layout fit
+  callbacks[1]("docked laptop yabai\n") -- pinned docked, but only the laptop layout fit
   assert(menu.props.label.string == "2", menu.props.label.string)
   assert(menu.props.label.color == 3 and menu.props.icon.color == 3, "a pin that is not in effect shows grey")
-  callbacks[1]("docked docked\n")
+  callbacks[1]("docked docked rift\n")
   assert(menu.props.label.color == 2 and menu.props.icon.color == 2, "a pin in effect is plain white")
-  callbacks[1]("auto single\n") -- no pin yet: show the applied layout
-  assert(menu.props.label.string == "1" and menu.props.label.color == 2, menu.props.label.string)
-  callbacks[1]("laptop laptop\n")
+  callbacks[1]("auto single aerospace\n") -- no pin yet: show the applied layout
+  assert(menu.props.label.string == "1 A" and menu.props.label.color == 2, menu.props.label.string)
+  callbacks[1]("laptop laptop yabai\n")
   assert(menu.props.label.string == "0")
   assert(items["display.profile.auto"] == nil, "no Auto row")
   local row = assert(items["display.profile.laptop"], "menu row exists")
@@ -52,5 +52,13 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   events["display.profile.laptop:mouse.clicked"]()
   assert(commands[#commands]:find('wm.sh" profile laptop', 1, true), commands[#commands])
   assert(menu.props.popup.drawing == false, "choosing a row closes the menu")
+  for _, manager in ipairs({"yabai", "aerospace", "rift"}) do
+    assert(items["display.profile.manager." .. manager])
+    events["display.profile.manager." .. manager .. ":mouse.clicked"]()
+    assert(commands[#commands]:find('wm.sh" use ' .. manager .. ' --temporary', 1, true))
+  end
+  assert(items["display.profile.quit"])
+  events["display.profile.quit:mouse.clicked"]()
+  assert(commands[#commands]:find('wm.sh" quit', 1, true))
 end
 print("Display profile menu checks passed for both profiles")

@@ -86,6 +86,8 @@ elif name == "defaults":
     elif args[0] == "write": state["prefs"][key] = 0 if args[-1] in ("false", "0") else 1; save()
     elif args[0] == "delete": state["prefs"].pop(key, None); save()
 elif name == "readlink":
+    if args[-1].endswith("config.toml"):
+        print(root / "rift/.config/rift/config.toml"); sys.exit(0)
     pkg = "skhd" if "skhdrc" in args[-1] else "yabai"
     print(root / pkg / ".config" / pkg / (pkg + "rc"))
 elif name == "launchctl":
@@ -100,7 +102,10 @@ elif name == "launchctl":
     elif args[0] == "submit":
         job = args[args.index("-l") + 1]
         app = job.split(".")[-1]
-        assert "AeroSpace" not in state["running"], "Started a second WM!"
+        if app in ("rift", "yabai"):
+            assert not set(state["running"]) & {"AeroSpace", "yabai", "rift"}, "Started a second WM!"
+        elif app == "skhd":
+            assert "AeroSpace" not in state["running"], "Started conflicting shortcuts!"
         state["jobs"].append(job)
         if state.get("fail_start") != app: state["running"].append(app)
         if app == "yabai" and not state.get("config_failure"):
@@ -121,13 +126,22 @@ elif name == "yabai":
         for space in state["spaces"]:
             if space["index"] == int(args[2]): space["label"] = args[4] if len(args) > 4 else ""
         save()
+elif name == "rift": print("rift 0.5.9")
+elif name == "rift-cli":
+    if args[:2] == ["query", "displays"]:
+        if "rift" not in state["running"]: sys.exit(1)
+        print("[]")
+    elif args == ["execute", "save-and-exit"]:
+        if "rift" in state["running"]: state["running"].remove("rift"); save()
+elif name == "aerospace":
+    if args == ["list-monitors"] and "AeroSpace" not in state["running"]: sys.exit(1)
 elif name == "skhd": print("skhd-v0.3.9")
 elif name == "osascript":
     if not state.get("quit_failure") and "AeroSpace" in state["running"]: state["running"].remove("AeroSpace")
     save()
 elif name == "open":
     assert "yabai" not in state["running"] and "skhd" not in state["running"], "Unsafe restore!"
-    if "AeroSpace" not in state["running"]: state["running"].append("AeroSpace")
+    if state.get("fail_start") != "AeroSpace" and "AeroSpace" not in state["running"]: state["running"].append("AeroSpace")
     save()
 elif name == "ioreg":
     if state.get("secure_input", 0) > 0:
@@ -144,6 +158,12 @@ class WmTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
         shutil.copy2(ROOT / "wm.sh", self.path / "wm.sh")
+        scripts = self.path / "scripts"
+        scripts.mkdir()
+        shutil.copy2(ROOT / "scripts/wm-lifecycle.sh", scripts / "wm-lifecycle.sh")
+        (scripts / "wm-session.py").write_text("pass\n")
+        (scripts / "wm-bar.py").write_text("import os,pathlib,sys\npathlib.Path(os.environ['WM_TEST_ROOT'],'bar-backend').write_text(sys.argv[1])\n")
+        (self.path / "wm_rift.py").write_text("pass\n")
         helpers = self.path / "yabai/.config/yabai/scripts"
         helpers.mkdir(parents=True)
         for name in ("ensure-spaces.sh", "build-spaces-helper.sh"):
@@ -161,7 +181,7 @@ class WmTests(unittest.TestCase):
         self.bin = self.path / "bin"
         self.bin.mkdir()
         for name in ("uname", "pgrep", "defaults", "readlink", "launchctl", "yabai", "skhd",
-                     "osascript", "open", "sleep", "sketchybar", "stow", "brew", "ioreg"):
+                     "osascript", "open", "sleep", "sketchybar", "stow", "brew", "ioreg", "aerospace", "rift", "rift-cli"):
             file = self.bin / name
             file.write_text(f"#!{sys.executable}\n" + MOCK)
             file.chmod(0o755)
@@ -190,8 +210,41 @@ class WmTests(unittest.TestCase):
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
         return result
 
+    def test_all_six_manager_transitions(self):
+        for source in ('yabai', 'rift', 'aerospace'):
+            for target in ('yabai', 'rift', 'aerospace'):
+                if source == target:
+                    continue
+                with self.subTest(source=source, target=target):
+                    self.run_wm(source)
+                    self.run_wm(target)
+                    expected = {'AeroSpace'} if target == 'aerospace' else {target, 'skhd'}
+                    actual = set(self.state['running']) & {'AeroSpace', 'yabai', 'rift', 'skhd'}
+                    self.assertEqual(actual, expected)
+                    self.assertEqual((self.path/'bar-backend').read_text(),target)
+                    if target == 'rift':
+                        submits = [c for c in self.calls('launchctl') if c[1] == 'submit' and 'local.dotfiles.skhd' in c]
+                        self.assertTrue(submits[-1][-1].endswith('/rift/skhdrc'))
+
+    def test_failed_rift_start_restores_yabai(self):
+        self.run_wm('yabai')
+        self.state['fail_start'] = 'rift'
+        self.save()
+        self.run_wm('rift', success=False)
+        self.assertEqual(set(self.state['running']) & {'yabai','rift','AeroSpace','skhd'}, {'yabai','skhd'})
+
+    def test_failed_aerospace_start_restores_rift(self):
+        self.run_wm('rift')
+        self.state['fail_start'] = 'AeroSpace'
+        self.save()
+        self.run_wm('aerospace', success=False)
+        self.assertEqual(set(self.state['running']) & {'yabai','rift','AeroSpace','skhd'}, {'rift','skhd'})
+
     def test_switch_round_trip_and_repeated_start(self):
         self.run_wm("yabai")
+        (self.path/'bar-backend').write_text('rift')
+        self.run_wm("yabai")
+        self.assertEqual((self.path/'bar-backend').read_text(),'yabai')
         self.assertEqual(set(self.state["running"]), {"yabai", "skhd", "sketchybar"})
         self.run_wm("yabai")
         self.assertEqual(len([c for c in self.calls("launchctl") if c[1] == "submit"]), 2)

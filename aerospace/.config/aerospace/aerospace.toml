@@ -232,13 +232,13 @@ outer.right =      10
     esc = 'mode main'
 
     left = ['resize width -16']
-    down = ['resize height -16']
-    up = ['resize height +16']
+    down = ['resize height +16']
+    up = ['resize height -16']
     right = ['resize width +16']
 
     shift-left = ['resize width -64']
-    shift-down = ['resize height -64']
-    shift-up = ['resize height +64']
+    shift-down = ['resize height +64']
+    shift-up = ['resize height -64']
     shift-right = ['resize width +64']
 
 

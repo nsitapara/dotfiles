@@ -13,10 +13,10 @@ cd "$DOTFILES_DIR"
 # menu or `wm.sh profile`. Dispatch before taking the display lock: wm.sh takes it.
 if [ "${1:-}" = --service ]; then
     case "${2:-}" in
-        yabai|aerospace)
+        yabai|aerospace|rift)
             [ "$#" -eq 2 ] || exit 64
             exec "$DOTFILES_DIR/wm.sh" "$2" ;;
-        *) echo "Usage: $0 --service yabai|aerospace" >&2; exit 64 ;;
+        *) echo "Usage: $0 --service yabai|aerospace|rift" >&2; exit 64 ;;
     esac
 fi
 
@@ -26,8 +26,13 @@ WORKSPACE_STATE_FILE="${STATE_FILE}.workspaces"
 
 # Serialize launchd and display-change runs without killing a switch midway.
 # macOS releases this descriptor lock even if the process exits unexpectedly.
-exec 9>"${STATE_FILE}.lock"
-lockf -s -t 10 9 || exit 1
+if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
+    exec 9>"${STATE_FILE}.lock"
+    lockf -s -t 10 9 || exit 1
+fi
+if launchctl list local.dotfiles.rift >/dev/null 2>&1; then
+    DOTFILES_WM_LOCKED=1 exec /usr/bin/python3 "$DOTFILES_DIR/wm_rift.py" profile
+fi
 
 # Native Spaces need different hotplug handling from AeroSpace workspaces.
 if launchctl list local.dotfiles.yabai >/dev/null 2>&1; then

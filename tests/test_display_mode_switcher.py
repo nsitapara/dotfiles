@@ -70,7 +70,7 @@ elif name == "wm.sh":
     state["yabai_trial"] = args[0] == "yabai"
     save()
 elif name == "launchctl":
-    sys.exit(0 if state.get("yabai_trial") else 1)
+    sys.exit(0 if state.get("yabai_trial") and args[-1] == "local.dotfiles.yabai" else 1)
 elif name == "sleep":
     if args == ["30"] and state.get("service_test"):
         state["service_ticks"] = state.get("service_ticks", 0) + 1
@@ -119,7 +119,7 @@ class DisplayModeTests(unittest.TestCase):
         wm = self.path / "wm.sh"
         wm.write_text('#!/bin/bash\nprintf "%s" "$1" > "$DISPLAY_TEST_DIR/login-manager"\nexit 7\n')
         wm.chmod(0o755)
-        for manager in ("yabai", "aerospace"):
+        for manager in ("yabai", "aerospace", "rift"):
             with self.subTest(manager=manager):
                 result = subprocess.run([str(self.script), "--service", manager], env=self.env,
                                         capture_output=True, text=True, timeout=5)

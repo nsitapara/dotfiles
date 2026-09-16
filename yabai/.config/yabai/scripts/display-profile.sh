@@ -11,8 +11,10 @@ export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 STATE="$HOME/.local/state/dotfiles-wm"
-exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
-lockf -s -t 10 9 || exit 1
+if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
+    exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
+    lockf -s -t 10 9 || exit 1
+fi
 if ! launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
     $force && exit 1
     exit 0

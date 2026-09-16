@@ -2,6 +2,7 @@
 """Choose a window manager now and at login, using wm.sh for safe switching."""
 
 import argparse
+import fcntl
 import os
 from pathlib import Path
 import plistlib
@@ -32,7 +33,7 @@ def saved_manager():
         if agent.exists():
             with agent.open("rb") as stream:
                 args = plistlib.load(stream).get("ProgramArguments", [])
-            if args and args[-1] in ("yabai", "aerospace"):
+            if args and args[-1] in ("yabai", "aerospace", "rift"):
                 return args[-1]
     return None
 
@@ -51,6 +52,16 @@ def retire_legacy(domain, state):
 
 
 def configure(manager):
+    if manager == 'status':
+        return _configure(manager)
+    state = Path(os.environ.get('DOTFILES_WM_STATE_DIR', HOME / '.local/state/dotfiles-wm'))
+    state.mkdir(parents=True, exist_ok=True)
+    with (state / 'startup.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _configure(manager)
+
+
+def _configure(manager):
     agent = HOME / "Library/LaunchAgents" / (LABEL + ".plist")
     domain = "gui/" + str(os.getuid())
     service = domain + "/" + LABEL
@@ -67,6 +78,8 @@ def configure(manager):
         manager = saved_manager() or "yabai"
 
     is_loaded = loaded(service)
+    was_loaded = is_loaded
+    previous_data = agent.read_bytes() if agent.exists() else None
     if manager == "off":
         if is_loaded:
             run("launchctl", "bootout", service)
@@ -95,23 +108,36 @@ def configure(manager):
     # The script owns the interval. No StartInterval or second polling job.
     # No KeepAlive: a service crash must not undo a manual manager switch.
     data = plistlib.dumps(config)
-    if not agent.exists() or agent.read_bytes() != data:
-        agent.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(dir=agent.parent, delete=False) as stream:
-            stream.write(data)
-            temporary = Path(stream.name)
-        temporary.chmod(0o644)
-        temporary.replace(agent)
-        if is_loaded:
-            run("launchctl", "bootout", service)
-            is_loaded = False
-    run("launchctl", "enable", service)
-    if not is_loaded:
-        # RunAtLoad also invokes the switcher once now. Repeated starts are safe.
-        run("launchctl", "bootstrap", domain, str(agent))
-    else:
-        # Without -k this starts an exited service and leaves a running one alone.
-        run("launchctl", "kickstart", service)
+    try:
+        if previous_data != data:
+            agent.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=agent.parent, delete=False) as stream:
+                stream.write(data)
+                temporary = Path(stream.name)
+            temporary.chmod(0o644)
+            temporary.replace(agent)
+            if is_loaded:
+                run("launchctl", "bootout", service)
+                is_loaded = False
+        run("launchctl", "enable", service)
+        if not is_loaded:
+            # RunAtLoad invokes the switcher now. Repeated starts are safe.
+            run("launchctl", "bootstrap", domain, str(agent))
+        else:
+            run("launchctl", "kickstart", service)
+    except (OSError, subprocess.CalledProcessError):
+        # A failed registration must not silently become tomorrow's default.
+        if previous_data is None:
+            agent.unlink(missing_ok=True)
+        else:
+            with tempfile.NamedTemporaryFile(dir=agent.parent, delete=False) as stream:
+                stream.write(previous_data)
+                temporary = Path(stream.name)
+            temporary.chmod(0o644)
+            temporary.replace(agent)
+        if was_loaded and not loaded(service):
+            run('launchctl', 'bootstrap', domain, str(agent))
+        raise
     # Retire both old jobs only after the replacement has been registered.
     retire_legacy(domain, state)
     print(manager + " is the default window manager now and at login.")
@@ -119,7 +145,7 @@ def configure(manager):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("manager", choices=("yabai", "aerospace", "install", "status", "off"))
+    parser.add_argument("manager", choices=("yabai", "aerospace", "rift", "install", "status", "off"))
     args = parser.parse_args()
     if sys.platform != "darwin":
         parser.error("This script requires macOS.")

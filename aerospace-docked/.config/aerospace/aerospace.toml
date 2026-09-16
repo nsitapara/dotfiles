@@ -224,13 +224,13 @@ outer.right =      10
     esc = 'mode main'
 
     left = ['resize width -16']
-    down = ['resize height -16']
-    up = ['resize height +16']
+    down = ['resize height +16']
+    up = ['resize height -16']
     right = ['resize width +16']
 
     shift-left = ['resize width -64']
-    shift-down = ['resize height -64']
-    shift-up = ['resize height +64']
+    shift-down = ['resize height +64']
+    shift-up = ['resize height -64']
     shift-right = ['resize width +64']
 
 
@@ -289,21 +289,9 @@ if.app-id = 'com.apple.FaceTime'
 run = 'layout floating'
 
 
-[[on-window-detected]]
-if.app-id = 'dev.warp.Warp-Stable'
-run = ['move-node-to-workspace 1']
 
-[[on-window-detected]]
-if.app-id = 'com.jetbrains.pycharm'
-run = ['move-node-to-workspace 1']
 
-[[on-window-detected]]
-if.app-id = 'com.github.GitHubClient'
-run = ['move-node-to-workspace 2']
 
-[[on-window-detected]]
-if.app-id = 'com.tinyspeck.slackmacgap'
-run = ['move-node-to-workspace 2']
 
 
 # Disabled: with 0.20/0.21's delayed window detection, move-on-detect makes new

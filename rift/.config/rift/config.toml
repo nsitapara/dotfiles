@@ -1,0 +1,47 @@
+# Managed by dotfiles. wm.sh owns startup and skhd owns all keyboard shortcuts.
+[settings]
+animate = false
+focus_follows_mouse = false
+mouse_follows_focus = false
+hot_reload = true
+default_disable = false
+
+[settings.layout]
+mode = "bsp"
+[settings.layout.gaps.outer]
+top = 50
+left = 10
+right = 10
+bottom = 8
+[settings.layout.gaps.inner]
+horizontal = 15
+vertical = 15
+[settings.ui.menu_bar]
+enabled = false
+[settings.ui.mission_control]
+enabled = false
+[settings.gestures]
+enabled = false
+
+[virtual_workspaces]
+enabled = true
+default_workspace_count = 9
+workspace_names = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+auto_assign_windows = true
+preserve_focus_per_workspace = true
+workspace_auto_back_and_forth = false
+prevent_wrapping = true
+app_rules = [
+  { app_name = "System Settings", floating = true },
+  { app_name = "System Preferences", floating = true },
+  { app_name = "Activity Monitor", floating = true },
+  { app_name = "App Store", floating = true },
+  { app_name = "Clock", floating = true },
+  { app_name = "FaceTime", floating = true },
+  { app_name = "1Password", floating = true },
+  { app_name = "Nuvio", floating = true },
+  { app_name = "Electron", title_regex = "^Worktree & Stack Manager$", floating = true },
+  { ax_subrole = "AXDialog", floating = true },
+]
+
+[keys]

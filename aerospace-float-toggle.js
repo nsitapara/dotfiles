@@ -42,7 +42,7 @@ function run() {
     const proc = Application('System Events').processes.whose({unixId: pid})[0];
     const win = proc.attributes.byName('AXFocusedWindow').value();
     const pos = win.position(), size = win.size();
-    const cg = ObjC.deepUnwrap($.CGWindowListCopyWindowInfo($.kCGWindowListOptionIncludingWindow, id))[0];
+    const cg = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionIncludingWindow, id)))[0];
     if (!cg || cg.kCGWindowOwnerPID !== pid ||
         Math.abs(cg.kCGWindowBounds.X - pos[0]) > 2 || Math.abs(cg.kCGWindowBounds.Y - pos[1]) > 2 ||
         Math.abs(cg.kCGWindowBounds.Width - size[0]) > 2 || Math.abs(cg.kCGWindowBounds.Height - size[1]) > 2) {
@@ -55,10 +55,10 @@ function run() {
         return cx >= f.origin.x && cx < f.origin.x + f.size.width && cy >= f.origin.y && cy < f.origin.y + f.size.height;
     });
     if (!screen) throw Error('Window monitor is unavailable');
-    const vf = screen.visibleFrame;
+    const sf = screen.frame;
     const inset = /built-in/i.test(screen.localizedName.js) ? 16 : 50;
-    const area = {x: vf.origin.x, y: primaryH - vf.origin.y - vf.size.height + inset,
-                  w: vf.size.width, h: vf.size.height - inset};
+    const area = {x: sf.origin.x + 10, y: primaryH - sf.origin.y - sf.size.height + inset,
+                  w: sf.size.width - 20, h: sf.size.height - inset - 8};
     const directory = $.NSHomeDirectory().js + '/.local/state/dotfiles-wm';
     const path = directory + '/float-frames.json';
     let cache = {};
@@ -79,7 +79,7 @@ function run() {
         }
         command(['layout', '--window-id', String(id), 'tiling']);
     } else {
-        const frame = restoreFrame(cache[key], area, 0.95);
+        const frame = restoreFrame(cache[key], area, 0.8);
         command(['layout', '--window-id', String(id), 'floating']);
         win.position = [frame.x, frame.y];
         win.size = [frame.w, frame.h];

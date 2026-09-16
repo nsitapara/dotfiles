@@ -1,4 +1,6 @@
--- Loaded by either existing SketchyBar profile during the yabai trial.
+-- Shared workspace renderer. Rift supplies its own queries and click handler.
+local adapter = ...
+local namespace = adapter and adapter.name or "yabai"
 local colors = require("colors")
 local settings = require("settings")
 local pills = {}
@@ -14,21 +16,21 @@ local window_epoch, settle_token = 0, 0
 
 -- sbar.exec runs in a launchd environment that may omit Homebrew.
 local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
-sbar.add("event", "yabai_windows_changed")
-sbar.add("event", "yabai_mode_changed")
+sbar.add("event", namespace .. "_windows_changed")
+sbar.add("event", namespace .. "_mode_changed")
 
-local mode = sbar.add("item", "yabai.mode", {
+local mode = sbar.add("item", namespace .. ".mode", {
   position = "left", drawing = false, updates = true,
   icon = { drawing = false },
   label = { string = "", color = colors.mauve },
 })
-mode:subscribe("yabai_mode_changed", function(env)
+mode:subscribe(namespace .. "_mode_changed", function(env)
   local value = env.MODE or "default"
   mode:set({ drawing = value ~= "default" and value ~= "service", label = { string = value } })
 end)
 
 local function create_pill(index)
-  local item = sbar.add("item", "yabai.space." .. index, {
+  local item = sbar.add("item", namespace .. ".space." .. index, {
     position = "left", drawing = false,
     icon = {
       font = { family = settings.font.numbers, size = 14.0 },
@@ -42,7 +44,9 @@ local function create_pill(index)
   local members = { item.name }
   local function clicked()
     -- The index comes from yabai's numeric JSON, never from an app title.
-    if pill.index then
+    if adapter then
+      adapter.click(pill.index, index)
+    elseif pill.index then
       sbar.exec(prefix .. '/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ' .. pill.index)
     else
       sbar.exec(prefix .. '"$HOME/.config/yabai/scripts/ensure-spaces.sh" && sketchybar --trigger yabai_windows_changed')
@@ -50,7 +54,7 @@ local function create_pill(index)
   end
   item:subscribe("mouse.clicked", clicked)
   for slot_index = 1, 5 do
-    local slot = sbar.add("item", "yabai.space." .. index .. ".app." .. slot_index, {
+    local slot = sbar.add("item", namespace .. ".space." .. index .. ".app." .. slot_index, {
       position = "left", drawing = false, width = 29,
       padding_left = 0, padding_right = 0,
       icon = { drawing = false }, label = { drawing = false },
@@ -63,19 +67,19 @@ local function create_pill(index)
     pill.slots[slot_index] = slot
     members[#members + 1] = slot.name
   end
-  pill.trail = sbar.add("item", "yabai.space." .. index .. ".trail", {
+  pill.trail = sbar.add("item", namespace .. ".space." .. index .. ".trail", {
     position = "left", drawing = false, width = 4,
     padding_left = 0, padding_right = 0,
     icon = { drawing = false }, label = { drawing = false },
     background = { drawing = false },
   })
   members[#members + 1] = pill.trail.name
-  pill.bracket = sbar.add("bracket", "yabai.space." .. index .. ".bracket", members, {
+  pill.bracket = sbar.add("bracket", namespace .. ".space." .. index .. ".bracket", members, {
     drawing = false,
     background = { color = colors.bg1, border_color = colors.bg2,
       border_width = 2, height = 30, corner_radius = 9 },
   })
-  pill.padding = sbar.add("item", "yabai.space." .. index .. ".padding", {
+  pill.padding = sbar.add("item", namespace .. ".space." .. index .. ".padding", {
     position = "left", drawing = false, width = settings.group_paddings,
     icon = { drawing = false }, label = { drawing = false },
     background = { drawing = false },
@@ -214,6 +218,11 @@ local function render(spaces, windows, displays, bar_displays, layout)
       for _, slot in ipairs(pill.slots) do set_changed(slot, { drawing = false }) end
     end
   end
+end
+
+if adapter then
+  adapter.start(render)
+  return
 end
 
 local function remaining_windows(windows, prune)

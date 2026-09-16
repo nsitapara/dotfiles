@@ -1,8 +1,10 @@
 -- Added immediately after the workspace group in both window-manager paths.
 local colors = require("colors")
 
-return function(yabai_active)
-  local event = yabai_active and "yabai_mode_changed" or "aerospace_mode_changed"
+return function(manager)
+  local rift_active = manager == "rift"
+  local yabai_active = manager == true or manager == "yabai" or rift_active
+  local event = rift_active and "rift_mode_changed" or (yabai_active and "yabai_mode_changed" or "aerospace_mode_changed")
   if not yabai_active then sbar.add("event", event) end
   local indicator = sbar.add("item", "wm.service", {
     position = "left", ignore_association = true, drawing = false, updates = true,
@@ -23,7 +25,7 @@ return function(yabai_active)
     if help_built then return end
     help_built = true
     local rows = {
-      {"SERVICE MODE", yabai_active and "yabai + skhd" or "AeroSpace", true},
+      {"SERVICE MODE", rift_active and "Rift + skhd" or (yabai_active and "yabai + skhd" or "AeroSpace"), true},
       {"?  /  Shift + /", "Show or hide this help"},
       {"Esc / Space / F15", "Close help and return to normal mode"},
       {"F", "Toggle floating; return to normal mode"},
@@ -31,6 +33,11 @@ return function(yabai_active)
       {"Up / Down", "Volume up / down"},
       {"Shift + Down", "Mute volume"},
     }
+    if rift_active then
+      rows[#rows+1] = {"B / T / S", "BSP / flexible splits / full-workspace stack"}
+      rows[#rows+1] = {"M / C", "Master and stack / scrolling columns"}
+      rows[#rows+1] = {"G / U", "Toggle group stack / unjoin in flexible splits"}
+    end
     if not yabai_active then
       rows[#rows+1] = {"Cmd + Shift + arrows", "Join with neighbor; return to normal mode"}
       rows[#rows+1] = {"Backspace", "Close ALL other windows; return to normal mode"}
@@ -46,7 +53,7 @@ return function(yabai_active)
       {"Ctrl + Tab", "Return to the previously focused window"},
       {"Cmd + F", "Toggle window fullscreen within the workspace"},
       {"Cmd + Ctrl + Shift + F", "Toggle floating"},
-      {"Cmd + 0 / Cmd + Ctrl + 0", "Balance window sizes"},
+      {"Cmd + 0 / Cmd + Ctrl + 0", rift_active and "Rebuild the workspace with default BSP sizes" or "Balance window sizes"},
       {"Cmd + J", "Change split orientation"},
       {"Cmd + comma", yabai_active and "Toggle tiled / stacked layout" or "Toggle tiles / accordion layout"},
       {"Cmd + = / minus", "Increase / decrease width"},
@@ -54,7 +61,7 @@ return function(yabai_active)
       {"Cmd + Ctrl + = / minus", "Step column width: 50%, 65%, 75%"},
       {"Cmd + Ctrl + Left / Right", "Move window between monitors; wrap and follow"},
       {"Cmd + Alt + S / F14", "Enter service mode"},
-      {"Cmd + Ctrl + Alt + Shift", "Add R: resize, W: workspace, M: " .. (yabai_active and "insertion" or "merge")},
+      {"Cmd + Ctrl + Alt + Shift", "Add R: resize, W: workspace, M: " .. (rift_active and "join" or (yabai_active and "insertion" or "merge"))},
     }
     for _, row in ipairs(normal) do rows[#rows+1] = row end
     for i, row in ipairs(rows) do

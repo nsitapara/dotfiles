@@ -1,0 +1,155 @@
+# Rift shortcuts. Same keys as yabai; see RIFT.md for action differences.
+# skhd executes actions through /bin/bash, set by wm.sh.
+# Modes exit with Escape or Space. Cmd+F expands the focused window within its workspace.
+# Reserved for Raycast: Cmd+Shift+C/E/G/B/P/S/V/Z/D, Cmd+Return,
+# Alt+Shift+M, Ctrl+Cmd+Space. Keep modes non-capturing so these pass through.
+:: default : "$HOME/.config/skhd/mode.sh" default
+:: resize : "$HOME/.config/skhd/mode.sh" resize
+:: workspace : "$HOME/.config/skhd/mode.sh" workspace
+:: insertion : "$HOME/.config/skhd/mode.sh" insertion
+:: service : "$HOME/.config/skhd/mode.sh" service
+
+cmd - h : true
+cmd + alt - h : true
+cmd - left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action focus left
+cmd + shift - left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action move left
+cmd - down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action focus down
+cmd + shift - down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action move down
+cmd - up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action focus up
+cmd + shift - up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action move up
+cmd - right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action focus right
+cmd + shift - right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action move right
+
+# skhd names special keys differently from AeroSpace. Use macOS keycodes for
+# punctuation: 0x18 = equals, 0x1B = minus, 0x2B = comma.
+cmd - 0x18 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width 32
+cmd - 0x1B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width -32
+cmd + ctrl - 0x18 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action preset up
+cmd + ctrl - 0x1B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action preset down
+cmd + shift - 0x18 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height 32
+cmd + shift - 0x1B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height -32
+# Reset window sizes in the current space.
+cmd - 0 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action balance
+cmd + ctrl - 0 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action balance
+cmd - j : rift-cli execute layout toggle-orientation
+cmd - 0x2B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action layout
+cmd - f : rift-cli execute window toggle-fullscreen-within-gaps
+
+cmd - 1 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 1
+cmd + shift - 1 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 1 --follow
+cmd + ctrl + shift - 1 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 1
+cmd - 0x53 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 1
+cmd + shift - 0x53 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 1 --follow
+cmd + ctrl + shift - 0x53 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 1
+cmd - 2 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 2
+cmd + shift - 2 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 2 --follow
+cmd + ctrl + shift - 2 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 2
+cmd - 0x54 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 2
+cmd + shift - 0x54 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 2 --follow
+cmd + ctrl + shift - 0x54 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 2
+cmd - 3 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 3
+cmd + shift - 3 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 3 --follow
+cmd + ctrl + shift - 3 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 3
+cmd - 0x55 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 3
+cmd + shift - 0x55 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 3 --follow
+cmd + ctrl + shift - 0x55 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 3
+cmd - 4 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 4
+cmd + shift - 4 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 4 --follow
+cmd + ctrl + shift - 4 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 4
+cmd - 0x56 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 4
+cmd + shift - 0x56 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 4 --follow
+cmd + ctrl + shift - 0x56 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 4
+cmd - 5 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 5
+cmd + shift - 5 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 5 --follow
+cmd + ctrl + shift - 5 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 5
+cmd - 0x57 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 5
+cmd + shift - 0x57 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 5 --follow
+cmd + ctrl + shift - 0x57 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 5
+cmd - 6 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 6
+cmd + shift - 6 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 6 --follow
+cmd + ctrl + shift - 6 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 6
+cmd - 0x58 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 6
+cmd + shift - 0x58 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 6 --follow
+cmd + ctrl + shift - 0x58 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 6
+
+# Laptop workspaces when both external monitors are connected.
+cmd - 7 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 7
+cmd + shift - 7 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 7 --follow
+cmd + ctrl + shift - 7 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 7
+cmd - 0x59 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 7
+cmd + shift - 0x59 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 7 --follow
+cmd + ctrl + shift - 0x59 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 7
+cmd - 8 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 8
+cmd + shift - 8 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 8 --follow
+cmd + ctrl + shift - 8 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 8
+cmd - 0x5B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 8
+cmd + shift - 0x5B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 8 --follow
+cmd + ctrl + shift - 0x5B : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 8
+cmd - 9 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 9
+cmd + shift - 9 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 9 --follow
+cmd + ctrl + shift - 9 : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 9
+cmd - 0x5C : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 9
+cmd + shift - 0x5C : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 9 --follow
+cmd + ctrl + shift - 0x5C : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send 9
+
+cmd - pageup : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace prev
+cmd - pagedown : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace next
+cmd - home : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 1
+cmd - end : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace 6
+alt - tab : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace recent
+ctrl - tab : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action previous-window
+cmd + ctrl - right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display next
+cmd + ctrl - left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display prev
+cmd + ctrl + shift - f : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action float
+cmd + ctrl + alt + shift - f : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action float
+cmd + ctrl + alt + shift - d : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action balance
+cmd + ctrl + alt + shift - r ; resize
+cmd + ctrl + alt + shift - w ; workspace
+cmd + ctrl + alt + shift - m ; insertion
+cmd + alt - s ; service
+f14 ; service
+alt + shift - c : /usr/bin/python3 "$HOME/.config/rift/adapter.py" reload
+
+resize, workspace, insertion, service < escape ; default
+resize, workspace, insertion, service < space ; default
+service < f15 ; default
+
+resize < left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width -16
+resize < shift - left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width -64
+resize < down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height 16
+resize < shift - down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height 64
+resize < up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height -16
+resize < shift - up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize height -64
+resize < right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width 16
+resize < shift - right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action resize width 64
+
+workspace < left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace prev
+workspace < right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action workspace next
+workspace < up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display prev --focus
+workspace < down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display next --focus
+workspace < shift - left : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send prev --follow
+workspace < shift - right : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action send next --follow
+workspace < shift - up : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display prev
+workspace < shift - down : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action display next
+
+insertion < left : rift-cli execute layout join-window left
+insertion < down : rift-cli execute layout join-window down
+insertion < up : rift-cli execute layout join-window up
+insertion < right : rift-cli execute layout join-window right
+
+# ? is Shift + slash (macOS keycode 0x2C).
+service < shift - 0x2C : sketchybar --trigger wm_help_toggle
+service < f : skhd -k "f15"; /usr/bin/python3 "$HOME/.config/rift/adapter.py" action float
+service < r : /usr/bin/python3 "$HOME/.config/rift/adapter.py" action balance
+service < up : osascript -e 'set volume output volume ((output volume of (get volume settings)) + 5)'
+service < down : osascript -e 'set volume output volume ((output volume of (get volume settings)) - 5)'
+service < shift - down : osascript -e 'set volume output volume 0'
+
+# Rift layout choices in service mode (F14 or Cmd+Alt+S).
+service < b : rift-cli execute workspace set-layout bsp; skhd -k "f15"
+service < t : rift-cli execute workspace set-layout traditional; skhd -k "f15"
+service < s : rift-cli execute workspace set-layout stack; skhd -k "f15"
+service < m : rift-cli execute workspace set-layout master_stack; skhd -k "f15"
+service < c : rift-cli execute workspace set-layout scrolling; skhd -k "f15"
+service < g : rift-cli execute layout toggle-stack; skhd -k "f15"
+service < u : rift-cli execute layout unjoin; skhd -k "f15"
