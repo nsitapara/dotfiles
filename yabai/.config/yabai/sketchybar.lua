@@ -4,6 +4,8 @@ local settings = require("settings")
 local pills = {}
 local busy = false
 local pending = false
+local topology
+local topology_epoch = 0
 
 -- sbar.exec runs in a launchd environment that may omit Homebrew.
 local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
@@ -180,11 +182,16 @@ local update
 update = function()
   if busy then pending = true; return end
   busy = true
+  local epoch = topology_epoch
+  local refresh_topology = topology == nil
   -- Combine JSON once, and let SbarLua decode it. A failed query leaves the
   -- last complete frame visible instead of clearing the bar during a hotplug.
   local command = prefix .. [[
     spaces=$(yabai -m query --spaces) &&
     windows=$(yabai -m query --windows) &&
+  ]]
+  if refresh_topology then
+    command = command .. [[
     displays=$(yabai -m query --displays) &&
     bar_displays=$(sketchybar --query displays) &&
     layout=$(cat "$HOME/.local/state/dotfiles-wm/display-layout.json" 2>/dev/null || echo '[]') &&
@@ -192,11 +199,23 @@ update = function()
       --argjson displays "$displays" --argjson bar_displays "$bar_displays" --argjson layout "$layout" \
       '{spaces:$spaces, windows:$windows, displays:$displays, bar_displays:$bar_displays, layout:$layout}'
   ]]
+  else
+    command = command .. [[
+      jq -n --argjson spaces "$spaces" --argjson windows "$windows" \
+        '{spaces:$spaces, windows:$windows}'
+    ]]
+  end
   sbar.exec(command, function(result)
-    if type(result) == "table" and type(result.spaces) == "table"
-      and type(result.windows) == "table" and type(result.displays) == "table"
-      and type(result.bar_displays) == "table" then
-      render(result.spaces, result.windows, result.displays, result.bar_displays, result.layout)
+    if epoch == topology_epoch and type(result) == "table"
+      and type(result.spaces) == "table" and type(result.windows) == "table" then
+      if refresh_topology and type(result.displays) == "table"
+        and type(result.bar_displays) == "table" then
+        topology = { displays = result.displays, bar_displays = result.bar_displays,
+          layout = result.layout }
+      end
+      if topology then
+        render(result.spaces, result.windows, topology.displays, topology.bar_displays, topology.layout)
+      end
     end
     busy = false
     if pending then pending = false; update() end
@@ -204,8 +223,10 @@ update = function()
 end
 local observer = sbar.add("item", "yabai.observer", { drawing = false, updates = true })
 observer:subscribe({ "space_change", "space_windows_change",
-  "system_woke", "yabai_windows_changed" }, update)
--- Profiles are pinned from the bar menu (wm.sh profile); a display change only
--- refreshes the pills. See DISPLAY-MODES.md.
-observer:subscribe("display_change", update)
+  "yabai_windows_changed" }, update)
+observer:subscribe({ "display_change", "system_woke" }, function()
+  topology_epoch = topology_epoch + 1
+  topology = nil
+  update()
+end)
 update()

@@ -60,8 +60,9 @@ yabai -m signal --add label=dotfiles-minimize-refocus event=window_minimized \
 yabai -m signal --add label=dotfiles-focus-history event=window_focused \
     action='/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" record'
 
-# Update app icons for same-app window changes, too.
-for event in window_created window_destroyed window_focused window_title_changed; do
+# Pills show apps, not titles. Retire the title signal on config reload too.
+yabai -m signal --remove dotfiles-window_title_changed 2>/dev/null || true
+for event in window_created window_destroyed window_focused application_hidden application_visible; do
     yabai -m signal --add label="dotfiles-$event" event="$event" \
         action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed'
 done

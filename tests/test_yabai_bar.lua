@@ -111,4 +111,22 @@ assert(items["yabai.space.1"].props.display == 1, "Missing slots follow plan, no
 events["yabai.observer:display_change"]({})
 callbacks[7](fixture())
 for i=7,9 do assert(items["yabai.space." .. i].props.drawing == false) end
+
+events["yabai.observer:yabai_windows_changed"]({})
+assert(not commands[#commands]:find("query --displays", 1, true), "Reuse display mappings for window events")
+local cached = fixture()
+cached.displays, cached.bar_displays = nil, nil
+callbacks[8](cached)
+assert(items["yabai.space.3"].props.display == 2, "Window-only snapshots use cached mappings")
+events["yabai.observer:yabai_windows_changed"]({})
+events["yabai.observer:display_change"]({})
+callbacks[9](cached)
+assert(commands[#commands]:find("query --displays", 1, true), "Hotplug during a query must invalidate its cache")
+callbacks[10]("")
+events["yabai.observer:yabai_windows_changed"]({})
+assert(commands[#commands]:find("query --displays", 1, true), "Failed topology queries must retry")
+callbacks[11](fixture())
+events["yabai.observer:system_woke"]({})
+assert(commands[#commands]:find("query --displays", 1, true), "Wake refreshes topology")
+callbacks[12](fixture())
 print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")
