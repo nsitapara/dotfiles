@@ -45,8 +45,7 @@ local function refresh()
     local color = in_effect and colors.white or colors.grey
     menu:set({ icon = { color = color }, label = { string = (number[shown_profile] or "–") .. (active_manager == "yabai" and "" or " " .. (letters[active_manager] or "?")), color = color } })
     for id, row in pairs(managers) do
-      row:set({ label = { color = id == active_manager and colors.mauve or colors.white },
-        icon = { string = letters[id], color = id == active_manager and colors.mauve or colors.white } })
+      row:set({ label = { color = id == active_manager and colors.mauve or colors.white } })
     end
     for id, row in pairs(rows) do
       row:set({ label = { color = id == pinned and colors.mauve or colors.white } })
@@ -75,17 +74,13 @@ sbar.add("item", "display.profile.manager_heading", {
   icon = { drawing = false },
   label = { string = "Window manager", color = colors.grey, align = "left", padding_left = 14, font = { size = 11 } },
 })
-for _, entry in ipairs({ {"yabai", "Use yabai"}, {"aerospace", "Use AeroSpace"}, {"rift", "Use Rift"} }) do
+for _, entry in ipairs({ {"yabai", "yabai - Y"}, {"aerospace", "AeroSpace - A"}, {"rift", "Rift - R"} }) do
   local id, title = entry[1], entry[2]
   local row = sbar.add("item", "display.profile.manager." .. id, {
     position = "popup.display.profile", width = 180,
-    icon = {
-      string = letters[id], width = 12, align = "center",
-      padding_left = 14, padding_right = 10, color = colors.white,
-      font = { family = "SF Pro", style = "Semibold", size = 12 },
-    },
+    icon = { drawing = false },
     label = {
-      string = title, align = "left", padding_left = 0, padding_right = 14,
+      string = title, align = "left", padding_left = 14, padding_right = 14,
       color = colors.white, font = { family = "SF Pro", style = "Semibold", size = 12 },
     },
     background = { drawing = false },
