@@ -5,53 +5,15 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import socket
-import struct
-import subprocess
 import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wm_client import run
 
 DIRECTIONS = {'left': 'west', 'right': 'east', 'up': 'north', 'down': 'south'}
 OPPOSITE = {'north': 'south', 'south': 'north', 'west': 'east', 'east': 'west'}
 AS_FORMAT = '%{window-id} %{workspace} %{window-layout} %{window-is-fullscreen} %{monitor-id}'
-
-
-def run(*args, check=True):
-    args = [str(a) for a in args]
-    result = yabai_message(args[2:]) if args[:2] == ['yabai', '-m'] else None
-    if result is None:
-        result = subprocess.run(args, capture_output=True, text=True)
-    if check and result.returncode:
-        raise RuntimeError(result.stderr.strip() or 'Command failed: ' + ' '.join(map(str, args)))
-    return result
-
-
-def yabai_message(args):
-    # Same local protocol as yabai 7's CLI, without launching a process for
-    # every query/change. See upstream src/yabai.c:client_send_message.
-    payload = b'\0'.join(arg.encode() for arg in args) + b'\0\0'
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-        connection.settimeout(2)
-        try:
-            connection.connect('/tmp/yabai_' + os.environ.get('USER', '') + '.socket')
-        except OSError:
-            return None  # CLI fallback is safe only before a request is sent.
-        try:
-            connection.sendall(struct.pack('=i', len(payload)) + payload)
-            connection.shutdown(socket.SHUT_WR)
-            chunks = []
-            while True:
-                chunk = connection.recv(65536)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-        except OSError as error:
-            # Never replay a possibly executed move through the CLI.
-            raise RuntimeError('yabai connection interrupted: ' + str(error)) from error
-    response = b''.join(chunks).decode()
-    failed = response.startswith('\x07')
-    return subprocess.CompletedProcess(args, int(failed), '' if failed else response,
-                                       response[1:] if failed else '')
 
 
 def query(*args):

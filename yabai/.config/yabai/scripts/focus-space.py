@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 """Switch native Spaces and recover window focus if macOS leaves Finder active."""
 import json
-import importlib.util
 from pathlib import Path
 import os
 import sys
 import time
 
 
-# Share the direct socket transport used by directional shortcuts. It falls back
-# to the CLI only if no request was sent, so moves are never replayed.
-_spec = importlib.util.spec_from_file_location(
-    'wm_direction', Path(__file__).resolve().parents[4] / 'wm-direction.py')
-_wm = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_wm)
+# Resolve the checkout when launched through the stowed config directory.
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from wm_client import run
 
 
 def command(*args):
-    return _wm.run('yabai', '-m', *args, check=False)
+    return run('yabai', '-m', *args, check=False, timeout=2)
 
 
 def query(*args):

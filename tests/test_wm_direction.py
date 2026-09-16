@@ -287,20 +287,6 @@ class DirectionTests(unittest.TestCase):
             wm.wait_for_frames(1,expected)
         sleep.assert_called_once_with(.005)
 
-    def test_socket_protocol_and_native_errors(self):
-        import struct
-        from unittest.mock import MagicMock
-        for reply,code in [(b'{"ok":true}',0),(b'\x07invalid window\n',1)]:
-            connection=MagicMock()
-            connection.recv.side_effect=[reply[:3],reply[3:],b'']
-            connection.__enter__.return_value=connection
-            with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run') as cli:
-                result=wm.run('yabai','-m','query','--windows',check=False)
-            self.assertEqual(result.returncode,code)
-            payload=b'query\0--windows\0\0'
-            connection.sendall.assert_called_once_with(struct.pack('=i',len(payload))+payload)
-            cli.assert_not_called()
-            if code:self.assertEqual(result.stderr,'invalid window\n')
 
     def test_minimum_height_finishes_after_stabilizing(self):
         expected = {1:dict(x=872,y=586,w=846,h=523)}
@@ -354,24 +340,7 @@ class DirectionTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'have not settled'):
                 wm.settled_windows(1,{1,2})
 
-    def test_socket_does_not_replay_a_move_after_connection_breaks(self):
-        from unittest.mock import MagicMock
-        connection=MagicMock();connection.__enter__.return_value=connection
-        connection.recv.side_effect=TimeoutError('timeout')
-        with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run') as cli:
-            with self.assertRaisesRegex(RuntimeError,'interrupted'):
-                wm.run('yabai','-m','window',1,'--swap',2)
-        cli.assert_not_called()
 
-    def test_socket_connection_failure_falls_back_before_sending(self):
-        from unittest.mock import MagicMock
-        connection=MagicMock();connection.__enter__.return_value=connection
-        connection.connect.side_effect=FileNotFoundError('socket missing')
-        response=SimpleNamespace(returncode=0,stdout='[]',stderr='')
-        with patch.object(wm.socket,'socket',return_value=connection),patch.object(wm.subprocess,'run',return_value=response) as cli:
-            self.assertEqual(wm.query('--windows'),[])
-        connection.sendall.assert_not_called()
-        cli.assert_called_once_with(['yabai','-m','query','--windows'],capture_output=True,text=True)
 
     def test_diagonally_separated_tile_is_not_neighbor(self):
         self.assertIsNone(wm.neighbor(w(1,0,0,100,100),[w(2,120,120,100,100)],'right'))

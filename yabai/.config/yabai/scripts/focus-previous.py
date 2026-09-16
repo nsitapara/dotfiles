@@ -4,14 +4,20 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 import time
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from wm_client import run
+
+
+def command(*args):
+    return run('yabai', '-m', *args, check=False, timeout=2)
+
+
 def query(*args):
-    result = subprocess.run(['yabai', '-m', 'query', *map(str, args)],
-                            capture_output=True, text=True, timeout=2)
+    result = command('query', *args)
     return json.loads(result.stdout) if result.returncode == 0 else None
 
 
@@ -44,8 +50,7 @@ def focus_previous(state):
         if not space.get('is-visible'):
             # Match Cmd+number: activate the Space explicitly, avoiding the
             # animated macOS switch caused by focusing an off-Space window.
-            result = subprocess.run(['yabai', '-m', 'space', '--focus', str(target['space'])],
-                                    capture_output=True, text=True, timeout=2)
+            result = command('space', '--focus', target['space'])
             if result.returncode:
                 raise RuntimeError(result.stderr.strip())
             deadline = time.monotonic() + 1.0
@@ -56,8 +61,7 @@ def focus_previous(state):
                 time.sleep(0.01)
             else:
                 raise RuntimeError('Previous window workspace did not become visible')
-    result = subprocess.run(['yabai', '-m', 'window', '--focus', str(target['id'])],
-                            capture_output=True, text=True, timeout=2)
+    result = command('window', '--focus', target['id'])
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
     remember(state, target)
@@ -96,6 +100,6 @@ if __name__ == '__main__':
         if action not in ('record', 'reset', 'toggle'):
             raise RuntimeError('Usage: focus-previous.py record|reset|toggle')
         main(action)
-    except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as error:
+    except (RuntimeError, ValueError, OSError) as error:
         print('Previous window: ' + str(error), file=sys.stderr)
         sys.exit(1)

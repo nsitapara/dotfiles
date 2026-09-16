@@ -26,12 +26,12 @@ class PreviousWindowTests(unittest.TestCase):
 
     def test_floating_window_and_return(self):
         with patch.object(focus, 'query', side_effect=[self.b, self.a, self.a, self.b]), \
-                patch.object(focus.subprocess, 'run', return_value=Mock(returncode=0)) as run:
+                patch.object(focus, 'command', return_value=Mock(returncode=0)) as run:
             focus.focus_previous(self.state)
             self.assertEqual(self.state['current'], focus.identity(self.a))
             focus.focus_previous(self.state)
             self.assertEqual(self.state['current'], focus.identity(self.b))
-            self.assertEqual([c.args[0][-1] for c in run.call_args_list], ['1', '2'])
+            self.assertEqual([c.args[-1] for c in run.call_args_list], [1, 2])
 
     def test_closed_reused_hidden_or_minimized_target_is_skipped(self):
         for target in [None, {**self.a, 'pid': 99},
@@ -39,7 +39,7 @@ class PreviousWindowTests(unittest.TestCase):
             with self.subTest(target=target):
                 state = dict(self.state)
                 with patch.object(focus, 'query', side_effect=[self.b, target]), \
-                        patch.object(focus.subprocess, 'run') as run:
+                        patch.object(focus, 'command') as run:
                     focus.focus_previous(state)
                     run.assert_not_called()
                     self.assertIsNone(state['previous'])
@@ -47,7 +47,7 @@ class PreviousWindowTests(unittest.TestCase):
     def test_focus_failure_keeps_history(self):
         before = dict(self.state)
         with patch.object(focus, 'query', side_effect=[self.b, self.a]), \
-                patch.object(focus.subprocess, 'run', return_value=Mock(returncode=1, stderr='failed')):
+                patch.object(focus, 'command', return_value=Mock(returncode=1, stderr='failed')):
             with self.assertRaises(RuntimeError):
                 focus.focus_previous(self.state)
         self.assertEqual(self.state, before)
@@ -56,11 +56,11 @@ class PreviousWindowTests(unittest.TestCase):
         target = {**self.a, 'is-visible': False}
         with patch.object(focus, 'query', side_effect=[
                 self.b, target, {'is-visible': False}, {'is-visible': True}]), \
-                patch.object(focus.subprocess, 'run', return_value=Mock(returncode=0)) as run:
+                patch.object(focus, 'command', return_value=Mock(returncode=0)) as run:
             focus.focus_previous(self.state)
-        self.assertEqual([c.args[0] for c in run.call_args_list], [
-            ['yabai', '-m', 'space', '--focus', '1'],
-            ['yabai', '-m', 'window', '--focus', '1'],
+        self.assertEqual([c.args for c in run.call_args_list], [
+            ('space', '--focus', 1),
+            ('window', '--focus', 1),
         ])
         self.assertEqual(self.state['current'], focus.identity(self.a))
 
@@ -68,7 +68,7 @@ class PreviousWindowTests(unittest.TestCase):
         before = dict(self.state)
         with patch.object(focus, 'query', side_effect=[
                 self.b, {**self.a, 'is-visible': False}, {'is-visible': False}]), \
-                patch.object(focus.subprocess, 'run', return_value=Mock(returncode=1, stderr='failed')) as run:
+                patch.object(focus, 'command', return_value=Mock(returncode=1, stderr='failed')) as run:
             with self.assertRaises(RuntimeError):
                 focus.focus_previous(self.state)
         self.assertEqual(run.call_count, 1)
@@ -87,7 +87,7 @@ class PreviousWindowTests(unittest.TestCase):
         with patch.object(focus, 'query', side_effect=[
                 self.b, {**self.a, 'is-visible': False}, {'is-visible': False}]), \
                 patch.object(focus.time, 'monotonic', side_effect=[0, 2]), \
-                patch.object(focus.subprocess, 'run', return_value=Mock(returncode=0)) as run:
+                patch.object(focus, 'command', return_value=Mock(returncode=0)) as run:
             with self.assertRaisesRegex(RuntimeError, 'did not become visible'):
                 focus.focus_previous(self.state)
             self.assertEqual(run.call_count, 1)

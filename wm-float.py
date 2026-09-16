@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Save floating geometry on tile; restore it on float. No background tracking."""
-import importlib.util
 import json
 import math
 import os
@@ -8,7 +7,9 @@ from pathlib import Path
 import sys
 import time
 
-ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wm_client import run
+
 CACHE = Path.home() / '.local/state/dotfiles-wm/float-frames.json'
 
 
@@ -80,10 +81,7 @@ def toggle(run):
 if __name__ == '__main__':
     os.environ['PATH'] += ':/opt/homebrew/bin:/usr/local/bin'
     try:
-        spec = importlib.util.spec_from_file_location('wm_direction', ROOT / 'wm-direction.py')
-        direction = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(direction)
-        toggle(direction.run)  # Existing native socket transport, no CLI per operation.
+        toggle(run)
     except (RuntimeError, OSError, ValueError, KeyError) as error:
         print('Float toggle: ' + str(error), file=sys.stderr)
         sys.exit(1)
