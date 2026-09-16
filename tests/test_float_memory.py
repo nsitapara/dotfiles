@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import copy
 import unittest
 from unittest.mock import patch
 
@@ -45,7 +46,16 @@ class FloatMemoryTests(unittest.TestCase):
             if args[2:4] == ('query', '--windows'): data = window
             elif args[2:4] == ('query', '--displays'): data = dict(frame=dict(x=0,y=0,w=2560,h=1440))
             elif args[2] == 'config': data = {'top_padding':50,'bottom_padding':8,'left_padding':10,'right_padding':10}[args[-1]]
-            else: data = {}
+            else:
+                data = {}
+                if args[2] == 'window':
+                    if '--toggle' in args: window['is-floating'] = not window['is-floating']
+                    if '--move' in args:
+                        _,x,y=args[args.index('--move')+1].split(':')
+                        window['frame'].update(x=float(x),y=float(y))
+                    if '--resize' in args:
+                        _,w,h=args[args.index('--resize')+1].split(':')
+                        window['frame'].update(w=float(w),h=float(h))
             return subprocess.CompletedProcess(args, 0, json.dumps(data), '')
         with tempfile.TemporaryDirectory() as directory, patch.object(floating, 'CACHE', Path(directory)/'frames.json'):
             floating.toggle(run)
@@ -55,29 +65,37 @@ class FloatMemoryTests(unittest.TestCase):
             calls.clear()
             floating.toggle(run)
         self.assertEqual(saved, dict(x=150,y=190,w=1000,h=800))
-        self.assertEqual(calls[-1],
-            ('yabai','-m','window',1,'--toggle','float','--move','abs:150:190',
-             '--resize','abs:1000:800','--move','abs:150:190'))
+        mutations=[call for call in calls if call[2]=='window']
+        self.assertEqual(mutations,[('yabai','-m','window',1,'--toggle','float','--move','abs:150:190'),
+                                    ('yabai','-m','window',1,'--resize','abs:1000:800')])
+        self.assertEqual(window['frame'],saved)
 
     def test_float_uses_applied_laptop_and_custom_padding(self):
         for top in [16, 50, 72]:
             calls = []
+            window = dict(id=1,pid=42,space=3,display=2,frame=dict(x=0,y=0,w=500,h=400),**{'is-floating':False})
             def run(*args):
                 calls.append(args)
                 if args[2:4] == ('query', '--windows'):
-                    data = dict(id=1, pid=42, space=3, display=2, **{'is-floating':False})
+                    data = window
                 elif args[2:4] == ('query', '--displays'):
                     data = dict(frame=dict(x=-1440,y=0,w=1440,h=900))
                 elif args[2] == 'config':
                     self.assertEqual(args[3:5], ('--space', 3))
                     data = {'top_padding':top,'bottom_padding':8,'left_padding':20,'right_padding':30}[args[-1]]
-                else: data = {}
+                else:
+                    data = {}
+                    if args[2]=='window':
+                        if '--toggle' in args:window['is-floating']=not window['is-floating']
+                        if '--move' in args:
+                            _,x,y=args[args.index('--move')+1].split(':');window['frame'].update(x=float(x),y=float(y))
+                        if '--resize' in args:
+                            _,w,h=args[args.index('--resize')+1].split(':');window['frame'].update(w=float(w),h=float(h))
                 return subprocess.CompletedProcess(args, 0, json.dumps(data), '')
             with patch.object(floating, 'load_cache', return_value={}):
                 floating.toggle(run)
             expected = floating.restore_frame(None, dict(x=-1420,y=top,w=1390,h=892-top))
-            self.assertIn(f"abs:{expected['x']}:{expected['y']}", calls[-1])
-            self.assertIn(f"abs:{expected['w']}:{expected['h']}", calls[-1])
+            self.assertEqual(window['frame'],expected)
 
     def test_cache_separates_windows_and_bounds_growth(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(floating, 'CACHE', Path(directory)/'frames.json'):
@@ -88,6 +106,60 @@ class FloatMemoryTests(unittest.TestCase):
             self.assertIn('42:1', loaded)
             self.assertNotIn('0', loaded)
             self.assertNotIn('99:1', loaded)
+
+    def test_restore_waits_for_async_full_frame_updates(self):
+        # Yabai move and resize both submit a full frame from cached geometry.
+        # AX events update the cache later. This reproduces the live regression:
+        # batching move/resize/move leaves the original tile's size in place.
+        window=dict(id=1,pid=42,display=1,space=1,frame=dict(x=10,y=50,w=2540,h=1382),
+                    **{'is-floating':False})
+        pending=[]
+        reads=0
+        def run(*args):
+            nonlocal reads
+            if args[2:4]==('query','--windows'):
+                reads+=1
+                if pending and reads>=2:
+                    window['frame']=pending[-1];pending.clear()
+                data=copy.deepcopy(window)
+            elif args[2:4]==('query','--displays'):
+                data={'frame':dict(x=0,y=0,w=2560,h=1440)}
+            elif args[2]=='config':
+                data={'top_padding':50,'bottom_padding':8,'left_padding':10,'right_padding':10}[args[-1]]
+            else:
+                data={};reads=0
+                for i,arg in enumerate(args):
+                    if arg=='--toggle':window['is-floating']=not window['is-floating']
+                    elif arg in ('--move','--resize'):
+                        frame=dict(window['frame']);_,a,b=args[i+1].split(':')
+                        frame.update(dict(zip(('x','y') if arg=='--move' else ('w','h'),(float(a),float(b)))))
+                        pending.append(frame)
+            return subprocess.CompletedProcess(args,0,json.dumps(data),'')
+        run('yabai','-m','window',1,'--toggle','float','--move','abs:264:188',
+            '--resize','abs:2032:1106','--move','abs:264:188')
+        run('yabai','-m','query','--windows','--window',1)
+        run('yabai','-m','query','--windows','--window',1)
+        self.assertEqual(window['frame']['w'],2540)
+        window['is-floating']=False
+        with patch.object(floating,'load_cache',return_value={}),patch.object(floating.time,'sleep'):
+            floating.toggle(run)
+        self.assertEqual(window['frame'],dict(x=264,y=188,w=2032,h=1106))
+
+    def test_save_reads_fresh_frame_instead_of_initial_tile_snapshot(self):
+        identity=dict(id=1,pid=42,display=1,space=1)
+        old=dict(identity,frame=dict(x=10,y=50,w=2540,h=1382),**{'is-floating':True})
+        moved=dict(identity,frame=dict(x=180,y=250,w=1000,h=700),**{'is-floating':True})
+        states=iter([old,moved,moved])
+        with patch.object(floating.time,'sleep'):
+            actual=floating.wait_window(lambda *_:next(states),old,lambda w:w['is-floating'],
+                                        'not settled',stable=True)
+        self.assertEqual(actual['frame'],moved['frame'])
+
+    def test_wait_does_not_resize_another_window_or_follow_it_across_desktops(self):
+        window=dict(id=1,pid=42,display=1,space=1)
+        for changed in (dict(window,pid=43),dict(window,display=2),dict(window,space=2)):
+            with self.subTest(changed=changed),self.assertRaises(RuntimeError):
+                floating.wait_window(lambda *_:changed,window,lambda _:True,'unavailable')
 
     @unittest.skipUnless(shutil.which('node'), 'Node is needed for JXA geometry parity')
     def test_aerospace_and_yabai_restore_geometry_match(self):

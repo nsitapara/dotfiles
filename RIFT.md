@@ -154,7 +154,7 @@ The earlier pooled 9.3× expansion comparison is therefore not a fair workload
 comparison. Rift's visible sequential retiling remains a practical concern.
 
 Yabai round 1 had the intended setup and three unresolved width-preset failures.
-Round 2's floating restoration check also needs better evidence. No corrected
+A later targeted check reproduced and fixed a real floating-helper geometry bug; six exact restores passed in the requested recheck. No corrected
 live run has been performed; the report retains the raw results and diagnoses
 which checks were invalid. AeroSpace is outside the current decision.
 

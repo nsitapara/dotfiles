@@ -515,3 +515,17 @@ Raycast, unplug/reconnect a monitor, then switch back to AeroSpace.
 - [yabai SIP requirements](https://github.com/asmvik/yabai/wiki/Disabling-System-Integrity-Protection)
 - [skhd configuration](https://github.com/asmvik/skhd) — the original skhd is in maintenance mode.
 - [SketchyBar events](https://felixkratz.github.io/SketchyBar/config/events)
+
+### Floating position and size
+
+Float → tile saves the window's latest floating frame. Floating it again restores
+that position and size on the same monitor. Moving to a smaller display keeps the
+window reachable by fitting it within the available area. An app's own minimum
+size can prevent an exact fit; the helper reports that instead of silently
+claiming success.
+
+The helper waits for the move to update before resizing. Yabai's move operation
+uses a cached full frame, so a move sent immediately after resize could restore
+the old tiled dimensions. No background watcher is added. A targeted live recheck
+passed six exact restores at two custom positions and sizes; total restore calls
+took about 66–70 ms. See [recorded check data](reports/float-restoration-2026-09-16.json).

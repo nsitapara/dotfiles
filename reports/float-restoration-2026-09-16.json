@@ -1,0 +1,114 @@
+{
+  "created_at": "2026-09-16T12:53:23-0700",
+  "manager": "yabai 7.1.25, installed compatibility build",
+  "os": "macOS 27.0 build 26A428",
+  "scope": "One disposable AppKit window, explicitly placed on empty workspace 5, yabai kept active. Recheck requested by user; keyboard and mouse idle. Original visible workspaces and focus restored afterward.",
+  "verification": "CoreGraphics frames read independently via observe-benchmark-windows.js after each action. Timings cover shortcut helper completion, excluding the independent observation.",
+  "expected_first_float": {
+    "x": 264,
+    "y": 188,
+    "w": 2032,
+    "h": 1106
+  },
+  "results": [
+    {
+      "stage": "old_first_float",
+      "frame": {
+        "x": 264,
+        "y": 188,
+        "w": 2540,
+        "h": 1382
+      }
+    },
+    {
+      "stage": "fixed_default_float",
+      "frame": {
+        "x": 264,
+        "y": 188,
+        "w": 2032,
+        "h": 1106
+      },
+      "ms": 66.07616700057406
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 0,
+      "repeat": 0,
+      "frame": {
+        "x": 150,
+        "y": 190,
+        "w": 1000,
+        "h": 800
+      },
+      "tile_ms": 61.15979100286495,
+      "float_ms": 67.3706669913372
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 0,
+      "repeat": 1,
+      "frame": {
+        "x": 150,
+        "y": 190,
+        "w": 1000,
+        "h": 800
+      },
+      "tile_ms": 59.09799999790266,
+      "float_ms": 69.27258300129324
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 0,
+      "repeat": 2,
+      "frame": {
+        "x": 150,
+        "y": 190,
+        "w": 1000,
+        "h": 800
+      },
+      "tile_ms": 61.26695800048765,
+      "float_ms": 70.48424999811687
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 1,
+      "repeat": 0,
+      "frame": {
+        "x": 970,
+        "y": 300,
+        "w": 1200,
+        "h": 700
+      },
+      "tile_ms": 67.00387499586213,
+      "float_ms": 66.78158300928771
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 1,
+      "repeat": 1,
+      "frame": {
+        "x": 970,
+        "y": 300,
+        "w": 1200,
+        "h": 700
+      },
+      "tile_ms": 56.714499994996004,
+      "float_ms": 67.5905420066556
+    },
+    {
+      "stage": "restored_custom_frame",
+      "case": 1,
+      "repeat": 2,
+      "frame": {
+        "x": 970,
+        "y": 300,
+        "w": 1200,
+        "h": 700
+      },
+      "tile_ms": 60.07370899897069,
+      "float_ms": 65.66987499536481
+    }
+  ],
+  "passed_custom_restores": 6,
+  "limitations": "Same-display restoration at two custom frames. Does not establish behavior for every application minimum size or native fullscreen. No full benchmark rerun."
+}

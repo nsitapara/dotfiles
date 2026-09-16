@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Save floating geometry on tile; restore it on float. No background tracking."""
 import json
+import fcntl
 import math
 import os
 from pathlib import Path
@@ -53,6 +54,28 @@ def save_cache(cache, key, frame, area):
     temporary.replace(CACHE)
 
 
+def wait_window(query, window, predicate, description, *, stable=False):
+    """Wait for yabai's asynchronous AX frame updates for this exact window."""
+    deadline = time.monotonic() + 1
+    previous = None
+    while True:
+        current = query('--windows', '--window', window['id'])
+        if current.get('id') != window['id'] or current.get('pid') != window['pid']:
+            raise RuntimeError('The selected window closed or changed identity')
+        if current.get('display') != window['display'] or current.get('space') != window['space']:
+            raise RuntimeError('The selected window moved to another desktop; retry floating')
+        if predicate(current) and (not stable or current.get('frame') == previous):
+            return current
+        if time.monotonic() >= deadline:
+            raise RuntimeError(description)
+        previous = dict(current.get('frame', {}))
+        time.sleep(.02)
+
+
+def frame_matches(actual, expected, keys=('x', 'y', 'w', 'h')):
+    return valid(actual) and all(abs(actual[key]-expected[key]) <= 1 for key in keys)
+
+
 def toggle(run):
     def query(*args):
         return json.loads(run('yabai', '-m', 'query', *args).stdout)
@@ -74,22 +97,41 @@ def toggle(run):
     key = str(window['pid']) + ':' + str(window['id'])
     cache = load_cache()
     if window['is-floating']:
-        save_cache(cache, key, window['frame'], area)
+        # Padding queries and an earlier shortcut may have been followed by AX
+        # updates. Save a fresh, stable floating frame, never the old tile size.
+        current = wait_window(query, window, lambda w: w['is-floating'] and valid(w.get('frame')),
+                              'Floating geometry did not settle; retry tiling', stable=True)
+        save_cache(cache, key, current['frame'], area)
         run('yabai', '-m', 'window', window['id'], '--toggle', 'float')
+        wait_window(query, window, lambda w: not w['is-floating'], 'Window did not return to tiling')
         return
     frame = restore_frame(cache.get(key), area)
-    # One message applies the toggle and geometry without query/process gaps.
-    # Position before size avoids constraining the size against the old edge.
+    # Move and resize each use yabai's cached full frame. Sending a final move
+    # before AX reports the resize can reapply the old tiled dimensions.
+    # Establish position first, then resize using the updated frame. No final
+    # move is needed, and all operations remain pinned to the original ID.
     run('yabai', '-m', 'window', window['id'], '--toggle', 'float',
-        '--move', f"abs:{frame['x']}:{frame['y']}",
-        '--resize', f"abs:{frame['w']}:{frame['h']}",
         '--move', f"abs:{frame['x']}:{frame['y']}")
+    wait_window(query, window, lambda w: w['is-floating'] and frame_matches(w.get('frame'), frame, ('x','y')),
+                'Window did not reach its floating position')
+    run('yabai', '-m', 'window', window['id'], '--resize', f"abs:{frame['w']}:{frame['h']}")
+    wait_window(query, window, lambda w: w['is-floating'] and frame_matches(w.get('frame'), frame),
+                'App did not accept the saved floating geometry', stable=True)
+
+
+def main():
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    # Repeated shortcuts cannot observe a half-applied float or overwrite a
+    # concurrent save for another window. Each invocation re-queries after lock.
+    with CACHE.with_name('float.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        toggle(run)
 
 
 if __name__ == '__main__':
     os.environ['PATH'] += ':/opt/homebrew/bin:/usr/local/bin'
     try:
-        toggle(run)
+        main()
     except (RuntimeError, OSError, ValueError, KeyError) as error:
         print('Float toggle: ' + str(error), file=sys.stderr)
         sys.exit(1)
