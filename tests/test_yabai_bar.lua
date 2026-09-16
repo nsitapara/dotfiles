@@ -44,9 +44,9 @@ local function fixture()
       {index=2,display=2,label="ws2",["has-focus"]=false,["is-native-fullscreen"]=false},
       {index=3,display=2,label="",["is-native-fullscreen"]=true},
     },
-    windows = {{space=1,app="Terminal"},{space=1,app="Terminal"},
-      {space=1,app="Google Chrome"},{space=1,app="Google Chrome"},
-      {space=1,app="Google Chrome",["is-hidden"]=true}},
+    windows = {{id=1,space=1,app="Terminal"},{id=2,space=1,app="Terminal"},
+      {id=3,space=1,app="Google Chrome"},{id=4,space=1,app="Google Chrome"},
+      {id=5,space=1,app="Google Chrome",["is-hidden"]=true}},
     displays = {{index=1,id=100,frame={x=0,y=0}},{index=2,id=200,frame={x=1920,y=0}}},
     bar_displays = {{DirectDisplayID=100,["arrangement-id"]=2},{DirectDisplayID=200,["arrangement-id"]=1}},
   }
@@ -222,4 +222,30 @@ restarting.spaces[#restarting.spaces+1] = {index=9,display=1,label="",["is-nativ
 callbacks[#callbacks](restarting)
 assert(items["yabai.space.native8"].props.drawing == true)
 assert(items["yabai.space.native9"].props.drawing == true)
-print("SketchyBar rendering, persistent slots, display mapping, clicks, and event coalescing passed")
+-- Focus and minimize/restore can reorder the query without changing membership.
+local stable = fixture()
+stable.windows = {
+  {id=20,space=1,app="Google Chrome"},
+  {id=10,space=1,app="T3 Code (Alpha)"},
+  {id=30,space=1,app="Google Chrome"},
+  {id=40,space=1,app="Spotify"},
+}
+events["yabai.observer:yabai_windows_changed"]({})
+callbacks[#callbacks](stable)
+assert(items["yabai.space.3.app.1"].props.background.image == "app.T3 Code (Alpha)")
+assert(items["yabai.space.3.app.2"].props.background.image == "app.Google Chrome")
+assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
+assert(items["yabai.space.3.app.4"].props.background.image == "app.Spotify")
+for _, minimized in ipairs({true, false}) do
+  stable.windows = {stable.windows[4], stable.windows[3], stable.windows[2], stable.windows[1]}
+  for _, window in ipairs(stable.windows) do
+    window["is-minimized"] = window.id == 30 and minimized
+    window["has-focus"] = window.id == (minimized and 20 or 10)
+  end
+  set_count, animation_count = 0, 0
+  events["yabai.observer:yabai_windows_changed"]({})
+  callbacks[#callbacks](stable)
+  assert(set_count == 0 and animation_count == 0,
+         "Query reordering, focus, and minimize/restore must not move app icons")
+end
+print("SketchyBar rendering, stable app order, persistent slots, display mapping, clicks, and event coalescing passed")

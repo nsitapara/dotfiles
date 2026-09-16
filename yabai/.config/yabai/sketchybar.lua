@@ -133,7 +133,15 @@ local function render(spaces, windows, displays, bar_displays, layout)
     end
   end
   local apps_by_space, seen_apps = {}, {}
-  for _, window in ipairs(windows) do
+  -- Query order can change with focus and minimization. Window IDs keep icon
+  -- positions stable while retaining one icon per Chrome window.
+  local ordered_windows = {}
+  for index, window in ipairs(windows) do
+    ordered_windows[#ordered_windows + 1] = { window = window, order = window.id or index }
+  end
+  table.sort(ordered_windows, function(a, b) return a.order < b.order end)
+  for _, entry in ipairs(ordered_windows) do
+    local window = entry.window
     local id, app = window.space, window.app
     apps_by_space[id] = apps_by_space[id] or {}
     seen_apps[id] = seen_apps[id] or {}
