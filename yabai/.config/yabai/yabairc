@@ -85,3 +85,24 @@ done
 if [ -n "${DOTFILES_YABAI_READY:-}" ]; then
     touch "$DOTFILES_YABAI_READY"
 fi
+
+# launchd restarts yabai after a crash without wm.sh, which drops the Space
+# labels the shortcuts and bar depend on. The profile script keys its signature
+# on the yabai pid, so every fresh daemon re-applies labels and the bar profile.
+# Displays can still be reconfiguring or asleep after a wake; retry until it
+# succeeds or this yabai is gone.
+mkdir -p "$HOME/.local/state/dotfiles-wm"
+(
+    blind=false
+    until "$HOME/.config/yabai/scripts/display-profile.sh"; do
+        pgrep -x yabai >/dev/null || exit
+        yabai -m query --displays 2>/dev/null | jq -e 'length > 0' >/dev/null 2>&1 || blind=true
+        sleep 10
+    done
+    # A daemon that started with no active displays never rebuilds its window
+    # tree once they return: windows stay invisible and actions cannot find them.
+    if $blind; then
+        echo 'yabai started without active displays; restarting on awake displays.'
+        launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai"
+    fi
+) >>"$HOME/.local/state/dotfiles-wm/display-profile.log" 2>&1 &

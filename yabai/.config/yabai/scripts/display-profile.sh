@@ -8,7 +8,7 @@ case "${1:-}" in
     *) echo "Unknown option: $1" >&2; exit 1 ;;
 esac
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 STATE="$HOME/.local/state/dotfiles-wm"
 if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
