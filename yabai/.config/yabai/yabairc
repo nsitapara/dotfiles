@@ -46,6 +46,11 @@ yabai -m signal --add label=dotfiles-focus-new-app-window event=window_created \
     app='^(Warp|PyCharm|GitHub Desktop|Slack)$' \
     action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; yabai -m window --focus "$YABAI_WINDOW_ID"'
 
+# Chrome can overwrite its tile while detaching a tab. Repair after mouse-up.
+yabai -m signal --add label=dotfiles-chrome-detach event=window_created \
+    app='^Google Chrome$' \
+    action='/usr/bin/python3 "$HOME/.config/yabai/scripts/settle-chrome.py" "$YABAI_WINDOW_ID"'
+
 # Cmd+Tab can switch to a hidden or minimized app without revealing it.
 yabai -m signal --add label=dotfiles-unhide-front-app event=application_front_switched \
     action='"$HOME/.config/yabai/scripts/reveal-app.sh" "$YABAI_PROCESS_ID"'

@@ -287,6 +287,18 @@ The cache lives in `~/.local/state/dotfiles-wm/float-frames.json`, holds at most
 background process is added. Yabai uses its existing socket transport; AeroSpace
 uses one Accessibility script invocation per toggle.
 
+### Chrome tab detachment
+
+Dragging a Chrome tab into a new window can leave the two browser windows
+overlapping. Chrome changes the window frames during the drag after yabai has
+already assigned their tiles. The `dotfiles-chrome-detach` creation signal waits
+for mouse release, then checks for overlapping tiled windows on that Space.
+It reapplies the existing layout with a zero padding delta, preserving split
+ratios and focus. It checks twice for late Chrome updates, exits after 30 seconds
+at most, and skips hidden Spaces, floating windows, stacks, and zoomed layouts.
+It does not run for ordinary window resizing. `Cmd + 0` still manually balances
+the layout, but the recovery does not need to reset your chosen sizes.
+
 ### Previous window
 
 **Ctrl + Tab** returns to the last focused window. Press it again to
