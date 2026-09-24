@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location(
-    'settle_chrome', ROOT / 'yabai/.config/yabai/scripts/settle-chrome.py')
+    'settle_tiles', ROOT / 'yabai/.config/yabai/scripts/settle-tiles.py')
 chrome = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(chrome)
 
@@ -116,6 +116,59 @@ class SettleChromeTests(unittest.TestCase):
         with patch.object(chrome, 'query', self.query), patch.object(chrome, 'run') as run:
             chrome.repair(20, (42, 1), lambda: True)
             run.assert_not_called()
+
+
+def tile(id, x, y, w, h):
+    return {'id': id, 'is-visible': True, 'subrole': 'AXStandardWindow', 'split-type': 'none',
+            'frame': {'x': x, 'y': y, 'w': w, 'h': h}}
+
+
+class SettleSpaceTests(unittest.TestCase):
+    """Observed ws1/ws5 frames on the 2560x1440 display with 50/8/10/10 padding."""
+    LEFT, RIGHT = (10, 50, 1262, 1382), (1288, 50, 1262, 1382)
+
+    def run_space(self, frames, after_reflush=None, after_rebuild=None, down=False):
+        windows = [tile(i, *f) for i, f in enumerate(frames)]
+        calls = []
+        config = {'top_padding': '50', 'bottom_padding': '8', 'left_padding': '10',
+                  'right_padding': '10', 'window_gap': '15'}
+
+        def query(*args):
+            if args[0] == '--spaces':
+                return {'type': 'bsp', 'is-visible': True, 'display': 1}
+            if args[0] == '--displays':
+                return {'frame': {'x': 0, 'y': 0, 'w': 2560, 'h': 1440}}
+            return windows
+
+        def run(*args, **kwargs):
+            if args[2] == 'config':
+                return type('Result', (), {'stdout': config[args[-1]]})
+            calls.append(args[4:])
+            for frame in (after_reflush if args[4] == '--padding' else after_rebuild) or []:
+                windows[frame[0]]['frame'].update(zip('xywh', frame[1:]))
+
+        with patch.object(chrome, 'query', query), patch.object(chrome, 'run', run), \
+             patch.object(chrome.time, 'sleep', lambda s: None):
+            chrome.settle_space(1, lambda: down)
+        return calls
+
+    def test_layouts(self):
+        cases = {
+            'full single tile': ([(10, 50, 2540, 1382)], None, None, []),
+            'unequal columns': ([(10, 50, 740, 1382), (765, 50, 1785, 1382)], None, None, []),
+            # ws5: T3 kept its old half-height frame; a reflush fixes it, ratios kept.
+            'stale frame': ([self.LEFT, (1288, 50, 1262, 683)], [(1,) + self.RIGHT], None,
+                            [('--padding', 'rel:0:0:0:0')]),
+            # ws1: an untracked window's leaf keeps its tile empty after a reflush.
+            'ghost tile': ([(1288, 749, 1262, 683)], None, [(0, 10, 50, 2540, 1382)],
+                           [('--padding', 'rel:0:0:0:0'), ('--layout', 'bsp')]),
+        }
+        for name, (frames, reflush, rebuild, expected) in cases.items():
+            with self.subTest(name):
+                self.assertEqual(self.run_space(frames, reflush, rebuild), expected)
+
+    def test_drag_in_progress_is_left_alone(self):
+        self.assertEqual(self.run_space([(1288, 749, 1262, 683)], down=True), [])
 
 
 if __name__ == '__main__':

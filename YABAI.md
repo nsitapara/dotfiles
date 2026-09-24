@@ -299,6 +299,17 @@ at most, and skips hidden Spaces, floating windows, stacks, and zoomed layouts.
 It does not run for ordinary window resizing. `Cmd + 0` still manually balances
 the layout, but the recovery does not need to reset your chosen sizes.
 
+### Empty tiles after windows leave
+
+A window closing, minimizing, hiding, or quitting can leave a visible Space with
+empty screen. Either a window missed its resize, or the tree kept a tile for a
+window yabai no longer tracks. yabai's own Space re-check skips unknown windows,
+so that tile stays empty. `settle-tiles.py --spaces` runs on those events and on
+Space/display changes. It checks each visible BSP Space for overlaps or uncovered
+area, reflushes with the zero padding delta first, and rebuilds the tree with
+`--layout bsp` only if area is still uncovered. A rebuild resets that Space's
+split ratios. It skips stacks, zoom, and active mouse drags.
+
 ### Previous window
 
 **Ctrl + Tab** returns to the last focused window. Press it again to
