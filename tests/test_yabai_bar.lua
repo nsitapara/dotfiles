@@ -47,7 +47,9 @@ local function fixture()
     windows = {{id=1,space=1,app="Terminal"},{id=2,space=1,app="Terminal",["is-floating"]=true},
       {id=3,space=1,app="Google Chrome"},{id=4,space=1,app="Google Chrome",["is-floating"]=true},
       {id=5,space=1,app="Google Chrome",["is-hidden"]=true},
-      {id=6,space=1,app="Google Chrome",role="AXHelpTag",["is-floating"]=true}},
+      {id=6,space=1,app="Google Chrome",role="AXHelpTag",["is-floating"]=true},
+      {id=7,space=1,app="Finder",["is-minimized"]=true,["split-child"]="none"},
+      {id=8,space=1,app="LibreOffice",["split-child"]="none"}},
     displays = {{index=1,id=100,frame={x=0,y=0}},{index=2,id=200,frame={x=1920,y=0}}},
     bar_displays = {{DirectDisplayID=100,["arrangement-id"]=2},{DirectDisplayID=200,["arrangement-id"]=1}},
   }
@@ -59,7 +61,10 @@ assert(items["yabai.space.3.app.1"].props.background.image == "app.Terminal")
 assert(items["yabai.space.3.app.2"].props.background.image == "app.Google Chrome")
 assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
 assert(items["yabai.space.3.app.3"].props.drawing == true, "Show each Chrome window")
-assert(items["yabai.space.3.app.4"].props.drawing == false, "Group other apps and skip hidden windows and tooltips")
+assert(items["yabai.space.3.app.4"].props.background.image == "app.Finder")
+assert(items["yabai.space.3.app.4"].props.label.string == "M", "Badge minimized apps")
+assert(items["yabai.space.3.app.5"].props.drawing == false,
+  "Group other apps; skip hidden windows, tooltips, and closed windows kept alive")
 assert(items["yabai.space.3.app.1"].props.label.drawing == false, "Badge an app only when all its windows float")
 assert(items["yabai.space.3.app.2"].props.label.drawing == false)
 assert(items["yabai.space.3.app.3"].props.label.drawing == true, "Badge a floating Chrome window")
@@ -149,7 +154,7 @@ set_count, animation_count = 0, 0
 events["yabai.observer:yabai_windows_changed"]({})
 focused.windows = {{space=1,app="Terminal"}}
 callbacks[15](focused)
-assert(set_count == 2 and animation_count == 0, "Only removed app slots should change")
+assert(set_count == 3 and animation_count == 0, "Only removed app slots should change")
 
 events["yabai.observer:yabai_windows_changed"]({})
 callbacks[#callbacks]("[\n")
@@ -249,7 +254,10 @@ for _, minimized in ipairs({true, false}) do
   set_count, animation_count = 0, 0
   events["yabai.observer:yabai_windows_changed"]({})
   callbacks[#callbacks](stable)
-  assert(set_count == 0 and animation_count == 0,
+  -- Only the minimized Chrome window's M badge toggles; no icon moves.
+  assert(set_count == 1 and animation_count == 0,
          "Query reordering, focus, and minimize/restore must not move app icons")
+  assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
+  assert(items["yabai.space.3.app.3"].props.label.drawing == minimized)
 end
 print("SketchyBar rendering, stable app order, persistent slots, display mapping, clicks, and event coalescing passed")

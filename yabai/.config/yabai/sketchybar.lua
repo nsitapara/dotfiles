@@ -58,8 +58,8 @@ local function create_pill(index)
       position = "left", drawing = false, width = 29,
       padding_left = 0, padding_right = 0,
       icon = { drawing = false },
-      -- Corner "F" for floating apps. A label background would span the whole
-      -- slot and ignore y_offset, so a shadow keeps it readable instead.
+      -- Corner F (floating) or M (minimized). A label background would span the
+      -- whole slot and ignore y_offset, so a shadow keeps it readable instead.
       label = {
         drawing = false, string = "F", width = 29, align = "right",
         font = "SF Pro:Heavy:10.0", color = colors.yellow,
@@ -144,7 +144,8 @@ local function render(spaces, windows, displays, bar_displays, layout)
       planned[workspace] = arrangement_by_id[screen.id]
     end
   end
-  local apps_by_space, seen_apps = {}, {}
+  local apps_by_space, seen_apps, layouts = {}, {}, {}
+  for _, space in ipairs(spaces) do layouts[space.index] = space.type end
   -- Query order can change with focus and minimization. Window IDs keep icon
   -- positions stable while retaining one icon per Chrome window.
   local ordered_windows = {}
@@ -158,15 +159,20 @@ local function render(spaces, windows, displays, bar_displays, layout)
     apps_by_space[id] = apps_by_space[id] or {}
     seen_apps[id] = seen_apps[id] or {}
     -- Chrome gets one icon per window; other apps remain grouped. A grouped
-    -- icon is floating only if every visible window of that app floats.
+    -- icon gets a badge only if all of that app's windows share the state.
     -- Chrome tooltips are AXHelpTag windows; Rift windows carry no role.
-    if app and app ~= "" and not window["is-hidden"] and (window.role or "AXWindow") == "AXWindow" then
-      local floating = window["is-floating"] == true and not window["is-minimized"]
+    local badge = window["is-minimized"] and "M" or window["is-floating"] and "F" or nil
+    -- On a tiling Space, a tiled window with no tree node ("split-child" none;
+    -- a lone root reports second_child) was closed by an app that keeps it
+    -- alive, such as Spotify or LibreOffice. It is not on screen.
+    local closed = not badge and window["split-child"] == "none" and layouts[id] ~= "float"
+    if app and app ~= "" and not window["is-hidden"] and not closed
+      and (window.role or "AXWindow") == "AXWindow" then
       local entry = app ~= "Google Chrome" and seen_apps[id][app]
       if entry then
-        entry.floating = entry.floating and floating
+        if entry.badge ~= badge then entry.badge = nil end
       else
-        entry = { app = app, floating = floating }
+        entry = { app = app, badge = badge }
         seen_apps[id][app] = entry
         table.insert(apps_by_space[id], entry)
       end
@@ -210,7 +216,8 @@ local function render(spaces, windows, displays, bar_displays, layout)
         local entry = apps[i]
         local app = entry and entry.app
         set_changed(slot, { drawing = visible and app ~= nil, display = display or "active",
-          label = { drawing = entry ~= nil and entry.floating },
+          label = { drawing = entry ~= nil and entry.badge ~= nil, string = entry and entry.badge or "F",
+            color = entry and entry.badge == "M" and colors.blue or colors.yellow },
           background = { image = app and ("app." .. app) or "" } })
       end
     end
