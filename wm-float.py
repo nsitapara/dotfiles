@@ -5,6 +5,7 @@ import fcntl
 import math
 import os
 from pathlib import Path
+import subprocess
 import sys
 import time
 
@@ -125,7 +126,15 @@ def main():
     # concurrent save for another window. Each invocation re-queries after lock.
     with CACHE.with_name('float.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        toggle(run)
+        try:
+            toggle(run)
+        finally:
+            # yabai emits no signal for float changes; refresh the bar's F badges.
+            try:
+                subprocess.run(['sketchybar', '--trigger', 'yabai_windows_changed'],
+                               capture_output=True, timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                pass  # The bar is optional.
 
 
 if __name__ == '__main__':

@@ -34,9 +34,28 @@ local center_label = sbar.add("item", "center_app.label", {
   updates = true,
 })
 
+-- Yabai floating-window chip after the name; hidden for tiled windows and
+-- for other window managers, whose query fails.
+local center_float = sbar.add("item", "center_app.float", {
+  position = "center",
+  display = "active",
+  drawing = false,
+  icon = { drawing = false },
+  label = {
+    string = "float",
+    font = { style = settings.font.style_map["Bold"], size = 10.0 },
+    color = colors.black,
+    padding_left = 6,
+    padding_right = 6,
+  },
+  background = { color = colors.yellow, corner_radius = 5, height = 18 },
+  padding_left = -4,
+  padding_right = 8,
+})
+
 -- the bracket IS the pill grouping icon + name. Matches the right-side widget
 -- pills (default.lua): bg1 fill + soft bg2 2px border.
-sbar.add("bracket", "center_app.bracket", { center_icon.name, center_label.name }, {
+sbar.add("bracket", "center_app.bracket", { center_icon.name, center_label.name, center_float.name }, {
   background = {
     color = colors.bg1,
     border_color = colors.bg2,
@@ -57,6 +76,16 @@ end
 center_label:subscribe("front_app_switched", function(env)
   set_app(env.INFO)
 end)
+
+local function update_float()
+  sbar.exec('export PATH="$PATH:/opt/homebrew/bin"; yabai -m query --windows --window 2>/dev/null',
+    function(window)
+      center_float:set({ drawing = type(window) == "table" and window["is-floating"] == true })
+    end)
+end
+-- yabai_windows_changed covers focus changes and float toggles.
+center_float:subscribe({ "front_app_switched", "yabai_windows_changed" }, update_float)
+update_float()
 
 -- Seed the current front app on load (the event only fires on change)
 sbar.exec(

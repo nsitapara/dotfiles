@@ -57,7 +57,15 @@ local function create_pill(index)
     local slot = sbar.add("item", namespace .. ".space." .. index .. ".app." .. slot_index, {
       position = "left", drawing = false, width = 29,
       padding_left = 0, padding_right = 0,
-      icon = { drawing = false }, label = { drawing = false },
+      icon = { drawing = false },
+      -- Corner "F" for floating apps. A label background would span the whole
+      -- slot and ignore y_offset, so a shadow keeps it readable instead.
+      label = {
+        drawing = false, string = "F", width = 29, align = "right",
+        font = "SF Pro:Heavy:10.0", color = colors.yellow,
+        y_offset = -7, padding_left = 0, padding_right = 1,
+        shadow = { drawing = true, color = colors.black, distance = 1, angle = 270 },
+      },
       background = {
         drawing = true, color = colors.transparent, border_width = 0, height = 24,
         image = { drawing = true, scale = 0.7, corner_radius = 5 },
@@ -149,10 +157,19 @@ local function render(spaces, windows, displays, bar_displays, layout)
     local id, app = window.space, window.app
     apps_by_space[id] = apps_by_space[id] or {}
     seen_apps[id] = seen_apps[id] or {}
-    -- Chrome gets one icon per window; other apps remain grouped.
-    if app and app ~= "" and (app == "Google Chrome" or not seen_apps[id][app]) and not window["is-hidden"] then
-      seen_apps[id][app] = true
-      table.insert(apps_by_space[id], app)
+    -- Chrome gets one icon per window; other apps remain grouped. A grouped
+    -- icon is floating only if every visible window of that app floats.
+    -- Chrome tooltips are AXHelpTag windows; Rift windows carry no role.
+    if app and app ~= "" and not window["is-hidden"] and (window.role or "AXWindow") == "AXWindow" then
+      local floating = window["is-floating"] == true and not window["is-minimized"]
+      local entry = app ~= "Google Chrome" and seen_apps[id][app]
+      if entry then
+        entry.floating = entry.floating and floating
+      else
+        entry = { app = app, floating = floating }
+        seen_apps[id][app] = entry
+        table.insert(apps_by_space[id], entry)
+      end
     end
   end
   local seen = {}
@@ -190,8 +207,10 @@ local function render(spaces, windows, displays, bar_displays, layout)
       set_changed(pill.trail, { drawing = visible and #apps > 0, display = display or "active" })
       set_changed(pill.padding, { drawing = visible, display = display or "active" })
       for i, slot in ipairs(pill.slots) do
-        local app = (apps_by_space[space.index] or {})[i]
+        local entry = apps[i]
+        local app = entry and entry.app
         set_changed(slot, { drawing = visible and app ~= nil, display = display or "active",
+          label = { drawing = entry ~= nil and entry.floating },
           background = { image = app and ("app." .. app) or "" } })
       end
     end

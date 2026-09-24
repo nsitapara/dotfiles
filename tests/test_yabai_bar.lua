@@ -44,9 +44,10 @@ local function fixture()
       {index=2,display=2,label="ws2",["has-focus"]=false,["is-native-fullscreen"]=false},
       {index=3,display=2,label="",["is-native-fullscreen"]=true},
     },
-    windows = {{id=1,space=1,app="Terminal"},{id=2,space=1,app="Terminal"},
-      {id=3,space=1,app="Google Chrome"},{id=4,space=1,app="Google Chrome"},
-      {id=5,space=1,app="Google Chrome",["is-hidden"]=true}},
+    windows = {{id=1,space=1,app="Terminal"},{id=2,space=1,app="Terminal",["is-floating"]=true},
+      {id=3,space=1,app="Google Chrome"},{id=4,space=1,app="Google Chrome",["is-floating"]=true},
+      {id=5,space=1,app="Google Chrome",["is-hidden"]=true},
+      {id=6,space=1,app="Google Chrome",role="AXHelpTag",["is-floating"]=true}},
     displays = {{index=1,id=100,frame={x=0,y=0}},{index=2,id=200,frame={x=1920,y=0}}},
     bar_displays = {{DirectDisplayID=100,["arrangement-id"]=2},{DirectDisplayID=200,["arrangement-id"]=1}},
   }
@@ -58,7 +59,10 @@ assert(items["yabai.space.3.app.1"].props.background.image == "app.Terminal")
 assert(items["yabai.space.3.app.2"].props.background.image == "app.Google Chrome")
 assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
 assert(items["yabai.space.3.app.3"].props.drawing == true, "Show each Chrome window")
-assert(items["yabai.space.3.app.4"].props.drawing == false, "Group other apps and skip hidden windows")
+assert(items["yabai.space.3.app.4"].props.drawing == false, "Group other apps and skip hidden windows and tooltips")
+assert(items["yabai.space.3.app.1"].props.label.drawing == false, "Badge an app only when all its windows float")
+assert(items["yabai.space.3.app.2"].props.label.drawing == false)
+assert(items["yabai.space.3.app.3"].props.label.drawing == true, "Badge a floating Chrome window")
 assert(items["yabai.space.native3"] == nil, "Skip native fullscreen Spaces")
 for _, i in ipairs({1,4,5,6}) do
   local props = items["yabai.space." .. i].props
