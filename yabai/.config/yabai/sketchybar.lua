@@ -270,19 +270,19 @@ local function labels_ready(spaces, layout)
   -- During daemon startup and profile changes, managed desktops temporarily
   -- lose their labels. Keep the previous frame until spaces.sh finishes;
   -- otherwise these desktops create duplicate D pills beside the fixed slots.
+  -- Labels follow their windows across hotplug, so count them, not their order.
   for _, screen in ipairs(layout or {}) do
-    local managed = {}
+    local wanted, managed, labelled = {}, 0, 0
+    for _, workspace in ipairs(screen.workspaces or {}) do wanted["ws" .. workspace] = true end
     for _, space in ipairs(spaces) do
       local label = space.label or ""
       if space.display == screen.index and not space["is-native-fullscreen"]
         and (label == "" or label:match("^ws[1-9]$")) then
-        managed[#managed + 1] = space
+        managed = managed + 1
+        if wanted[label] then labelled = labelled + 1 end
       end
     end
-    table.sort(managed, function(a, b) return a.index < b.index end)
-    for i, workspace in ipairs(screen.workspaces or {}) do
-      if managed[i] and managed[i].label ~= "ws" .. workspace then return false end
-    end
+    if labelled < math.min(managed, #(screen.workspaces or {})) then return false end
   end
   return true
 end

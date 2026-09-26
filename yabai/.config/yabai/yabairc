@@ -90,10 +90,11 @@ done
 # changes and never switches the window manager or repairs physical displays.
 # Undocking fires several of these at once while displays are still settling;
 # a run that loses the lock or sees a moving topology exits 1, so retry.
-# New screens drop any manual bar pick and follow what is connected.
+# New screens drop any manual bar pick and follow what is connected. macOS keeps
+# shuffling desktops for a few seconds, so sweep leftover empty ones once more.
 for event in display_added display_removed display_moved display_resized; do
     yabai -m signal --add label="dotfiles-$event" event="$event" \
-        action='(echo "$(date "+%F %T") '"$event"'"; for try in 1 2 3 4 5 6 7 8 9 10; do "$HOME/.config/yabai/scripts/display-profile.sh" --hotplug && break; sleep 3; done) >>"$HOME/.local/state/dotfiles-wm/display-profile.log" 2>&1 &'
+        action='(echo "$(date "+%F %T") '"$event"'"; for try in 1 2 3 4 5 6 7 8 9 10; do "$HOME/.config/yabai/scripts/display-profile.sh" --hotplug && { sleep 5; "$HOME/.config/yabai/scripts/ensure-spaces.sh"; break; }; sleep 3; done) >>"$HOME/.local/state/dotfiles-wm/display-profile.log" 2>&1 &'
 done
 
 # wm.sh creates and labels desktops once the daemon is ready.
