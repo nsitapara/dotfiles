@@ -1,10 +1,10 @@
 -- Display profile menu: a monitor icon plus the number of external screens the
--- pinned profile uses (2, 1, or 0). Profiles are pinned by hand; nothing polls.
+-- profile uses (2, 1, or 0). Auto follows the connected screens; others pin one.
 local colors = require("colors")
 local settings = require("settings")
-local order = { "docked", "single", "laptop" }
+local order = { "auto", "docked", "single", "laptop" }
 local number = { docked = "2", single = "1", laptop = "0" }
-local titles = { docked = "2 monitors", single = "1 monitor", laptop = "Laptop only" }
+local titles = { auto = "Auto", docked = "2 monitors", single = "1 monitor", laptop = "Laptop only" }
 local wm = 'export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; "$HOME/dotfiles/wm.sh" profile'
 
 local menu = sbar.add("item", "display.profile", {
