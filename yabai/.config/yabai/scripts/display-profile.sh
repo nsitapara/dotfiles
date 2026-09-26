@@ -73,7 +73,10 @@ done < <(jq -nr --argjson spaces "$spaces" --argjson plan "$plan" '
 
 # Only the bar changes Stow packages. AeroSpace's config is left alone.
 if [[ "$live" != *"/$package/.config/"* ]]; then
-    stow --dir="$ROOT" --target="$HOME" -D sketchybar sketchybar-docked
+    # One call per package: Stow 2.4 aborts when the first unstow removes the
+    # folded ~/.config/sketchybar link and the second then walks it.
+    stow --dir="$ROOT" --target="$HOME" -D sketchybar
+    stow --dir="$ROOT" --target="$HOME" -D sketchybar-docked
     stow --dir="$ROOT" --target="$HOME" "$package"
 fi
 temp=$(mktemp "$STATE/display-layout.XXXXXX")

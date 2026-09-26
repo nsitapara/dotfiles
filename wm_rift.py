@@ -250,7 +250,9 @@ def profile():
     live = Path.home() / '.config/sketchybar/sketchybarrc'
     expected = ROOT / package / '.config/sketchybar/sketchybarrc'
     if live.resolve() != expected:
-        run('stow', '--dir=' + str(ROOT), '--target=' + str(Path.home()), '-D', 'sketchybar', 'sketchybar-docked')
+        # One call per package; see display-profile.sh for the Stow 2.4 abort.
+        for stale in ('sketchybar', 'sketchybar-docked'):
+            run('stow', '--dir=' + str(ROOT), '--target=' + str(Path.home()), '-D', stale)
         run('stow', '--dir=' + str(ROOT), '--target=' + str(Path.home()), package)
     if run('pgrep', '-x', 'sketchybar', check=False).returncode == 0:
         run('sketchybar', '--set', 'display_mode', 'label=reloading', check=False)
