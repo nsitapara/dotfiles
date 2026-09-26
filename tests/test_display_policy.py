@@ -202,6 +202,13 @@ class NativeProfileTests(unittest.TestCase):
         self.run_profile(hotplug=True)
         self.assertFalse(pin.exists())
 
+    def test_busy_bar_retries_only_after_hotplug(self):
+        self.run_profile()
+        self.state['plan'][0]['frame']['x'] += 1
+        self.state['loaded'] = ''
+        self.run_profile()
+        self.run_profile(success=False, hotplug=True)
+
     def test_three_screens_apply_both_padding_values_and_nine_slots(self):
         self.state['plan'][0]['workspaces'] = [7,8,9]
         self.state['plan'] += [dict(screen(2,'LG HDR QHD'),workspaces=[1,3,5],top_padding=50),

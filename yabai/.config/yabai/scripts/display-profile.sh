@@ -17,7 +17,7 @@ STATE="$HOME/.local/state/dotfiles-wm"
 if $hotplug; then rm -f "$STATE/display-profile.pin"; fi
 if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
     exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
-    lockf -s -t 10 9 || exit 1
+    lockf -s -t 10 9 || { echo 'Another display profile run holds the lock; will retry.' >&2; exit 1; }
 fi
 if ! launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
     $force && exit 1
@@ -50,8 +50,12 @@ if pgrep -x sketchybar >/dev/null; then
     bar_running=true
     loaded=$(sketchybar --query display_mode 2>/dev/null |
         sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p') || exit 1
-    # Don't interrupt a bar reload in progress; the next event/interval retries.
-    if [ -z "$loaded" ] && ! $force; then exit 0; fi
+    # Don't interrupt a bar reload in progress. Nothing polls, so a hotplug run
+    # must fail here to be retried; the bar also goes blank while screens change.
+    if [ -z "$loaded" ] && ! $force; then
+        $hotplug || exit 0
+        echo 'SketchyBar is busy; will retry.' >&2; exit 1
+    fi
 fi
 old=$(cat "$STATE/display-profile.signature" 2>/dev/null || true)
 if ! $force && [ "$signature" = "$old" ] && [[ "$live" == *"/$package/.config/"* ]] &&
