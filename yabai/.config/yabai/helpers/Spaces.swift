@@ -64,10 +64,11 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> (Int, Int) {
         }
     }
     func count(_ all: [Space], _ display: Display) -> Int { ordinary(all, display).count }
-    // The last unlabelled, empty desktop beyond the target, if any.
+    // The last unlabelled, empty desktop beyond the target, if any. macOS keeps
+    // at least one desktop per display, so a screen with no workspaces keeps one.
     func surplus(_ all: [Space], _ display: Display, _ target: Int) -> Space? {
         let desktops = ordinary(all, display)
-        guard desktops.count > target else { return nil }
+        guard desktops.count > max(target, 1) else { return nil }
         return desktops.reversed().first { $0.label.isEmpty && $0.windows.isEmpty }
     }
     let screens = try displays()
