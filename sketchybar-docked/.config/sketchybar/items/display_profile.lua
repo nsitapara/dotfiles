@@ -1,10 +1,11 @@
--- Display profile menu: a monitor icon plus the number of external screens the
--- profile uses (2, 1, or 0). Auto follows the connected screens; others pin one.
+-- Display profile menu: a monitor icon plus the number of external screens in
+-- use (2, 1, or 0). It follows the connected screens; a pick here overrides that
+-- until the screens change. Nothing polls.
 local colors = require("colors")
 local settings = require("settings")
-local order = { "auto", "docked", "single", "laptop" }
+local order = { "docked", "single", "laptop" }
 local number = { docked = "2", single = "1", laptop = "0" }
-local titles = { auto = "Auto", docked = "2 monitors", single = "1 monitor", laptop = "Laptop only" }
+local titles = { docked = "2 monitors", single = "1 monitor", laptop = "Laptop only" }
 local wm = 'export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; "$HOME/dotfiles/wm.sh" profile'
 
 local menu = sbar.add("item", "display.profile", {
@@ -48,7 +49,7 @@ local function refresh()
       row:set({ label = { color = id == active_manager and colors.mauve or colors.white } })
     end
     for id, row in pairs(rows) do
-      row:set({ label = { color = id == pinned and colors.mauve or colors.white } })
+      row:set({ label = { color = id == shown_profile and colors.mauve or colors.white } })
     end
   end)
 end

@@ -165,9 +165,10 @@ class NativeProfileTests(unittest.TestCase):
         self.state = dict(package='sketchybar-docked',loaded='docked',
                           plan=[dict(screen(1,'Built-in',True),workspaces=[1,2,3,4,5,6],top_padding=16)])
 
-    def run_profile(self, success=True, force=False):
+    def run_profile(self, success=True, force=False, hotplug=False):
         self.statefile.write_text(json.dumps(self.state))
-        result = subprocess.run(['/bin/bash', str(self.script)] + (['--force'] if force else []),env=self.env,
+        flags = (['--force'] if force else []) + (['--hotplug'] if hotplug else [])
+        result = subprocess.run(['/bin/bash', str(self.script)] + flags,env=self.env,
                                 capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode == 0,success,result.stdout+result.stderr)
         self.state = json.loads(self.statefile.read_text())
@@ -191,6 +192,15 @@ class NativeProfileTests(unittest.TestCase):
         (self.signature.parent/'display-profile.pin').write_text('laptop\n')
         self.run_profile()
         self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
+
+    def test_screen_change_drops_manual_pick(self):
+        pin = self.signature.parent/'display-profile.pin'
+        self.run_profile()
+        pin.write_text('single\n')
+        self.run_profile()
+        self.assertTrue(pin.exists())
+        self.run_profile(hotplug=True)
+        self.assertFalse(pin.exists())
 
     def test_three_screens_apply_both_padding_values_and_nine_slots(self):
         self.state['plan'][0]['workspaces'] = [7,8,9]

@@ -2,8 +2,10 @@
 # Apply the native-Space profile under the same lock as wm.sh and AeroSpace.
 set -euo pipefail
 force=false
+hotplug=false
 case "${1:-}" in
     --force) force=true ;;
+    --hotplug) hotplug=true ;;
     "") ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
 esac
@@ -11,6 +13,8 @@ export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 STATE="$HOME/.local/state/dotfiles-wm"
+# A bar pick overrides detection only until the screens change.
+if $hotplug; then rm -f "$STATE/display-profile.pin"; fi
 if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
     exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
     lockf -s -t 10 9 || exit 1
