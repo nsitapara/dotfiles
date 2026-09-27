@@ -67,6 +67,13 @@ yabai -m signal --add label=dotfiles-unhide-front-app event=application_front_sw
 yabai -m signal --add label=dotfiles-minimize-refocus event=window_minimized \
     action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" --restore; [ "$(yabai -m query --windows --window 2>/dev/null | jq -r ".\"is-minimized\"")" = false ] || yabai -m window --focus recent'
 
+# Remember each window's workspace so display changes can put it back. The
+# script ignores events while the screens differ from the applied layout.
+for event in window_created window_destroyed window_focused space_changed; do
+    yabai -m signal --add label="dotfiles-memory-$event" event="$event" \
+        action='/usr/bin/python3 "$HOME/.config/yabai/scripts/workspace-memory.py" save'
+done
+
 # Native 'recent' excludes floating windows, so retain a pair from focus events.
 /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" reset
 yabai -m signal --add label=dotfiles-focus-history event=window_focused \

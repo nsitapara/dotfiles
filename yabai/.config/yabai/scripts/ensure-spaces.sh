@@ -11,17 +11,11 @@ plan=$(mktemp "${TMPDIR:-/tmp}/dotfiles-layout.XXXXXX")
 trap 'rm -f "$result" "$plan"' EXIT
 "$HERE/display-layout.sh" > "$plan"
 # Launch as an app so macOS grants permission to this helper, not the terminal.
-helper() {
-    open -W -n -g "$HOME/Applications/Dotfiles Spaces.app" --args "$(command -v yabai)" "$result" "$plan"
-    if ! grep -q '^OK ' "$result"; then
-        cat "$result" >&2
-        echo 'Automatic desktop setup did not finish.' >&2
-        return 1
-    fi
-    cat "$result"
-}
-helper || exit 1
-out=$("$HERE/spaces.sh" --plan "$plan" "$@")
-printf '%s\n' "$out"
-# Moved workspaces leave empty unlabelled desktops on the old display.
-if grep -q '^Moved ' <<< "$out"; then helper || true; fi
+open -W -n -g "$HOME/Applications/Dotfiles Spaces.app" --args "$(command -v yabai)" "$result" "$plan"
+if ! grep -q '^OK ' "$result"; then
+    cat "$result" >&2
+    echo 'Automatic desktop setup did not finish.' >&2
+    exit 1
+fi
+cat "$result"
+"$HERE/spaces.sh" --plan "$plan" "$@"

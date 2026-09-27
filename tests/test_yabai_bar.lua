@@ -224,15 +224,6 @@ restarting.spaces[2].label = "ws2"
 callbacks[#callbacks](restarting)
 assert(items["yabai.space.3.app.1"].props.drawing == true, "Label completion restores app icons")
 assert(items["yabai.space.2"].props.icon.color == 2, "Restored desktop is no longer a placeholder")
--- Labels move with their windows on hotplug, so native order need not match.
-events["yabai.observer:display_change"]({})
-local reordered = fixture()
-reordered.layout = {{index=1,id=100,workspaces={3}},{index=2,id=200,workspaces={2,4}}}
-reordered.spaces[2].label = "ws4"
-reordered.spaces[#reordered.spaces+1] = {index=4,display=2,label="ws2",["is-native-fullscreen"]=false}
-reordered.windows[#reordered.windows+1] = {id=20,space=4,app="Slack"}
-callbacks[#callbacks](reordered)
-assert(items["yabai.space.2.app.1"].props.drawing == true, "Out-of-order labels still render")
 -- Real extra/custom desktops still have fallback pills.
 events["yabai.observer:yabai_windows_changed"]({})
 restarting.spaces[#restarting.spaces+1] = {index=8,display=1,label="custom",["is-native-fullscreen"]=false}

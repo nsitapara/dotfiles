@@ -126,12 +126,6 @@ elif name == "yabai":
         for space in state["spaces"]:
             if space["index"] == int(args[2]): space["label"] = args[4] if len(args) > 4 else ""
         save()
-    elif args[:2] == ["-m", "window"] and args[3] == "--space":
-        window = int(args[2])
-        for space in state["spaces"]:
-            space["windows"] = [w for w in space.get("windows", []) if w != window]
-            if space["index"] == int(args[4]): space["windows"].append(window)
-        save()
 elif name == "rift": print("rift 0.5.9")
 elif name == "rift-cli":
     if args[:2] == ["query", "displays"]:
@@ -442,25 +436,9 @@ class WmTests(unittest.TestCase):
         for space in self.state["spaces"]: space["display"] = 1
         self.save()
         self.run_spaces()
-        # Labels stay with their desktops so no workspace swaps windows.
         self.assertEqual([s["label"] for s in self.state["spaces"]],
-                         ["ws1","ws3","ws5","ws2","ws4","ws6","","",""])
+                         ["ws1","ws2","ws3","ws4","ws5","ws6","","",""])
         self.assertEqual(self.state["spaces"][0]["windows"], [123])
-
-    def test_docking_moves_even_workspaces_with_their_windows(self):
-        self.native_spaces([6])
-        self.run_spaces()
-        for n, space in enumerate(self.state["spaces"], 1): space["windows"] = [100 + n]
-        # macOS keeps every desktop on the laptop; the monitor arrives empty.
-        self.state["displays"].append(dict(index=2, frame=dict(x=1920, y=0)))
-        for index in (7, 8, 9):
-            self.state["spaces"].append(dict(index=index, display=2, label="", windows=[],
-                                             **{"is-native-fullscreen": False}))
-        self.save()
-        self.run_spaces()
-        labelled = {s["label"]: (s["display"], s["windows"]) for s in self.state["spaces"] if s["label"]}
-        self.assertEqual(labelled, {"ws1": (1, [101]), "ws3": (1, [103]), "ws5": (1, [105]),
-                                    "ws2": (2, [102]), "ws4": (2, [104]), "ws6": (2, [106])})
 
 
 if __name__ == "__main__":
