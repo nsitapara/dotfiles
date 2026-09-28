@@ -52,11 +52,13 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   events["display.profile.laptop:mouse.clicked"]()
   assert(commands[#commands]:find('wm.sh" profile laptop', 1, true), commands[#commands])
   assert(menu.props.popup.drawing == false, "choosing a row closes the menu")
-  for _, manager in ipairs({"yabai", "aerospace", "rift"}) do
-    assert(items["display.profile.manager." .. manager])
-    events["display.profile.manager." .. manager .. ":mouse.clicked"]()
-    assert(commands[#commands]:find('wm.sh" use ' .. manager .. ' --temporary', 1, true))
-  end
+  events["display.profile.manager.yabai:mouse.clicked"]()
+  assert(commands[#commands]:find('wm.sh" use yabai --temporary', 1, true))
+  assert(items["display.profile.manager.aerospace"] == nil and items["display.profile.manager.rift"] == nil,
+    "only yabai is offered")
+  events["display.profile.restart:mouse.clicked"]()
+  assert(commands[#commands]:find('kickstart -k "gui/$(id -u)/local.dotfiles.yabai"', 1, true), commands[#commands])
+  assert(menu.props.popup.drawing == false, "restart closes the menu")
   assert(items["display.profile.quit"])
   events["display.profile.quit:mouse.clicked"]()
   assert(commands[#commands]:find('wm.sh" quit', 1, true))

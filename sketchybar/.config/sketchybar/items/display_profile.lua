@@ -75,7 +75,7 @@ sbar.add("item", "display.profile.manager_heading", {
   icon = { drawing = false },
   label = { string = "Window manager", color = colors.grey, align = "left", padding_left = 14, font = { size = 11 } },
 })
-for _, entry in ipairs({ {"yabai", "yabai - Y"}, {"aerospace", "AeroSpace - A"}, {"rift", "Rift - R"} }) do
+for _, entry in ipairs({ {"yabai", "yabai - Y"} }) do
   local id, title = entry[1], entry[2]
   local row = sbar.add("item", "display.profile.manager." .. id, {
     position = "popup.display.profile", width = 180,
@@ -103,6 +103,20 @@ for _, entry in ipairs({ {"yabai", "yabai - Y"}, {"aerospace", "AeroSpace - A"},
     end)
   end)
 end
+-- A restart rediscovers every window; it fixes apps yabai lost track of, such
+-- as login items that started before it.
+local restart = sbar.add("item", "display.profile.restart", {
+  position = "popup.display.profile", width = 180,
+  icon = { drawing = false },
+  label = { string = "Restart yabai", align = "left", padding_left = 14,
+    color = colors.white, font = { size = 12 } },
+})
+restart:subscribe("mouse.clicked", function()
+  shown = false
+  menu:set({ popup = { drawing = false }, label = { string = "…" } })
+  sbar.exec('mkdir -p "$HOME/.local/state/dotfiles-wm"; '
+    .. 'launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai" >>"$HOME/.local/state/dotfiles-wm/menu-switch.log" 2>&1', refresh)
+end)
 local quit = sbar.add("item", "display.profile.quit", {
   position = "popup.display.profile", width = 180,
   icon = { drawing = false },
