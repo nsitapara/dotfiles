@@ -1,8 +1,8 @@
 
 ## Window manager alternatives
 
-Yabai is the login default. The monitor menu switches managers temporarily and
-includes **Quit window manager**. `./wm.sh use yabai|rift|aerospace` chooses the
-manager now and at login; add `--temporary` for the current session only.
-See [Rift and shared switching](RIFT.md) and the
-[local performance report](reports/window-managers-2026-09-16.html).
+Yabai is the window manager. The monitor menu's **Yabai** section has
+**Restart**, which rediscovers every window (use it when an app looks floating
+but won't tile, or its bar icon is missing) and starts yabai after a quit, and
+**Quit**, which stops yabai and skhd and leaves apps open. AeroSpace's config is
+kept; `./wm.sh use aerospace` still switches to it from a terminal.
