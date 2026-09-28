@@ -16,10 +16,9 @@ class BarTests(unittest.TestCase):
         return subprocess.CompletedProcess([],code,json.dumps(value), '')
 
     def test_matching_backend_rejects_stale_foreign_pills(self):
-        for target,foreign in [('yabai','rift.space.native201'),('rift','yabai.space.2')]:
-            with self.subTest(target=target),patch.object(bar,'run',side_effect=[
-                self.result({'label':{'value':target}}),self.result({'items':[target+'.mode',foreign]})]):
-                self.assertFalse(bar.matches(target))
+        with patch.object(bar,'run',side_effect=[
+            self.result({'label':{'value':'aerospace'}}),self.result({'items':['yabai.space.2']})]):
+            self.assertFalse(bar.matches('aerospace'))
 
     def test_profile_marker_cannot_stand_in_for_manager_identity(self):
         with patch.object(bar,'run',return_value=self.result({'label':{'value':'docked'}})):
@@ -33,7 +32,7 @@ class BarTests(unittest.TestCase):
 
     def test_healthy_bar_is_not_reloaded(self):
         with patch.object(bar,'run',return_value=self.result()) as run,patch.object(bar,'matches',return_value=True):
-            bar.ensure('rift')
+            bar.ensure('aerospace')
         self.assertEqual(run.call_count,1)
 
     def test_reload_success_without_correct_backend_is_failure(self):

@@ -33,7 +33,7 @@ def saved_manager():
         if agent.exists():
             with agent.open("rb") as stream:
                 args = plistlib.load(stream).get("ProgramArguments", [])
-            if args and args[-1] in ("yabai", "aerospace", "rift"):
+            if args and args[-1] in ("yabai", "aerospace"):
                 return args[-1]
     return None
 
@@ -145,7 +145,7 @@ def _configure(manager):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("manager", choices=("yabai", "aerospace", "rift", "install", "status", "off"))
+    parser.add_argument("manager", choices=("yabai", "aerospace", "install", "status", "off"))
     args = parser.parse_args()
     if sys.platform != "darwin":
         parser.error("This script requires macOS.")

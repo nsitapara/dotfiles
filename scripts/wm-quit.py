@@ -21,21 +21,17 @@ def running(name):
 
 
 def quit_managers():
-    active=[m for m in ('yabai','rift','AeroSpace') if running(m)]
+    active=[m for m in ('yabai','AeroSpace') if running(m)]
     if len(active)==1:
         result=run(sys.executable,ROOT/'scripts/wm-session.py','capture',active[0].lower(),timeout=10)
         if result.returncode:
             print('Window assignment capture was unavailable; continuing emergency quit.',file=sys.stderr)
     # Reveal virtual-workspace windows before deactivation whenever IPC works.
-    if 'rift' in active:
-        result=run(sys.executable,ROOT/'wm_rift.py','release',timeout=20)
-        if result.returncode:
-            print('Rift did not release every hidden window. Restart a manager to restore captured assignments.',file=sys.stderr)
     if 'AeroSpace' in active:
         run('aerospace','enable','off')
-    labels=[f'local.dotfiles.rift.{e}' for e in ('workspace_changed','windows_changed','focused_window_changed')]
-    for app in ('skhd','yabai','rift','aerospace'):
-        labels.extend(f'{prefix}.{app}' for prefix in ('local.dotfiles','com.asmvik','com.koekeishiya','homebrew.mxcl','com.acsandmann'))
+    labels=[]
+    for app in ('skhd','yabai','aerospace'):
+        labels.extend(f'{prefix}.{app}' for prefix in ('local.dotfiles','com.asmvik','com.koekeishiya','homebrew.mxcl'))
     labels.append('bobko.aerospace')
     for label in labels:
         if run('launchctl','list',label).returncode == 0:
@@ -43,10 +39,10 @@ def quit_managers():
     if running('AeroSpace'):
         run('osascript','-e','tell application "AeroSpace" to quit')
     # Also stop manually launched instances, including conflicting managers.
-    for app in ('skhd','yabai','rift','AeroSpace'):
+    for app in ('skhd','yabai','AeroSpace'):
         if running(app):run('pkill','-TERM','-u',str(os.getuid()),'-x',app)
     for _ in range(30):
-        remaining=[app for app in ('skhd','yabai','rift','AeroSpace') if running(app)]
+        remaining=[app for app in ('skhd','yabai','AeroSpace') if running(app)]
         if not remaining:break
         time.sleep(.1)
     else:

@@ -29,7 +29,7 @@ sbar.add("bracket", "display.profile.bracket", { menu.name }, { background = { c
 sbar.add("item", "display.profile.padding", { position = "right", width = settings.group_paddings })
 
 local rows, shown = {}, false
-local letters = { yabai = "Y", aerospace = "A", rift = "R", none = "Off" }
+local letters = { yabai = "Y", aerospace = "A", none = "Off" }
 local active_manager = "none"
 local generation = 0
 local function refresh()

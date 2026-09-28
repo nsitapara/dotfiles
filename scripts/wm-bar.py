@@ -21,8 +21,7 @@ def matches(manager):
         if bar.returncode:
             return False
         items=json.loads(bar.stdout)['items']
-        foreign=tuple(prefix for owner,prefix in [('rift','rift.'),('yabai','yabai.')] if owner != manager)
-        if any(name.startswith(foreign) for name in items):
+        if manager != 'yabai' and any(name.startswith('yabai.') for name in items):
             return False
         return manager in ('aerospace','none') or manager+'.mode' in items
     except (ValueError,KeyError,subprocess.TimeoutExpired):
@@ -48,8 +47,8 @@ def ensure(manager):
 
 if __name__ == '__main__':
     os.environ['PATH'] += ':/opt/homebrew/bin:/usr/local/bin'
-    if len(sys.argv) != 2 or sys.argv[1] not in ('yabai','rift','aerospace','none'):
-        sys.exit('Usage: wm-bar.py yabai|rift|aerospace|none')
+    if len(sys.argv) != 2 or sys.argv[1] not in ('yabai','aerospace','none'):
+        sys.exit('Usage: wm-bar.py yabai|aerospace|none')
     try:
         ensure(sys.argv[1])
     except (RuntimeError,subprocess.TimeoutExpired) as error:

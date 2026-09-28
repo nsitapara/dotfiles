@@ -36,7 +36,7 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   callbacks[1]("docked laptop yabai\n") -- pinned docked, but only the laptop layout fit
   assert(menu.props.label.string == "2", menu.props.label.string)
   assert(menu.props.label.color == 3 and menu.props.icon.color == 3, "a pin that is not in effect shows grey")
-  callbacks[1]("docked docked rift\n")
+  callbacks[1]("docked docked aerospace\n")
   assert(menu.props.label.color == 2 and menu.props.icon.color == 2, "a pin in effect is plain white")
   callbacks[1]("auto single aerospace\n") -- no pin yet: show the applied layout
   assert(menu.props.label.string == "1 A" and menu.props.label.color == 2, menu.props.label.string)
@@ -53,7 +53,7 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   assert(commands[#commands]:find('wm.sh" profile laptop', 1, true), commands[#commands])
   assert(menu.props.popup.drawing == false, "choosing a row closes the menu")
   assert(items["display.profile.manager_heading"].props.label.string == "Yabai")
-  for _, manager in ipairs({"yabai", "aerospace", "rift"}) do
+  for _, manager in ipairs({"yabai", "aerospace"}) do
     assert(items["display.profile.manager." .. manager] == nil, "no manager switch rows")
   end
   events["display.profile.restart:mouse.clicked"]()

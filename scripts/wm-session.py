@@ -5,14 +5,36 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-import wm_rift as rift
+STATE = Path(os.environ.get('DOTFILES_WM_STATE_DIR', Path.home() / '.local/state/dotfiles-wm'))
+os.environ['PATH'] += ':' + str(Path.home() / '.local/bin') + ':/opt/homebrew/bin:/usr/local/bin'
 
-STATE = rift.STATE
-run = rift.run
+
+def run(*args, check=True, input=None):
+    result = subprocess.run([str(a) for a in args], capture_output=True, text=True,
+                            input=input, timeout=30)
+    if check and result.returncode:
+        raise RuntimeError(' '.join(str(a) for a in args) + ': ' + (result.stderr.strip() or result.stdout.strip() or 'failed'))
+    return result
+
+
+def write_state(name, value):
+    STATE.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode='w', dir=STATE, delete=False) as stream:
+        json.dump(value, stream)
+        path = Path(stream.name)
+    path.chmod(0o600)
+    path.replace(STATE / name)
+
+
+def read_state(name, default=None):
+    try:
+        return json.loads((STATE / name).read_text())
+    except (FileNotFoundError, ValueError):
+        return default
 
 
 def query_yabai(*args):
@@ -25,9 +47,7 @@ def aerospace_windows():
 
 
 def capture(manager):
-    if manager == 'rift':
-        data = rift.snapshot()
-    elif manager == 'yabai':
+    if manager == 'yabai':
         spaces = {s['index']: s for s in query_yabai('--spaces')}
         displays = {d['index']: d for d in query_yabai('--displays')}
         windows = []
@@ -54,7 +74,7 @@ def capture(manager):
                     focused=w['window-id'] == focused) for w in aerospace_windows()
                     if str(w['workspace']).isdigit() and 1 <= int(w['workspace']) <= 9])
     data['captured_at'] = time.time()
-    rift.write_state('handoff.json', data)
+    write_state('handoff.json', data)
 
 
 def prepare(manager, target):
@@ -64,7 +84,7 @@ def prepare(manager, target):
         visible = {s['display']: s['index'] for s in query_yabai('--spaces')
                    if s['is-visible'] and not s['is-native-fullscreen']}
         displays = {d['uuid']: d['index'] for d in query_yabai('--displays')}
-        saved = rift.read_state('handoff.json', {})
+        saved = read_state('handoff.json', {})
         for w in saved.get('windows', []):
             destination = visible.get(displays.get(w.get('display')))
             if destination is not None and destination != w.get('native_space'):
@@ -75,29 +95,11 @@ def prepare(manager, target):
 
 
 def restore(manager):
-    data = rift.read_state('handoff.json')
+    data = read_state('handoff.json')
     if not data or time.time() - data.get('captured_at', 0) > 3600:
         return
     windows = data['windows']
-    if manager == 'rift':
-        live = rift.snapshot()['windows']
-        identities = {(w['id'], w['pid']): w for w in live}
-        plan = rift.read_state('display-layout.json')
-        slots = rift.mappings(plan)
-        for old in windows:
-            window = identities.get((old['id'], old['pid']))
-            if window is None:
-                continue  # It closed while switching; never match by title or app alone.
-            number = old['workspace'] if old['workspace'] in slots else min(slots)
-            rift.move_window(window, number, True)
-            if window['floating'] != old['floating']:
-                rift.focus_window(window)
-                rift.execute('window', 'toggle-float')
-        focused = next((w for w in windows if w['focused'] and (w['id'],w['pid']) in identities), None)
-        if focused:
-            rift.switch(focused['workspace'] if focused['workspace'] in slots else min(slots), False)
-            rift.focus_window(identities[(focused['id'],focused['pid'])])
-    elif manager == 'yabai':
+    if manager == 'yabai':
         live = {(w['id'],w['pid']): w for w in query_yabai('--windows')}
         labels = {s['label'] for s in query_yabai('--spaces')}
         for w in windows:

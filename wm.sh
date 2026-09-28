@@ -6,7 +6,6 @@ export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin"
 STATE="${DOTFILES_WM_STATE_DIR:-$HOME/.local/state/dotfiles-wm}"
 YABAI_JOB=local.dotfiles.yabai
 SKHD_JOB=local.dotfiles.skhd
-RIFT_JOB=local.dotfiles.rift
 
 die() { echo "$*" >&2; exit 1; }
 loaded() { launchctl list "$1" >/dev/null 2>&1; }
@@ -72,16 +71,15 @@ case "${1:-help}" in
     help|--help|-h)
         cat <<'EOF'
 Usage: ./wm.sh COMMAND
-  install [MANAGER]    Install/link yabai (default), aerospace, or rift; start nothing
-  use MANAGER          Switch now and at login: rift, yabai, or aerospace
+  install [MANAGER]    Install/link yabai (default) or aerospace; start nothing
+  use MANAGER          Switch now and at login: yabai or aerospace
   use MANAGER --temporary  Switch only for the current login
   quit                 Stop running managers and shortcuts; keep apps and login default
-  rift                 Switch to Rift for this login
   doctor               Check dependencies, macOS preferences, and running apps
   prepare              Save/set native Spaces preferences; then log out and in
   yabai                Quit AeroSpace, start yabai + skhd, reload SketchyBar
   aerospace            Switch to AeroSpace and reload SketchyBar
-  default MANAGER      Switch now and at login: yabai, aerospace, or rift
+  default MANAGER      Switch now and at login: yabai or aerospace
   default status       Show the saved login default
   default install      Install/repair the desktop service with the saved choice
   default off          Remove desktop service; keep current manager running
@@ -91,17 +89,17 @@ Usage: ./wm.sh COMMAND
   restore-preferences  Restore preferences saved by prepare; then log out and in
   status               Show running apps and owned jobs
 
-SIP stays enabled. See RIFT.md for shared switching and YABAI.md for the baseline.
+SIP stays enabled. See YABAI.md for the baseline.
 EOF
         exit 0 ;;
 esac
 [ "$(uname -s)" = Darwin ] || die "This script requires macOS."
 if [ "$1" = use ]; then
-    case "${2:-}" in yabai|aerospace|rift) ;; *) die "Use: ./wm.sh use rift|yabai|aerospace [--temporary]" ;; esac
+    case "${2:-}" in yabai|aerospace) ;; *) die "Use: ./wm.sh use yabai|aerospace [--temporary]" ;; esac
     case "$#:${3:-}" in
         2:) exec /usr/bin/python3 "$ROOT/wm-startup.py" "$2" ;;
         3:--temporary) set -- "$2" ;;
-        *) die "Use: ./wm.sh use rift|yabai|aerospace [--temporary]" ;;
+        *) die "Use: ./wm.sh use yabai|aerospace [--temporary]" ;;
     esac
 fi
 if [ "$1" = default ]; then
@@ -131,13 +129,6 @@ case "$1" in
         exec /usr/bin/python3 "$ROOT/scripts/wm-quit.py" ;;
     install)
         case "${2:-yabai}" in
-            rift)
-                /usr/bin/python3 "$ROOT/scripts/install-rift.py"
-                need stow; need skhd; need jq
-                stow --simulate --dir="$ROOT" --target="$HOME" rift skhd
-                stow --dir="$ROOT" --target="$HOME" rift skhd
-                echo "Rift installed. Grant Accessibility access, then run ./wm.sh use rift."
-                exit 0 ;;
             aerospace)
                 need brew
                 brew install --cask nikitabobko/tap/aerospace
@@ -160,10 +151,10 @@ case "$1" in
         "$ROOT/yabai/.config/yabai/scripts/build-spaces-helper.sh"
         echo "Installed and linked. Nothing started. Next: ./wm.sh doctor" ;;
     doctor|status)
-        for app in AeroSpace yabai rift skhd sketchybar; do
+        for app in AeroSpace yabai skhd sketchybar; do
             if running "$app"; then echo "$app: running"; else echo "$app: stopped"; fi
         done
-        for app in yabai rift skhd; do
+        for app in yabai skhd; do
             if command -v "$app" >/dev/null; then "$app" --version; else echo "$app: not installed"; fi
         done
         echo "Displays have separate Spaces (0 = enabled): $(defaults read com.apple.spaces spans-displays 2>/dev/null || echo 'default')"
@@ -171,7 +162,6 @@ case "$1" in
         echo "Active manager: $(active_manager)"
         /usr/bin/python3 "$ROOT/wm-startup.py" status
         echo "Accessibility permission is required for the selected manager and skhd."
-        if loaded "$RIFT_JOB"; then rift-cli query displays; fi
         echo "If skhd ignores keys, check whether your terminal has Secure Keyboard Entry enabled."
         if loaded "$YABAI_JOB"; then echo "yabai owned job: loaded"; fi
         if loaded "$SKHD_JOB"; then echo "skhd owned job: loaded"; fi
@@ -185,7 +175,7 @@ case "$1" in
         echo "Log out and back in to enable separate Spaces, then run ./wm.sh yabai."
         echo "This script does not log you out or change SIP." ;;
     restore-preferences)
-        { running yabai || running rift; } && die "Switch to AeroSpace before restoring preferences."
+        running yabai && die "Switch to AeroSpace before restoring preferences."
         for key in spans-displays mru-spaces; do
             [ -f "$STATE/$key.before" ] || continue
             domain=com.apple.dock
@@ -201,7 +191,7 @@ case "$1" in
         echo "Preferences restored. Log out and back in for the Spaces change." ;;
     _stop) stop_manager "$2" ;;
     current) active_manager ;;
-    yabai|aerospace|rift)
+    yabai|aerospace)
         switch_manager "$1" ;;
     profile)
         pin="$STATE/display-profile.pin"
@@ -218,11 +208,7 @@ case "$1" in
         exec 9>&-
         exec "$ROOT/switch-display-mode.sh" ;;
     spaces|reload)
-        if running rift; then
-            if [ "$1" = reload ]; then rift-cli execute config reload; skhd --reload; fi
-            DOTFILES_WM_LOCKED=1 /usr/bin/python3 "$ROOT/wm_rift.py" profile
-            exit 0
-        elif running AeroSpace; then
+        if running AeroSpace; then
             aerospace reload-config
             exec 9>&-
             exec "$ROOT/switch-display-mode.sh"

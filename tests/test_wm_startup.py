@@ -81,11 +81,6 @@ class StartupTests(unittest.TestCase):
         self.assertFalse(any(c[1] in ("bootout", "bootstrap") for c in self.calls))
         self.assertTrue(any(c[:2] == ["launchctl", "kickstart"] and "-k" not in c for c in self.calls))
 
-    def test_rift_becomes_saved_choice(self):
-        startup.configure("rift")
-        self.assertEqual(startup.saved_manager(), "rift")
-        self.assertEqual(plistlib.loads(self.agent.read_bytes())["ProgramArguments"][-1], "rift")
-
     def test_aerospace_becomes_saved_choice(self):
         startup.configure("yabai")
         self.calls.clear()
@@ -131,7 +126,7 @@ class StartupTests(unittest.TestCase):
         startup.configure('yabai')
         before=self.agent.read_bytes()
         self.fail_bootstrap=True
-        with self.assertRaises(subprocess.CalledProcessError):startup.configure('rift')
+        with self.assertRaises(subprocess.CalledProcessError):startup.configure('aerospace')
         self.assertEqual(self.agent.read_bytes(),before)
         self.assertEqual(startup.saved_manager(),'yabai')
 

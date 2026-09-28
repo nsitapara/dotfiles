@@ -21,5 +21,4 @@ trap 'rm -f "$temp"' EXIT
 printf '%s %s\n' "$pid" "$1" > "$temp"
 mv "$temp" "$state"
 event=yabai_mode_changed
-if launchctl list local.dotfiles.rift >/dev/null 2>&1; then event=rift_mode_changed; fi
 sketchybar --trigger "$event" MODE="$1"

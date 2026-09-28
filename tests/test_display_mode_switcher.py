@@ -119,7 +119,7 @@ class DisplayModeTests(unittest.TestCase):
         wm = self.path / "wm.sh"
         wm.write_text('#!/bin/bash\nprintf "%s" "$1" > "$DISPLAY_TEST_DIR/login-manager"\nexit 7\n')
         wm.chmod(0o755)
-        for manager in ("yabai", "aerospace", "rift"):
+        for manager in ("yabai", "aerospace"):
             with self.subTest(manager=manager):
                 result = subprocess.run([str(self.script), "--service", manager], env=self.env,
                                         capture_output=True, text=True, timeout=5)

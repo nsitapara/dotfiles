@@ -1,9 +1,8 @@
 local root = assert(arg[1], "Pass the repository path")
 package.preload.colors = function() return { mauve=1, bg1=2, white=3 } end
 for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
-  for _, manager in ipairs({false, true, "rift"}) do
-    local rift = manager == "rift"
-    local yabai = manager == true or rift
+  for _, manager in ipairs({false, true}) do
+    local yabai = manager == true
     local item, events, callbacks, items = nil, {}, {}, {}
     sbar = {
       add = function(kind, name, props)
@@ -35,7 +34,7 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
     assert(not items["wm.help.1"], "Help rows are created only on demand")
     events.wm_help_toggle()
     assert(item.props.popup.drawing, "? opens help in service mode")
-    assert(items["wm.help.1"].props.label.string == (rift and "Rift + skhd" or (yabai and "yabai + skhd" or "AeroSpace")))
+    assert(items["wm.help.1"].props.label.string == (yabai and "yabai + skhd" or "AeroSpace"))
     assert(items["wm.help.1"].props.position == "popup.wm.service")
     assert(item.props.popup.height == 25)
     local has_close_others, has_insertion, has_merge = false, false, false
@@ -47,12 +46,12 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
       end
     end
     assert(has_close_others == not yabai, "Only AeroSpace binds close-other-windows")
-    assert(has_insertion == (yabai and not rift) and has_merge == not yabai, "Show manager-specific modes")
+    assert(has_insertion == yabai and has_merge == not yabai, "Show manager-specific modes")
     events.wm_help_toggle()
     assert(not item.props.popup.drawing, "? toggles help off")
     events["mouse.clicked"]()
     assert(item.props.popup.drawing, "Clicking SERVICE opens help too")
-    local event = rift and "rift_mode_changed" or (yabai and "yabai_mode_changed" or "aerospace_mode_changed")
+    local event = yabai and "yabai_mode_changed" or "aerospace_mode_changed"
     events[event]({MODE="default"})
     if not yabai then callbacks[#callbacks]("main\n") end
     assert(not item.props.drawing, "Hide on exit")
