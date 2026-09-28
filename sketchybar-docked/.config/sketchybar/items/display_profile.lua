@@ -28,7 +28,7 @@ local menu = sbar.add("item", "display.profile", {
 sbar.add("bracket", "display.profile.bracket", { menu.name }, { background = { color = colors.bg1 } })
 sbar.add("item", "display.profile.padding", { position = "right", width = settings.group_paddings })
 
-local rows, managers, shown = {}, {}, false
+local rows, shown = {}, false
 local letters = { yabai = "Y", aerospace = "A", rift = "R", none = "Off" }
 local active_manager = "none"
 local generation = 0
@@ -45,9 +45,6 @@ local function refresh()
     local in_effect = not number[pinned] or pinned == applied
     local color = in_effect and colors.white or colors.grey
     menu:set({ icon = { color = color }, label = { string = (number[shown_profile] or "–") .. (active_manager == "yabai" and "" or " " .. (letters[active_manager] or "?")), color = color } })
-    for id, row in pairs(managers) do
-      row:set({ label = { color = id == active_manager and colors.mauve or colors.white } })
-    end
     for id, row in pairs(rows) do
       row:set({ label = { color = id == shown_profile and colors.mauve or colors.white } })
     end
@@ -73,63 +70,29 @@ end
 sbar.add("item", "display.profile.manager_heading", {
   position = "popup.display.profile", width = 180,
   icon = { drawing = false },
-  label = { string = "Window manager", color = colors.grey, align = "left", padding_left = 14, font = { size = 11 } },
+  label = { string = "Yabai", color = colors.grey, align = "left", padding_left = 14, font = { size = 11 } },
 })
-for _, entry in ipairs({ {"yabai", "yabai - Y"} }) do
-  local id, title = entry[1], entry[2]
-  local row = sbar.add("item", "display.profile.manager." .. id, {
+local function manager_row(id, title, command)
+  local row = sbar.add("item", "display.profile." .. id, {
     position = "popup.display.profile", width = 180,
     icon = { drawing = false },
-    label = {
-      string = title, align = "left", padding_left = 14, padding_right = 14,
-      color = colors.white, font = { family = "SF Pro", style = "Semibold", size = 12 },
-    },
-    background = { drawing = false },
+    label = { string = title, align = "left", padding_left = 14,
+      color = colors.white, font = { size = 12 } },
   })
-  managers[id] = row
   row:subscribe("mouse.clicked", function()
     shown = false
     menu:set({ popup = { drawing = false }, label = { string = "…" } })
-    -- Alternatives are temporary; yabai stays the saved login default. Keep errors in
-    -- the desktop log; a failed switch refreshes the actual manager badge.
-    local command = 'export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; '
-      .. 'mkdir -p "$HOME/.local/state/dotfiles-wm"; '
-      .. '"$HOME/dotfiles/wm.sh" use ' .. id .. ' --temporary >>"$HOME/.local/state/dotfiles-wm/menu-switch.log" 2>&1'
-    sbar.exec(command, function(_, code)
-      if code and code ~= 0 then
-        menu:set({ label = { string = "! " .. (letters[active_manager] or "?") } })
-      end
-      refresh()
-    end)
+    sbar.exec('export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; '
+      .. 'mkdir -p "$HOME/.local/state/dotfiles-wm"; { ' .. command
+      .. '; } >>"$HOME/.local/state/dotfiles-wm/menu-switch.log" 2>&1', refresh)
   end)
 end
 -- A restart rediscovers every window; it fixes apps yabai lost track of, such
--- as login items that started before it.
-local restart = sbar.add("item", "display.profile.restart", {
-  position = "popup.display.profile", width = 180,
-  icon = { drawing = false },
-  label = { string = "Restart yabai", align = "left", padding_left = 14,
-    color = colors.white, font = { size = 12 } },
-})
-restart:subscribe("mouse.clicked", function()
-  shown = false
-  menu:set({ popup = { drawing = false }, label = { string = "…" } })
-  sbar.exec('mkdir -p "$HOME/.local/state/dotfiles-wm"; '
-    .. 'launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai" >>"$HOME/.local/state/dotfiles-wm/menu-switch.log" 2>&1', refresh)
-end)
-local quit = sbar.add("item", "display.profile.quit", {
-  position = "popup.display.profile", width = 180,
-  icon = { drawing = false },
-  label = { string = "Quit window manager", align = "left", padding_left = 14,
-    color = colors.white, font = { size = 12 } },
-})
-quit:subscribe("mouse.clicked", function()
-  shown = false
-  menu:set({ popup = { drawing = false }, label = { string = "…" } })
-  sbar.exec('export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; '
-    .. 'mkdir -p "$HOME/.local/state/dotfiles-wm"; '
-    .. '"$HOME/dotfiles/wm.sh" quit >>"$HOME/.local/state/dotfiles-wm/menu-switch.log" 2>&1', refresh)
-end)
+-- as login items that started before it. After Quit, the same row starts yabai.
+manager_row("restart", "Restart", 'if pgrep -x yabai >/dev/null; then '
+  .. 'launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai"; '
+  .. 'else "$HOME/dotfiles/wm.sh" use yabai --temporary; fi')
+manager_row("quit", "Quit", '"$HOME/dotfiles/wm.sh" quit')
 menu:subscribe("mouse.clicked", function()
   shown = not shown
   menu:set({ popup = { drawing = shown } })
