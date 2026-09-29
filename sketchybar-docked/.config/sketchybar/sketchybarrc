@@ -1,5 +1,7 @@
 #!/opt/homebrew/opt/lua@5.4/bin/lua5.4
 
 -- Load the sketchybar-package and prepare the helper binaries
+-- The launchd stdout log never rotates; start over once it passes 20 MB.
+os.execute([[f=/opt/homebrew/var/log/sketchybar/sketchybar.out.log; [ -f "$f" ] && [ "$(stat -f %z "$f")" -gt 20000000 ] && : > "$f"]])
 require("helpers")
 require("init")

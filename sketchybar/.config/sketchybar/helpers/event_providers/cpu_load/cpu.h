@@ -19,6 +19,7 @@ static inline void cpu_init(struct cpu* cpu) {
   cpu->host = mach_host_self();
   cpu->count = HOST_CPU_LOAD_INFO_COUNT;
   cpu->has_prev_load = false;
+  cpu->user_load = cpu->sys_load = cpu->total_load = 0;
 }
 
 static inline void cpu_update(struct cpu* cpu) {

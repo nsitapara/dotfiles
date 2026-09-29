@@ -65,12 +65,15 @@ sbar.add("bracket", "center_app.bracket", { center_icon.name, center_label.name,
   },
 })
 
+-- The lock screen has no app bundle; skip it and repeats so no failed image
+-- lookups get logged.
+local shown
 local function set_app(name)
   name = (name or ""):gsub("%s+$", "")
-  if name ~= "" then
-    center_icon:set({ background = { image = "app." .. name } })
-    center_label:set({ label = { string = name } })
-  end
+  if name == "" or name == shown or name == "SecurityAgentHelper" or name == "loginwindow" then return end
+  shown = name
+  center_icon:set({ background = { image = "app." .. name } })
+  center_label:set({ label = { string = name } })
 end
 
 center_label:subscribe("front_app_switched", function(env)

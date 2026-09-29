@@ -34,6 +34,7 @@ local cpu = sbar.add("graph", "widgets.cpu" , 36, {
 cpu:subscribe("cpu_update", function(env)
   -- Also available: env.user_load, env.sys_load
   local load = tonumber(env.total_load)
+  if not load or load < 0 or load > 100 then return end
   -- Keep the graph in the lower third, below the percentage label.
   cpu:push({ load / 100. * 0.3 })
 

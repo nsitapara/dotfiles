@@ -23,17 +23,22 @@ local front_icon = sbar.add("item", "front_app.icon", {
 -- Padding after the icon (no pill/bracket behind the selected-app icon)
 sbar.add("item", { width = 7 })
 
+-- The lock screen has no app bundle; skip it and repeats so no failed image
+-- lookups get logged.
+local shown
+local function show_app(name)
+  name = (name or ""):gsub("%s+$", "")
+  if name == "" or name == shown or name == "SecurityAgentHelper" or name == "loginwindow" then return end
+  shown = name
+  front_icon:set({ background = { image = "app." .. name } })
+end
+
 front_icon:subscribe("front_app_switched", function(env)
-  front_icon:set({ background = { image = "app." .. env.INFO } })
+  show_app(env.INFO)
 end)
 
 -- Seed the current front app on load (the event only fires on change)
 sbar.exec(
   "osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true'",
-  function(result)
-    local app = (result or ""):gsub("%s+$", "")
-    if app ~= "" then
-      front_icon:set({ background = { image = "app." .. app } })
-    end
-  end
+  show_app
 )
