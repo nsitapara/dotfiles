@@ -310,9 +310,9 @@ assert(animation_count == 0, "Confirming snapshot after a display change must no
 -- focus-space.py announces its target index; the pill moves before any event.
 animation_count = 0
 local queries_before = #callbacks
-events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", INDEX="4"})
+events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", TARGET="ws5"})
 assert(items["yabai.space.5"].props.icon.color == 1 and items["yabai.space.2"].props.icon.color == 2,
-       "Announced target is highlighted at once")
+       "Announced target is highlighted at once, by label")
 assert(animation_count == 2 and #callbacks == queries_before, "No query until the switch is under way")
 local expiry = timers[#timers - 1]
 timers[#timers].callback()
@@ -334,7 +334,7 @@ events["yabai.observer:yabai_windows_changed"]({})
 lagging.spaces[1]["has-focus"], lagging.spaces[4]["has-focus"] = true, false
 callbacks[#callbacks](lagging)
 assert(items["yabai.space.3"].props.icon.color == 1, "After agreement, frames rule again")
-events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", INDEX="4"})
+events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", TARGET=4})
 timers[#timers - 1].callback() -- announcement expires unanswered
 events["yabai.observer:yabai_windows_changed"]({})
 lagging.spaces[1]["has-focus"], lagging.spaces[4]["has-focus"] = true, false -- the pin mutated the shared frame

@@ -379,21 +379,21 @@ local function show_focus(focused)
   render(last_snapshot.spaces, last_snapshot.windows,
     topology.displays, topology.bar_displays, topology.layout)
 end
--- yabai_space_focus INDEX: focus-space.py names its target as it switches, so
--- keyboard and click switches never wait for an event, even across displays.
--- yabai reports the old focus for a few hundred ms more, so frames keep the
--- announced focus until one agrees or the announcement expires.
+-- yabai_space_focus TARGET: focus-space.py names its target (label or index)
+-- before it switches, so keyboard and click switches never wait for an event,
+-- even across displays. yabai reports the old focus for a few hundred ms more,
+-- so frames keep the announced focus until one agrees or the announcement expires.
 local announced, announce_token = nil, 0
-local function apply_space_focus(index)
-  index = tonumber(index)
-  if not index then return end
-  announced = index
-  announce_token = announce_token + 1
-  local token = announce_token
-  sbar.delay(1.5, function() if token == announce_token then announced = nil end end)
+local function apply_space_focus(target)
   if not (topology and last_snapshot) then return end
   for _, space in ipairs(last_snapshot.spaces) do
-    if space.index == index then return show_focus(space) end
+    if space.label == tostring(target) or space.index == tonumber(target) then
+      announced = space.index
+      announce_token = announce_token + 1
+      local token = announce_token
+      sbar.delay(1.5, function() if token == announce_token then announced = nil end end)
+      return show_focus(space)
+    end
   end
 end
 keep_announced = function(spaces)
@@ -461,7 +461,7 @@ observer:subscribe({ "space_change", "space_windows_change",
   requested_update()
 end)
 observer:subscribe(namespace .. "_space_focus", function(env)
-  apply_space_focus(env.INDEX)
+  apply_space_focus(env.TARGET)
   -- Asking at once can read the old state before the WindowServer starts
   -- holding queries; a little later the answer waits for the switch to land.
   sbar.delay(0.2, requested_update)
