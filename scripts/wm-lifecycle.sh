@@ -70,7 +70,9 @@ start_manager() {
             launchctl submit -l "$YABAI_JOB" -o "$STATE/yabai.log" -e "$STATE/yabai.err.log" -- \
                 /usr/bin/env ${developer_env[@]+"${developer_env[@]}"} "PATH=$PATH" "HOME=$HOME" "USER=$USER" "DOTFILES_YABAI_READY=$STATE/yabai-ready" \
                 "$(command -v yabai)" -c "$HOME/.config/yabai/yabairc"
-            for _ in {1..30}; do
+            # Right after login the displays can still be re-probing, which makes
+            # the space query fail for a while; give the daemon up to 60 s.
+            for _ in {1..300}; do
                 if [ -f "$STATE/yabai-ready" ] && probe_command yabai -m query --spaces; then ready=true; break; fi
                 sleep 0.2
             done

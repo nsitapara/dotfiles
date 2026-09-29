@@ -109,6 +109,12 @@ if [ -n "${DOTFILES_YABAI_READY:-}" ]; then
     touch "$DOTFILES_YABAI_READY"
 fi
 
+# The bar chooses its workspace backend when its config loads. After a boot
+# where the bar came up before yabai, or a launchd relaunch, reload it.
+if command -v sketchybar >/dev/null && [ "$(sketchybar --query wm.backend 2>/dev/null | jq -r '.label.value // ""')" != yabai ]; then
+    sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc" >/dev/null 2>&1 || true
+fi
+
 # launchd restarts yabai after a crash without wm.sh, which drops the Space
 # labels the shortcuts and bar depend on. The profile script keys its signature
 # on the yabai pid, so every fresh daemon re-applies labels and the bar profile.
