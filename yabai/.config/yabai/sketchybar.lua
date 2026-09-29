@@ -7,17 +7,20 @@ local pills = {}
 local busy = false
 local pending = false
 local topology
+local topology_stale = false -- keep the old mapping for instant renders until refreshed
 local topology_epoch = 0
 local retry_count, retry_token = 0, 0
 local retry_delays = { 0.1, 0.25, 0.5 }
 local last_snapshot
 local removed_windows = {}
 local window_epoch, settle_token = 0, 0
+local focus_epoch = 0
 
 -- sbar.exec runs in a launchd environment that may omit Homebrew.
 local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
 sbar.add("event", namespace .. "_windows_changed")
 sbar.add("event", namespace .. "_mode_changed")
+sbar.add("event", namespace .. "_space_focus")
 
 local mode = sbar.add("item", namespace .. ".mode", {
   position = "left", drawing = false, updates = true,
@@ -265,7 +268,7 @@ local function remaining_windows(windows, prune)
   return remaining
 end
 
-local update
+local update, keep_announced
 local function labels_ready(spaces, layout)
   -- During daemon startup and profile changes, managed desktops temporarily
   -- lose their labels. Keep the previous frame until spaces.sh finishes;
@@ -294,7 +297,8 @@ update = function()
   local token = retry_token
   local epoch = topology_epoch
   local windows_at_start = window_epoch
-  local refresh_topology = topology == nil
+  local focus_at_start = focus_epoch
+  local refresh_topology = topology == nil or topology_stale
   -- Combine JSON once, and let SbarLua decode it. A failed query leaves the
   -- last complete frame visible instead of clearing the bar during a hotplug.
   local command = prefix .. [[
@@ -325,11 +329,17 @@ update = function()
         and #result.bar_displays > 0 then
         topology = { displays = result.displays, bar_displays = result.bar_displays,
           layout = result.layout }
+        topology_stale = false
       end
-      if topology and labels_ready(result.spaces, topology.layout) then
-        local windows = remaining_windows(result.windows, windows_at_start == window_epoch)
-        last_snapshot = { spaces = result.spaces, windows = windows }
-        render(result.spaces, windows, topology.displays, topology.bar_displays, topology.layout)
+      if topology and not topology_stale and labels_ready(result.spaces, topology.layout) then
+        if focus_at_start == focus_epoch then
+          keep_announced(result.spaces)
+          local windows = remaining_windows(result.windows, windows_at_start == window_epoch)
+          last_snapshot = { spaces = result.spaces, windows = windows }
+          render(result.spaces, windows, topology.displays, topology.bar_displays, topology.layout)
+        else
+          pending = true -- the focus moved after this query began; ask again
+        end
         valid = true
       end
     end
@@ -352,26 +362,73 @@ local function requested_update()
   retry_count = 0
   update()
 end
--- The WindowServer holds every yabai query for ~0.5 s while a Space slides in,
--- so a pill driven by the query trails the animation. SketchyBar's own event
--- already carries the active Mission Control index per display (SbarLua decodes
--- the INFO JSON into a table): move the highlight from the last frame at once
--- and let the following query reconcile.
+-- The WindowServer holds every yabai query for ~0.5 s while a Space slides in
+-- or display 2 takes focus, so a pill driven by the query trails the screen.
+-- SketchyBar's own events already say what changed: move the highlight on the
+-- last frame at once and let the following query reconcile. A query that
+-- started before the event would report the old focus, so its frame is dropped.
+local function pin_focus(spaces, focused)
+  for _, space in ipairs(spaces) do
+    if space.display == focused.display then space["is-visible"] = space == focused end
+    space["has-focus"] = space == focused
+  end
+end
+local function show_focus(focused)
+  pin_focus(last_snapshot.spaces, focused)
+  focus_epoch = focus_epoch + 1
+  render(last_snapshot.spaces, last_snapshot.windows,
+    topology.displays, topology.bar_displays, topology.layout)
+end
+-- yabai_space_focus INDEX: focus-space.py names its target as it switches, so
+-- keyboard and click switches never wait for an event, even across displays.
+-- yabai reports the old focus for a few hundred ms more, so frames keep the
+-- announced focus until one agrees or the announcement expires.
+local announced, announce_token = nil, 0
+local function apply_space_focus(index)
+  index = tonumber(index)
+  if not index then return end
+  announced = index
+  announce_token = announce_token + 1
+  local token = announce_token
+  sbar.delay(1.5, function() if token == announce_token then announced = nil end end)
+  if not (topology and last_snapshot) then return end
+  for _, space in ipairs(last_snapshot.spaces) do
+    if space.index == index then return show_focus(space) end
+  end
+end
+keep_announced = function(spaces)
+  for _, space in ipairs(spaces) do
+    if announced and space.index == announced then
+      if space["has-focus"] then announced = nil else pin_focus(spaces, space) end
+    end
+  end
+end
+-- space_change INFO: the active Mission Control index per display, decoded by
+-- SbarLua into a table. The index that was not visible before is the new focus.
 local function apply_space_change(info)
   if not (topology and last_snapshot and type(info) == "table") then return end
   local active = {}
   for _, index in pairs(info) do active[tonumber(index)] = true end
-  local focused
   for _, space in ipairs(last_snapshot.spaces) do
-    if active[space.index] and not space["is-visible"] then focused = focused or space end
+    if active[space.index] and not space["is-visible"] then return show_focus(space) end
   end
-  if not focused then return end
+end
+-- display_change INFO: the arrangement id of the display that took focus. Its
+-- visible Space is the new focus. Hotplug also fires this; the topology refresh
+-- that follows corrects any guess made from a stale mapping.
+local function apply_display_change(info)
+  if not (topology and last_snapshot) then return end
+  local display_id
+  for _, display in ipairs(topology.bar_displays) do
+    if display["arrangement-id"] == tonumber(info) then display_id = display.DirectDisplayID or display.id end
+  end
+  local index
+  for _, display in ipairs(topology.displays) do
+    if display.id == display_id then index = display.index end
+  end
   for _, space in ipairs(last_snapshot.spaces) do
-    space["is-visible"] = active[space.index] == true
-    space["has-focus"] = space == focused
+    if space.display == index and space["is-visible"] then return show_focus(space) end
   end
-  render(last_snapshot.spaces, last_snapshot.windows,
-    topology.displays, topology.bar_displays, topology.layout)
 end
 observer:subscribe({ "space_change", "space_windows_change",
   "yabai_windows_changed" }, function(env)
@@ -403,9 +460,16 @@ observer:subscribe({ "space_change", "space_windows_change",
   end
   requested_update()
 end)
-observer:subscribe({ "display_change", "system_woke" }, function()
+observer:subscribe(namespace .. "_space_focus", function(env)
+  apply_space_focus(env.INDEX)
+  -- Asking at once can read the old state before the WindowServer starts
+  -- holding queries; a little later the answer waits for the switch to land.
+  sbar.delay(0.2, requested_update)
+end)
+observer:subscribe({ "display_change", "system_woke" }, function(env)
+  if env.SENDER == "display_change" then apply_display_change(env.INFO) end
   topology_epoch = topology_epoch + 1
-  topology = nil
+  topology_stale = true
   requested_update()
 end)
 update()

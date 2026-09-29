@@ -5,6 +5,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 import os
+import subprocess
 import sys
 import time
 
@@ -119,6 +120,13 @@ def switch(selector):
     if not target:
         raise RuntimeError('Workspace is not available: ' + selector)
     result = command('space', '--focus', target['index'])
+    # Tell the bar now: its yabai queries stall until the switch animation ends.
+    try:
+        subprocess.Popen(['sketchybar', '--trigger', 'yabai_space_focus',
+                          'INDEX=' + str(target['index'])],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass  # No bar to notify.
     if result.returncode:
         current = query('--spaces', '--space')
         if not current or current['id'] != target['id']:

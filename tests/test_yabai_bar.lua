@@ -281,4 +281,63 @@ assert(animation_count == 0, "The confirming snapshot must not animate again")
 set_count = 0
 events["yabai.observer:space_change"]({SENDER="space_change", INFO={["display-1"]=2, ["display-2"]=4}})
 assert(set_count == 0, "A display-only focus change leaves the pills alone")
+-- A query that began before the switch reports the old focus once the
+-- WindowServer releases it; that frame must not undo the instant highlight.
+events["yabai.observer:yabai_windows_changed"]({})
+local stale_query = #callbacks
+events["yabai.observer:space_change"]({SENDER="space_change", INFO={["display-1"]=2, ["display-2"]=1}})
+assert(items["yabai.space.3"].props.icon.color == 1 and items["yabai.space.5"].props.icon.color == 2)
+local before_stale = #callbacks
+callbacks[stale_query](sliding) -- still says ws5 has focus
+assert(items["yabai.space.3"].props.icon.color == 1, "Stale focus must not flicker the highlight back")
+assert(#callbacks == before_stale + 1, "Dropped frame is replaced by a fresh query")
+sliding.spaces[1]["has-focus"], sliding.spaces[1]["is-visible"] = true, true
+sliding.spaces[4]["has-focus"], sliding.spaces[4]["is-visible"] = false, false
+animation_count = 0
+callbacks[#callbacks](sliding)
+assert(animation_count == 0 and items["yabai.space.3"].props.icon.color == 1)
+-- Focusing the other display highlights its visible Space before any query;
+-- bar arrangement 1 is DirectDisplayID 200, yabai display 2, showing ws2.
+animation_count = 0
+events["yabai.observer:display_change"]({SENDER="display_change", INFO=1})
+assert(items["yabai.space.2"].props.icon.color == 1, "Display focus highlights that display's visible Space at once")
+assert(items["yabai.space.3"].props.icon.color == 2 and animation_count == 2)
+assert(commands[#commands]:find("query --displays", 1, true), "Hotplug refresh still follows")
+sliding.spaces[1]["has-focus"], sliding.spaces[2]["has-focus"] = false, true
+animation_count = 0
+callbacks[#callbacks](sliding)
+assert(animation_count == 0, "Confirming snapshot after a display change must not animate again")
+-- focus-space.py announces its target index; the pill moves before any event.
+animation_count = 0
+local queries_before = #callbacks
+events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", INDEX="4"})
+assert(items["yabai.space.5"].props.icon.color == 1 and items["yabai.space.2"].props.icon.color == 2,
+       "Announced target is highlighted at once")
+assert(animation_count == 2 and #callbacks == queries_before, "No query until the switch is under way")
+local expiry = timers[#timers - 1]
+timers[#timers].callback()
+assert(#callbacks == queries_before + 1, "Then the usual query confirms")
+assert(sliding.spaces[1]["is-visible"] == false and sliding.spaces[4]["is-visible"] == true,
+       "The target replaces its display's visible Space in the frame")
+-- yabai can still report the old focus for a few hundred ms.
+local lagging = fixture()
+lagging.spaces[#lagging.spaces+1] = {index=4,display=1,label="ws5",["has-focus"]=false,["is-visible"]=false,["is-native-fullscreen"]=false}
+lagging.spaces[1]["is-visible"], lagging.spaces[2]["is-visible"] = true, true
+animation_count = 0
+callbacks[#callbacks](lagging)
+assert(items["yabai.space.5"].props.icon.color == 1 and animation_count == 0, "A lagging frame keeps the announced focus")
+events["yabai.observer:yabai_windows_changed"]({})
+lagging.spaces[1]["has-focus"], lagging.spaces[4]["has-focus"] = false, true
+callbacks[#callbacks](lagging)
+assert(items["yabai.space.5"].props.icon.color == 1, "An agreeing frame ends the pin")
+events["yabai.observer:yabai_windows_changed"]({})
+lagging.spaces[1]["has-focus"], lagging.spaces[4]["has-focus"] = true, false
+callbacks[#callbacks](lagging)
+assert(items["yabai.space.3"].props.icon.color == 1, "After agreement, frames rule again")
+events["yabai.observer:yabai_space_focus"]({SENDER="yabai_space_focus", INDEX="4"})
+timers[#timers - 1].callback() -- announcement expires unanswered
+events["yabai.observer:yabai_windows_changed"]({})
+lagging.spaces[1]["has-focus"], lagging.spaces[4]["has-focus"] = true, false -- the pin mutated the shared frame
+callbacks[#callbacks](lagging)
+assert(items["yabai.space.3"].props.icon.color == 1, "An expired announcement no longer pins the focus")
 print("SketchyBar rendering, stable app order, persistent slots, display mapping, clicks, and event coalescing passed")
