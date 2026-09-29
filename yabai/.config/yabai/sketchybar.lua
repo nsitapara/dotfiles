@@ -352,9 +352,30 @@ local function requested_update()
   retry_count = 0
   update()
 end
+-- The WindowServer holds every yabai query for ~0.5 s while a Space slides in,
+-- so a pill driven by the query trails the animation. SketchyBar's own event
+-- already carries the active Mission Control index per display: move the
+-- highlight from the last frame at once and let the following query reconcile.
+local function apply_space_change(info)
+  if not (topology and last_snapshot and info) then return end
+  local active = {}
+  for index in info:gmatch('"display%-%d+"%s*:%s*(%d+)') do active[tonumber(index)] = true end
+  local focused
+  for _, space in ipairs(last_snapshot.spaces) do
+    if active[space.index] and not space["is-visible"] then focused = focused or space end
+  end
+  if not focused then return end
+  for _, space in ipairs(last_snapshot.spaces) do
+    space["is-visible"] = active[space.index] == true
+    space["has-focus"] = space == focused
+  end
+  render(last_snapshot.spaces, last_snapshot.windows,
+    topology.displays, topology.bar_displays, topology.layout)
+end
 observer:subscribe({ "space_change", "space_windows_change",
   "yabai_windows_changed" }, function(env)
   local event = env.EVENT or env.SENDER
+  if event == "space_change" then apply_space_change(env.INFO) end
   local id, pid = tonumber(env.WINDOW_ID), tonumber(env.PROCESS_ID)
   if event == "window_created" and id then removed_windows[id] = nil end
   if event == "window_destroyed" and id then removed_windows[id] = true end

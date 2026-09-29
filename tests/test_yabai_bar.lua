@@ -260,4 +260,25 @@ for _, minimized in ipairs({true, false}) do
   assert(items["yabai.space.3.app.3"].props.background.image == "app.Google Chrome")
   assert(items["yabai.space.3.app.3"].props.label.drawing == minimized)
 end
+-- The WindowServer holds every yabai query while a Space slides in, so the
+-- pill must follow SketchyBar's own space_change payload, not the query.
+local sliding = fixture()
+for _, space in ipairs(sliding.spaces) do space["is-visible"] = true end
+sliding.spaces[#sliding.spaces+1] = {index=4,display=1,label="ws5",["has-focus"]=false,["is-visible"]=false,["is-native-fullscreen"]=false}
+events["yabai.observer:yabai_windows_changed"]({})
+callbacks[#callbacks](sliding)
+set_count, animation_count = 0, 0
+local queries = #callbacks
+events["yabai.observer:space_change"]({SENDER="space_change", INFO='{\n\t"display-1": 2,\n\t"display-2": 4\n}'})
+assert(items["yabai.space.5"].props.icon.color == 1, "Highlight the incoming Space before the query returns")
+assert(items["yabai.space.3"].props.icon.color == 2, "Drop the highlight from the outgoing Space")
+assert(animation_count == 2 and #callbacks == queries + 1, "One animation, then the usual query")
+sliding.spaces[1]["has-focus"], sliding.spaces[1]["is-visible"] = false, false
+sliding.spaces[4]["has-focus"], sliding.spaces[4]["is-visible"] = true, true
+animation_count = 0
+callbacks[#callbacks](sliding)
+assert(animation_count == 0, "The confirming snapshot must not animate again")
+set_count = 0
+events["yabai.observer:space_change"]({SENDER="space_change", INFO='{"display-1": 2, "display-2": 4}'})
+assert(set_count == 0, "A display-only focus change leaves the pills alone")
 print("SketchyBar rendering, stable app order, persistent slots, display mapping, clicks, and event coalescing passed")
