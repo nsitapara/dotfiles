@@ -354,12 +354,13 @@ local function requested_update()
 end
 -- The WindowServer holds every yabai query for ~0.5 s while a Space slides in,
 -- so a pill driven by the query trails the animation. SketchyBar's own event
--- already carries the active Mission Control index per display: move the
--- highlight from the last frame at once and let the following query reconcile.
+-- already carries the active Mission Control index per display (SbarLua decodes
+-- the INFO JSON into a table): move the highlight from the last frame at once
+-- and let the following query reconcile.
 local function apply_space_change(info)
-  if not (topology and last_snapshot and info) then return end
+  if not (topology and last_snapshot and type(info) == "table") then return end
   local active = {}
-  for index in info:gmatch('"display%-%d+"%s*:%s*(%d+)') do active[tonumber(index)] = true end
+  for _, index in pairs(info) do active[tonumber(index)] = true end
   local focused
   for _, space in ipairs(last_snapshot.spaces) do
     if active[space.index] and not space["is-visible"] then focused = focused or space end
