@@ -18,12 +18,12 @@ fi
 # Add your own customizations below
 #
 
-export OMARCHY_PATH=$HOME/.local/share/omarchy
+export OMARCHY_PATH=/usr/share/omarchy
 export PATH=$OMARCHY_PATH/bin:$PATH:$HOME/.local/bin
 
 # ── FZF colors (from theme) ──────────────────────────────
-if [[ -f ~/.config/omarchy/current/fzf-colors.sh ]]; then
-  source ~/.config/omarchy/current/fzf-colors.sh
+if [[ -f ~/.local/state/omarchy/current/theme/fzf-colors.sh ]]; then
+  source ~/.local/state/omarchy/current/theme/fzf-colors.sh
 else
   export FZF_DEFAULT_OPTS=" \
   --color=bg+:#313244,bg:#1E1E2E,spinner:#F5E0DC,hl:#F38BA8 \

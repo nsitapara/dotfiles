@@ -10,3 +10,12 @@ nvim/.config/nvim/lua/plugins/theme.lua
 
 # Python script bytecode
 __pycache__/
+
+# Quattro: third-party Git checkouts are restored from plugins.lock.json.
+/omarchy/.config/omarchy/plugins/*
+!/omarchy/.config/omarchy/plugins/nsitapara.bar/
+!/omarchy/.config/omarchy/plugins/nsitapara.system-monitor/
+/omarchy/.config/omarchy/**/*.bak*
+/hypr/.config/hypr/*.bak*
+/omarchy/.config/omarchy/.plugins.lock.tmp
+/eza/.config/eza/theme.yml

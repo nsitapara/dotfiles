@@ -1,0 +1,101 @@
+{
+  "bar": {
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "center": [
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "ddd d MMM h:mm AP",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm",
+          "birthYear": 1991,
+          "lifeExpectancy": 90
+        },
+        {
+          "id": "omarchy.keyboard-layout"
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.system-update"
+        }
+      ],
+      "left": [
+        {
+          "id": "omarchy.menu"
+        },
+        {
+          "id": "tornikegomareli.spaces",
+          "labelStyle": "number",
+          "showIcons": true,
+          "showApps": "all",
+          "perMonitor": true,
+          "persistentWorkspaces": 0,
+          "hideEmpty": false
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.tray",
+          "pinned": [
+            "Stremio",
+            "discord_status_icon_1",
+            "steam",
+            "Slack_status_icon_1"
+          ],
+          "hidden": []
+        },
+        {
+          "id": "nsitapara.system-monitor",
+          "barMode": "All"
+        },
+        {
+          "id": "omaplug"
+        },
+        {
+          "id": "vinicgobbi.clipboard"
+        },
+        {
+          "id": "omarchy.tailscale"
+        },
+        {
+          "id": "omarchy.agents"
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "omarchy.power"
+        },
+        {
+          "id": "jankeesvw.notification-center"
+        }
+      ]
+    },
+    "position": "top",
+    "transparent": false,
+    "id": "nsitapara.bar"
+  },
+  "idle": {
+    "lock": 300,
+    "screensaver": 150
+  },
+  "plugins": [],
+  "version": 1,
+  "disabledPlugins": [
+    "omarchy.clipboard"
+  ]
+}
