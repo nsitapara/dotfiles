@@ -1,0 +1,146 @@
+# yabai shortcuts based on the docked AeroSpace profile.
+# skhd executes actions through /bin/bash, set by wm.sh.
+# Modes exit with Escape or Space. Cmd+F expands the focused window within its workspace.
+# Reserved for Raycast: Cmd+Shift+C/E/G/B/P/S/V/Z/D, Cmd+Return,
+# Alt+Shift+M, Ctrl+Cmd+Space. Keep modes non-capturing so these pass through.
+:: default : "$HOME/.config/skhd/mode.sh" default
+:: resize : "$HOME/.config/skhd/mode.sh" resize
+:: workspace : "$HOME/.config/skhd/mode.sh" workspace
+:: insertion : "$HOME/.config/skhd/mode.sh" insertion
+:: service : "$HOME/.config/skhd/mode.sh" service
+
+cmd - h : true
+cmd + alt - h : true
+cmd - left : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai left --focus
+cmd + shift - left : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai left
+cmd - down : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai down --focus
+cmd + shift - down : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai down
+cmd - up : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai up --focus
+cmd + shift - up : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai up
+cmd - right : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai right --focus
+cmd + shift - right : /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" yabai right
+
+# skhd names special keys differently from AeroSpace. Use macOS keycodes for
+# punctuation: 0x18 = equals, 0x1B = minus, 0x2B = comma.
+cmd - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize width 32
+cmd - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize width -32
+cmd + ctrl - 0x18 : /usr/bin/python3 "$HOME/dotfiles/wm-size.py" yabai up
+cmd + ctrl - 0x1B : /usr/bin/python3 "$HOME/dotfiles/wm-size.py" yabai down
+cmd + shift - 0x18 : "$HOME/.config/yabai/scripts/window.sh" resize height 32
+cmd + shift - 0x1B : "$HOME/.config/yabai/scripts/window.sh" resize height -32
+# Reset window sizes in the current space.
+cmd - 0 : yabai -m space --balance
+cmd + ctrl - 0 : yabai -m space --balance
+cmd - j : yabai -m window --toggle split
+cmd - 0x2B : "$HOME/.config/yabai/scripts/window.sh" layout
+cmd - f : yabai -m window --toggle zoom-fullscreen
+
+cmd - 1 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
+cmd + shift - 1 : "$HOME/.config/yabai/scripts/window.sh" send-space ws1
+cmd + ctrl + shift - 1 : yabai -m window --space ws1
+cmd - 0x53 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
+cmd + shift - 0x53 : "$HOME/.config/yabai/scripts/window.sh" send-space ws1
+cmd + ctrl + shift - 0x53 : yabai -m window --space ws1
+cmd - 2 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws2
+cmd + shift - 2 : "$HOME/.config/yabai/scripts/window.sh" send-space ws2
+cmd + ctrl + shift - 2 : yabai -m window --space ws2
+cmd - 0x54 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws2
+cmd + shift - 0x54 : "$HOME/.config/yabai/scripts/window.sh" send-space ws2
+cmd + ctrl + shift - 0x54 : yabai -m window --space ws2
+cmd - 3 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws3
+cmd + shift - 3 : "$HOME/.config/yabai/scripts/window.sh" send-space ws3
+cmd + ctrl + shift - 3 : yabai -m window --space ws3
+cmd - 0x55 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws3
+cmd + shift - 0x55 : "$HOME/.config/yabai/scripts/window.sh" send-space ws3
+cmd + ctrl + shift - 0x55 : yabai -m window --space ws3
+cmd - 4 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws4
+cmd + shift - 4 : "$HOME/.config/yabai/scripts/window.sh" send-space ws4
+cmd + ctrl + shift - 4 : yabai -m window --space ws4
+cmd - 0x56 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws4
+cmd + shift - 0x56 : "$HOME/.config/yabai/scripts/window.sh" send-space ws4
+cmd + ctrl + shift - 0x56 : yabai -m window --space ws4
+cmd - 5 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws5
+cmd + shift - 5 : "$HOME/.config/yabai/scripts/window.sh" send-space ws5
+cmd + ctrl + shift - 5 : yabai -m window --space ws5
+cmd - 0x57 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws5
+cmd + shift - 0x57 : "$HOME/.config/yabai/scripts/window.sh" send-space ws5
+cmd + ctrl + shift - 0x57 : yabai -m window --space ws5
+cmd - 6 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
+cmd + shift - 6 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
+cmd + ctrl + shift - 6 : yabai -m window --space ws6
+cmd - 0x58 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
+cmd + shift - 0x58 : "$HOME/.config/yabai/scripts/window.sh" send-space ws6
+cmd + ctrl + shift - 0x58 : yabai -m window --space ws6
+
+# Laptop workspaces when both external monitors are connected.
+cmd - 7 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws7
+cmd + shift - 7 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd + ctrl + shift - 7 : yabai -m window --space ws7
+cmd - 0x59 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws7
+cmd + shift - 0x59 : "$HOME/.config/yabai/scripts/window.sh" send-space ws7
+cmd + ctrl + shift - 0x59 : yabai -m window --space ws7
+cmd - 8 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws8
+cmd + shift - 8 : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd + ctrl + shift - 8 : yabai -m window --space ws8
+cmd - 0x5B : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws8
+cmd + shift - 0x5B : "$HOME/.config/yabai/scripts/window.sh" send-space ws8
+cmd + ctrl + shift - 0x5B : yabai -m window --space ws8
+cmd - 9 : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws9
+cmd + shift - 9 : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+cmd + ctrl + shift - 9 : yabai -m window --space ws9
+cmd - 0x5C : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws9
+cmd + shift - 0x5C : "$HOME/.config/yabai/scripts/window.sh" send-space ws9
+cmd + ctrl + shift - 0x5C : yabai -m window --space ws9
+
+cmd - pageup : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" prev
+cmd - pagedown : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" next
+cmd - home : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws1
+cmd - end : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" ws6
+alt - tab : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" recent
+ctrl - tab : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" toggle
+cmd + ctrl - right : "$HOME/.config/yabai/scripts/window.sh" send-display next
+cmd + ctrl - left : "$HOME/.config/yabai/scripts/window.sh" send-display prev
+cmd + ctrl + shift - f : "$HOME/.config/yabai/scripts/window.sh" float
+cmd + ctrl + alt + shift - f : "$HOME/.config/yabai/scripts/window.sh" float
+cmd + ctrl + alt + shift - d : yabai -m space --layout bsp; yabai -m space --balance
+cmd + ctrl + alt + shift - r ; resize
+cmd + ctrl + alt + shift - w ; workspace
+cmd + ctrl + alt + shift - m ; insertion
+cmd + alt - s ; service
+f14 ; service
+alt + shift - c : /bin/bash "$HOME/.config/yabai/yabairc"; skhd --reload
+
+resize, workspace, insertion, service < escape ; default
+resize, workspace, insertion, service < space ; default
+service < f15 ; default
+
+resize < left : "$HOME/.config/yabai/scripts/window.sh" resize width -16
+resize < shift - left : "$HOME/.config/yabai/scripts/window.sh" resize width -64
+resize < down : "$HOME/.config/yabai/scripts/window.sh" resize height 16
+resize < shift - down : "$HOME/.config/yabai/scripts/window.sh" resize height 64
+resize < up : "$HOME/.config/yabai/scripts/window.sh" resize height -16
+resize < shift - up : "$HOME/.config/yabai/scripts/window.sh" resize height -64
+resize < right : "$HOME/.config/yabai/scripts/window.sh" resize width 16
+resize < shift - right : "$HOME/.config/yabai/scripts/window.sh" resize width 64
+
+workspace < left : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" prev
+workspace < right : /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" next
+workspace < up : yabai -m display --focus prev
+workspace < down : yabai -m display --focus next
+workspace < shift - left : "$HOME/.config/yabai/scripts/window.sh" send-space prev
+workspace < shift - right : "$HOME/.config/yabai/scripts/window.sh" send-space next
+workspace < shift - up : "$HOME/.config/yabai/scripts/window.sh" send-display prev
+workspace < shift - down : "$HOME/.config/yabai/scripts/window.sh" send-display next
+
+insertion < left : yabai -m window --insert west
+insertion < down : yabai -m window --insert south
+insertion < up : yabai -m window --insert north
+insertion < right : yabai -m window --insert east
+
+# ? is Shift + slash (macOS keycode 0x2C).
+service < shift - 0x2C : sketchybar --trigger wm_help_toggle
+service < f : skhd -k "f15"; "$HOME/.config/yabai/scripts/window.sh" float
+service < r : yabai -m space --layout bsp; yabai -m space --balance
+service < up : osascript -e 'set volume output volume ((output volume of (get volume settings)) + 5)'
+service < down : osascript -e 'set volume output volume ((output volume of (get volume settings)) - 5)'
+service < shift - down : osascript -e 'set volume output volume 0'

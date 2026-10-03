@@ -1,20 +1,27 @@
 local colors = require("colors")
+-- Avoid io.popen/pclose: SbarLua children inherit unusual SIGCHLD handling.
+local version_file = io.open("/System/Library/CoreServices/SystemVersion.plist", "r")
+local version_xml = version_file and version_file:read("*a") or ""
+if version_file then version_file:close() end
+local version = version_xml:match("<key>ProductVersion</key>%s*<string>(%d+)") or "0"
+local native_item = (tonumber(version:match("^%d+")) or 0) >= 27
 
 local alias_name = "Amphetamine,Amphetamine"
 local hovered, busy, status_pending = false, false, false
 local revision = 0
 local hover_pending, watch_pending = false, false
+local power_pending = false
 local hover_revision = 0
 local check_hover
 local watch_pointer
 local suppress_hover = false
 
-local amphetamine = sbar.add("alias", alias_name, {
+local amphetamine = sbar.add(native_item and "item" or "alias", alias_name, {
   position = "right",
   width = "dynamic",
-  alias = { scale = 1.0, color = colors.grey, update_freq = 2 },
-  update_freq = 1,
-  icon = { drawing = false },
+  alias = not native_item and { scale = 1.0, color = colors.grey, update_freq = 2 } or nil,
+  update_freq = native_item and 5 or 1,
+  icon = { drawing = native_item, string = "􀸙", color = colors.grey, padding_left = 8, padding_right = 8 },
   label = { drawing = false },
   padding_left = 5,
   padding_right = 0,
@@ -91,7 +98,7 @@ local function show_status(result, exit_code)
     end
   end
   local color = active and colors.green or colors.grey
-  amphetamine:set({ alias = { color = color } })
+  amphetamine:set(native_item and { icon = { color = color } } or { alias = { color = color } })
   remaining:set({ label = { string = text, color = color } })
   hint:set({ label = { string = help, color = colors.grey } })
 end
@@ -107,10 +114,13 @@ local function refresh_tooltip()
 end
 
 local function update_status()
-  if check_hover then check_hover() end
+  if not native_item and check_hover then check_hover() end
+  if power_pending then return end
+  power_pending = true
   -- Keep the bar accurate without querying AppleScript when the tooltip is closed.
   local requested_revision = revision
   sbar.exec("/usr/bin/pmset -g assertions", function(result, exit_code)
+    power_pending = false
     if exit_code ~= 0 or busy or requested_revision ~= revision then return end
     local active = false
     for line in result:gmatch("[^\r\n]+") do
@@ -120,7 +130,8 @@ local function update_status()
         break
       end
     end
-    amphetamine:set({ alias = { color = active and colors.green or colors.grey } })
+    local color = active and colors.green or colors.grey
+    amphetamine:set(native_item and { icon = { color = color } } or { alias = { color = color } })
     refresh_tooltip()
   end)
 end
@@ -131,8 +142,11 @@ amphetamine:subscribe("mouse.clicked", function(env)
     hover_revision = hover_revision + 1
     suppress_hover = true
     amphetamine:set({ popup = { drawing = false } })
+    if native_item then amphetamine:set({ update_freq = 5 }) end
     watch_pointer()
-    sbar.exec('"$CONFIG_DIR/helpers/menus/bin/menus" -s "Amphetamine,Amphetamine"')
+    sbar.exec(native_item
+      and '/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" open amphetamine'
+      or '"$CONFIG_DIR/helpers/menus/bin/menus" -s "Amphetamine,Amphetamine"')
     return
   end
   if env.BUTTON ~= "left" or busy then return end
@@ -148,10 +162,11 @@ end)
 local function hide_tooltip()
   hovered = false
   hover_revision = hover_revision + 1
-  amphetamine:set({ popup = { drawing = false } })
+  amphetamine:set({ popup = { drawing = false }, update_freq = native_item and 5 or 1 })
 end
 
 watch_pointer = function()
+  if native_item then return end
   if (not hovered and not suppress_hover) or watch_pending then return end
   watch_pending = true
   run_script("hover-watch", function(result, exit_code)
@@ -168,6 +183,12 @@ end
 
 check_hover = function()
   if hovered or hover_pending or suppress_hover then return end
+  if native_item then
+    hovered = true
+    amphetamine:set({ popup = { drawing = true }, update_freq = 1 })
+    refresh_tooltip()
+    return
+  end
   hover_pending = true
   local requested_revision = hover_revision
   run_script("hover-check", function(result, exit_code)
@@ -180,9 +201,15 @@ check_hover = function()
     watch_pointer()
   end)
 end
--- Alias items can miss entry events and emit exit events during image refreshes.
--- Check direct entry on the routine tick; the pointer watcher handles real exits.
+-- Regular items deliver reliable entry/exit events. Only legacy aliases need
+-- process-based polling because image refreshes can produce false exit events.
 amphetamine:subscribe("mouse.entered", check_hover)
+if native_item then
+  amphetamine:subscribe("mouse.exited", function()
+    suppress_hover = false
+    hide_tooltip()
+  end)
+end
 local function sync_power(env)
   local action = "sync"
   if env and (env.INFO == "AC" or env.INFO == "BATTERY") then

@@ -60,8 +60,28 @@ elif name == "sketchybar":
         print(json.dumps(state.get("layout", [{"arrangement-id": 1}])))
     elif args == ["--query", "display_mode"]:
         print(json.dumps({"icon": {"value": ""}, "label": {"value": state["loaded"], "background": {"image": {"value": "(null)"}}}}, indent=2))
+elif name == "display-layout.sh":
+    print(json.dumps(state["plan"]))
+elif name == "display-profile.sh":
+    if state.get("service_test") and state.get("service_ticks") == 1:
+        sys.exit(1)
+elif name == "wm.sh":
+    state["manager_starts"] = state.get("manager_starts", 0) + 1
+    state["yabai_trial"] = args[0] == "yabai"
+    save()
+elif name == "launchctl":
+    sys.exit(0 if state.get("yabai_trial") and args[-1] == "local.dotfiles.yabai" else 1)
 elif name == "sleep":
-    pass
+    if args == ["30"] and state.get("service_test"):
+        state["service_ticks"] = state.get("service_ticks", 0) + 1
+        # Simulate a manual switch to AeroSpace after the first failed check.
+        if state["service_ticks"] == 2:
+            state["yabai_trial"] = False
+        save()
+        if state["service_ticks"] > 2:
+            sys.exit(1)
+elif name == "aerospace" and args[0] == "list-workspaces":
+    print(state.get("assignments", ""))
 elif name != "aerospace":
     raise AssertionError((name, args))
 '''
@@ -77,23 +97,68 @@ class DisplayModeTests(unittest.TestCase):
         shutil.copy2(ROOT / self.script.name, self.script)
         self.bin = self.path / "bin"
         self.bin.mkdir()
-        for name in ("system_profiler", "readlink", "pgrep", "stow", "sketchybar", "aerospace", "sleep"):
+        for name in ("system_profiler", "readlink", "pgrep", "stow", "sketchybar", "aerospace", "sleep", "launchctl"):
             command = self.bin / name
             command.write_text(f"#!{sys.executable}\n" + MOCK)
             command.chmod(0o755)
-        self.env = dict(os.environ, TMPDIR=str(self.path), DISPLAY_TEST_DIR=str(self.path))
-        self.env["PATH"] = f"{self.bin}:/usr/bin:/bin:/usr/sbin:/sbin"
+        self.home = self.path / "home"
+        self.home.mkdir()
+        self.env = dict(os.environ, HOME=str(self.home), TMPDIR=str(self.path), DISPLAY_TEST_DIR=str(self.path))
+        self.env["PATH"] = f"{self.bin}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         self.state_file = self.path / ".display-mode-state"
         self.mock_file = self.path / "mock.json"
+        helpers = self.path / "yabai/.config/yabai/scripts"
+        helpers.mkdir(parents=True)
+        for name in ["display-layout.sh", "display-profile.sh"]:
+            file = helpers / name
+            file.write_text(f"#!{sys.executable}\n" + MOCK)
+            file.chmod(0o755)
         self.configure()
+
+    def test_service_propagates_startup_failure_before_display_checks(self):
+        wm = self.path / "wm.sh"
+        wm.write_text('#!/bin/bash\nprintf "%s" "$1" > "$DISPLAY_TEST_DIR/login-manager"\nexit 7\n')
+        wm.chmod(0o755)
+        for manager in ("yabai", "aerospace"):
+            with self.subTest(manager=manager):
+                result = subprocess.run([str(self.script), "--service", manager], env=self.env,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 7)
+                self.assertEqual((self.path / "login-manager").read_text(), manager)
+                self.assertFalse(Path(str(self.state_file) + ".lock").exists())
+
+    def test_service_rejects_missing_or_invalid_manager(self):
+        for args in (["--service"], ["--service", "other"], ["--service", "yabai", "extra"]):
+            with self.subTest(args=args):
+                result = subprocess.run([str(self.script), *args], env=self.env,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 64)
+
+    def test_service_starts_manager_once_without_display_checks(self):
+        self.configure(counts=[2])
+        wm = self.path / "wm.sh"
+        wm.write_text(f"#!{sys.executable}\n" + MOCK)
+        wm.chmod(0o755)
+        result = subprocess.run([str(self.script), "--service", "yabai"], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        state = json.loads(self.mock_file.read_text())
+        self.assertEqual(state["manager_starts"], 1)
+        self.assertNotIn("service_ticks", state)
+        calls = [json.loads(line) for line in (self.path / "calls.jsonl").read_text().splitlines()]
+        self.assertFalse(any(c[0] in ("display-profile.sh", "display-layout.sh") for c in calls))
 
     def configure(self, mode="docked", counts=None, **overrides):
         suffix = "-docked" if mode == "docked" else ""
         state = dict(counts=counts or [1], aerospace="aerospace" + suffix,
                      sketchybar="sketchybar" + suffix, loaded=mode)
+        state["plan"] = [dict(id=1,index=1,workspaces=[1,2,3,4,5,6])]
         state.update(overrides)
         self.mock_file.write_text(json.dumps(state))
         self.state_file.write_text(mode + "\n")
+        canonical = json.dumps(state["plan"], sort_keys=True, separators=(",",":"))
+        signature = subprocess.check_output(["cksum"], input="\n"+canonical+"\n", text=True)
+        Path(str(self.state_file)+".workspaces").write_text(signature)
 
     def run_switch(self, success=True):
         result = subprocess.run(["/bin/bash", str(self.script)], env=self.env,
@@ -117,11 +182,34 @@ class DisplayModeTests(unittest.TestCase):
         self.assert_profile("non-docked")
         reloads = [c for c in self.calls("sketchybar") if c[1] == "--reload"]
         self.assertEqual(reloads, [["sketchybar", "--reload",
-                                   str(Path.home() / ".config/sketchybar/sketchybarrc")]])
+                                   str(self.home / ".config/sketchybar/sketchybarrc")]])
         before = self.calls("stow")
         self.run_switch()
         self.run_switch()
         self.assertEqual(self.calls("stow"), before)
+
+    def test_yabai_trial_delegates_without_changing_aerospace(self):
+        self.configure(yabai_trial=True)
+        self.run_switch()
+        self.assertEqual(len(self.calls("display-profile.sh")), 1)
+        self.assertEqual(self.calls("system_profiler"), [])
+        self.assertEqual(self.calls("stow"), [])
+        self.assertEqual(self.calls("sketchybar"), [])
+        self.assert_profile("docked")
+
+    def test_shared_three_screen_plan_moves_only_incorrect_assignments(self):
+        plan = [dict(id=3,index=1,workspaces=[7,8,9]),
+                dict(id=1,index=2,workspaces=[1,3,5]),
+                dict(id=2,index=3,workspaces=[2,4,6])]
+        self.configure(counts=[3],plan=plan,assignments="1|2\n3|2\n5|2")
+        Path(str(self.state_file)+".workspaces").unlink()
+        self.run_switch()
+        moves = [c for c in self.calls("aerospace") if c[1] == "move-workspace-to-monitor"]
+        self.assertEqual(moves, [["aerospace","move-workspace-to-monitor","--workspace",str(w),str(m)]
+                                 for m,ws in [(1,[7,8,9]),(3,[2,4,6])] for w in ws])
+        self.assertEqual(json.loads((self.home/".local/state/dotfiles-wm/display-layout.json").read_text()),plan)
+        self.run_switch()
+        self.assertEqual(moves,[c for c in self.calls("aerospace") if c[1] == "move-workspace-to-monitor"])
 
     def test_repeated_dock_undock_cycles(self):
         for count, mode in [(1, "non-docked"), (2, "docked")] * 3:

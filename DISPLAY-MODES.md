@@ -1,6 +1,6 @@
 # Display modes: docked, laptop, and Screen Sharing
 
-Three layouts have to work, and they are selected by display count, not by choice:
+Three layouts have to work. They are pinned from the bar's profile menu (the pill on the right, or `./wm.sh profile NAME`). `./wm.sh profile auto` clears the pin and detects the connected screens. Nothing polls displays. A pin the connected screens cannot satisfy falls back to Auto and shows greyed in the bar:
 
 | Layout | Displays | Profile stowed |
 |---|---|---|
@@ -17,8 +17,9 @@ per-monitor split" is exactly right. No third profile exists.
 | Piece | Role |
 |---|---|
 | `switch-display-mode.sh` | Counts displays, unstows/stows the matching profile, reloads AeroSpace + sketchybar. Idempotent — exits early when the mode and the stowed config already agree. |
-| `com.user.display-mode-switcher` (launchd) | Runs the above every 30s. The backstop. |
+| `local.dotfiles.desktop` (launchd) | Starts the saved manager once at login, which applies the pinned profile once. The single service is installed by `./wm.sh default yabai` or `aerospace`. |
 | `aerospace-monitor-sync.sh` | Runs it *immediately*, off sketchybar's built-in `display_change` event, and repairs the arrangement first. |
+| `yabai/.config/yabai/scripts/display-profile.sh` | Applies the pinned native-Space profile at startup, on request, and on yabai display add/remove/move/resize events. It works with the bar stopped and does not repair physical display arrangement. |
 
 The switcher waits for two matching display snapshots before applying a profile.
 It tracks the display count and SketchyBar display identities/geometry, excluding
@@ -30,7 +31,7 @@ Checks made while the bar is stopped preserve the last running layout, and an
 unavailable profile marker defers action until a later check. Each applied change
 logs its timestamp and reason.
 Failed or zero-display detection leaves the existing profile alone for the next
-event or 30-second check to retry.
+display event or explicit profile application to retry.
 
 Both scripts use macOS `lockf` to prevent overlapping runs. Display events no
 longer kill a pending switch while it is changing symlinks. The event handler
@@ -52,10 +53,18 @@ and its `.displays` companion. Run the isolated regression tests on macOS with
 unplugging, config desynchronization, failed detection/reloads, and concurrent
 invocations without changing the live desktop.
 
-Without the event hook there is a window of up to 30s where the wrong profile is
-stowed: workspaces force-assigned to a monitor that isn't there, space pills
-pinned to a dead display index. That window is what made sketchybar look "cut
-off" after connecting a Screen Sharing session.
+Without the event hook the wrong AeroSpace profile stays stowed until a profile is
+re-pinned: workspaces force-assigned to a monitor that isn't there, space pills
+pinned to a dead display index. That is what made sketchybar look "cut off" after
+connecting a Screen Sharing session. Under yabai, native display events reapply
+the pinned profile when the topology changes. SketchyBar's display event refreshes
+the pills and invalidates their cached display mapping.
+
+Workspace pills keep their last valid snapshot if a query fails or the desktop
+temporarily has no displays. They retry after 0.1, 0.25, and 0.5 seconds, then wait
+for the next event. Window-close events remove the affected app icon immediately
+and request one follow-up snapshot after the closing animation. Numbered workspace
+pills stay visible when empty so they remain available to select.
 
 ## Trap: three different display numbers
 

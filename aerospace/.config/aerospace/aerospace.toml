@@ -1,7 +1,7 @@
 # Reference: https://github.com/i3/i3/blob/next/etc/config
 
-# Start AeroSpace at login
-start-at-login = true
+# Login startup is managed by ./wm.sh default; see YABAI.md.
+start-at-login = false
 
 after-startup-command = [
     # JankyBorders - colors loaded from Omarchy theme
@@ -10,7 +10,8 @@ after-startup-command = [
     'exec-and-forget sketchybar',
     # 1s refresh poller — covers same-app window closes, which AeroSpace's async
     # pipeline never notices on its own (#1615). See comments in the script.
-    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh'
+    'exec-and-forget $HOME/dotfiles/aerospace-poll.sh',
+    'exec-and-forget $HOME/dotfiles/switch-display-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change; re-poll aerospace so windows closed while
@@ -18,6 +19,9 @@ after-startup-command = [
 exec-on-workspace-change = ['/bin/bash', '-c',
     'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; $HOME/dotfiles/aerospace-retile.sh &'
 ]
+
+# Keep the service indicator in sync with every entry and exit path.
+on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_changed']
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
@@ -37,8 +41,8 @@ default-root-container-orientation = 'auto'
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
 key-mapping.preset = 'qwerty'
 
-# Mouse follows focus when focused monitor changes
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+# Keep the pointer in place when window, workspace, or monitor focus changes.
+on-focused-monitor-changed = []
 
 # Workaround for delayed re-tiling on window open/close since 0.20/0.21 async rewrite.
 # Single-flight re-poll script — see comments in ~/dotfiles/aerospace-retile.sh.
@@ -63,21 +67,25 @@ outer.right =      10
     cmd-h = [] # Disable "hide application"
     cmd-alt-h = [] # Disable "hide others"
 
-    cmd-left     =   'focus --boundaries-action wrap-around-the-workspace left'
-    cmd-down     =   'focus --boundaries-action wrap-around-the-workspace down'
-    cmd-up       =   'focus --boundaries-action wrap-around-the-workspace up'
-    cmd-right    =   'focus --boundaries-action wrap-around-the-workspace right'
+    cmd-left = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace left --focus'
+    cmd-down = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace down --focus'
+    cmd-up = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace up --focus'
+    cmd-right = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace right --focus'
 
-    cmd-shift-left = 'move left'
-    cmd-shift-down = 'move down'
-    cmd-shift-up = 'move up'
-    cmd-shift-right = 'move right'
+    cmd-shift-left = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace left'
+    cmd-shift-down = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace down'
+    cmd-shift-up = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace up'
+    cmd-shift-right = 'exec-and-forget /usr/bin/python3 "$HOME/dotfiles/wm-direction.py" aerospace right'
 
 
     cmd-equal = ['resize width +32']
     cmd-minus = ['resize width -32']
+    cmd-ctrl-equal = 'exec-and-forget /usr/bin/python3 $HOME/dotfiles/wm-size.py aerospace up'
+    cmd-ctrl-minus = 'exec-and-forget /usr/bin/python3 $HOME/dotfiles/wm-size.py aerospace down'
     cmd-shift-equal = ['resize height +32']
     cmd-shift-minus = ['resize height -32']
+    cmd-0 = 'balance-sizes' # Reset window sizes in the current workspace
+    cmd-ctrl-0 = 'balance-sizes'
 
     cmd-j = 'layout tiles horizontal vertical'
     cmd-comma = 'layout accordion horizontal vertical'
@@ -101,6 +109,32 @@ outer.right =      10
     cmd-5 = 'workspace 5'
     cmd-6 = 'workspace 6'
 
+    cmd-7 = 'workspace 7'
+    cmd-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-ctrl-shift-7 = 'move-node-to-workspace 7'
+    cmd-keypad7 = 'workspace 7'
+    cmd-shift-keypad7 = 'move-node-to-workspace 7 --focus-follows-window'
+    cmd-ctrl-shift-keypad7 = 'move-node-to-workspace 7'
+    cmd-8 = 'workspace 8'
+    cmd-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-ctrl-shift-8 = 'move-node-to-workspace 8'
+    cmd-keypad8 = 'workspace 8'
+    cmd-shift-keypad8 = 'move-node-to-workspace 8 --focus-follows-window'
+    cmd-ctrl-shift-keypad8 = 'move-node-to-workspace 8'
+    cmd-9 = 'workspace 9'
+    cmd-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+    cmd-ctrl-shift-9 = 'move-node-to-workspace 9'
+    cmd-keypad9 = 'workspace 9'
+    cmd-shift-keypad9 = 'move-node-to-workspace 9 --focus-follows-window'
+    cmd-ctrl-shift-keypad9 = 'move-node-to-workspace 9'
+
+    cmd-keypad1 = 'workspace 1'
+    cmd-keypad2 = 'workspace 2'
+    cmd-keypad3 = 'workspace 3'
+    cmd-keypad4 = 'workspace 4'
+    cmd-keypad5 = 'workspace 5'
+    cmd-keypad6 = 'workspace 6'
+
     cmd-pageUp = ['workspace prev']
     cmd-pageDown = ['workspace next']
 
@@ -109,20 +143,39 @@ outer.right =      10
 
     # Move window to workspace
     cmd-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
+    cmd-ctrl-shift-1 = 'move-node-to-workspace 1'
     cmd-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
+    cmd-ctrl-shift-2 = 'move-node-to-workspace 2'
     cmd-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
+    cmd-ctrl-shift-3 = 'move-node-to-workspace 3'
     cmd-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
+    cmd-ctrl-shift-4 = 'move-node-to-workspace 4'
     cmd-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
+    cmd-ctrl-shift-5 = 'move-node-to-workspace 5'
     cmd-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
+    cmd-ctrl-shift-6 = 'move-node-to-workspace 6'
 
-    alt-tab = 'workspace-back-and-forth' 
-    # Move current workspace to next monitor (wrap-around)
-    cmd-ctrl-right = 'move-workspace-to-monitor --wrap-around next'
+    cmd-shift-keypad1 = 'move-node-to-workspace 1 --focus-follows-window'
+    cmd-ctrl-shift-keypad1 = 'move-node-to-workspace 1'
+    cmd-shift-keypad2 = 'move-node-to-workspace 2 --focus-follows-window'
+    cmd-ctrl-shift-keypad2 = 'move-node-to-workspace 2'
+    cmd-shift-keypad3 = 'move-node-to-workspace 3 --focus-follows-window'
+    cmd-ctrl-shift-keypad3 = 'move-node-to-workspace 3'
+    cmd-shift-keypad4 = 'move-node-to-workspace 4 --focus-follows-window'
+    cmd-ctrl-shift-keypad4 = 'move-node-to-workspace 4'
+    cmd-shift-keypad5 = 'move-node-to-workspace 5 --focus-follows-window'
+    cmd-ctrl-shift-keypad5 = 'move-node-to-workspace 5'
+    cmd-shift-keypad6 = 'move-node-to-workspace 6 --focus-follows-window'
+    cmd-ctrl-shift-keypad6 = 'move-node-to-workspace 6'
 
-    # Move current workspace to previous monitor (wrap-around)
-    cmd-ctrl-left = 'move-workspace-to-monitor --wrap-around prev'
+    alt-tab = 'workspace-back-and-forth'
+    ctrl-tab = 'focus-back-and-forth'
+    # Move the focused window and follow it, wrapping between monitors.
+    cmd-ctrl-right = 'move-node-to-monitor --wrap-around next --focus-follows-window'
+    cmd-ctrl-left = 'move-node-to-monitor --wrap-around prev --focus-follows-window'
 
-    cmd-g = 'mode service'
+    cmd-alt-s = 'mode service'
+    f14 = 'mode service'
 
     alt-shift-c = 'reload-config'
 
@@ -130,8 +183,8 @@ outer.right =      10
     cmd-ctrl-alt-shift-d = 'flatten-workspace-tree'
 
     # Floating window
-    # Float toggle: when a window BECOMES floating, shrink it to 1600x1000 so it
-    # visibly pops out of the layout (AeroSpace has no float-size memory).
+    # Float toggle restores the last saved floating size and position.
+    cmd-ctrl-shift-f = 'exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh'
     cmd-ctrl-alt-shift-f = 'exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh'
 
     # Modes
@@ -140,9 +193,12 @@ outer.right =      10
     cmd-ctrl-alt-shift-r = 'mode resize'
 
 [mode.service.binding]
+    shift-slash = 'exec-and-forget sketchybar --trigger wm_help_toggle'
     esc = ['reload-config', 'mode main']
+    f15 = 'mode main'
+    space = 'mode main'
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
-    f = ['exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh', 'mode main'] # Float toggle, shrinks on float
+    f = ['exec-and-forget $HOME/dotfiles/aerospace-float-toggle.sh', 'mode main'] # Float toggle restores saved geometry
     backspace = ['close-all-windows-but-current', 'mode main']
 
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
@@ -176,13 +232,13 @@ outer.right =      10
     esc = 'mode main'
 
     left = ['resize width -16']
-    down = ['resize height -16']
-    up = ['resize height +16']
+    down = ['resize height +16']
+    up = ['resize height -16']
     right = ['resize width +16']
 
     shift-left = ['resize width -64']
-    shift-down = ['resize height -64']
-    shift-up = ['resize height +64']
+    shift-down = ['resize height +64']
+    shift-up = ['resize height -64']
     shift-right = ['resize width +64']
 
 
@@ -190,10 +246,10 @@ outer.right =      10
     space = 'mode main'
     esc = 'mode main'
 
-    left = ['workspace prev', 'move-mouse window-force-center']
-    right = ['workspace next', 'move-mouse window-force-center']
-    up = ['focus-monitor prev', 'move-mouse window-force-center']
-    down = ['focus-monitor next', 'move-mouse window-force-center']
+    left = ['workspace prev']
+    right = ['workspace next']
+    up = ['focus-monitor prev']
+    down = ['focus-monitor next']
     
     shift-right = ['move-node-to-workspace next --focus-follows-window']
     shift-left = ['move-node-to-workspace prev --focus-follows-window']
@@ -274,4 +330,3 @@ run = 'layout floating'
 [[on-window-detected]]
 if.app-id="com.mitchellh.ghostty"
 run= "layout tiling"
-

@@ -8,13 +8,34 @@ set -e
 DOTFILES_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DOTFILES_DIR"
 
+# One launchd service starts the manager once at login, which applies the pinned
+# profile. Nothing polls displays afterwards: profiles are chosen from the bar
+# menu or `wm.sh profile`. Dispatch before taking the display lock: wm.sh takes it.
+if [ "${1:-}" = --service ]; then
+    case "${2:-}" in
+        yabai|aerospace)
+            [ "$#" -eq 2 ] || exit 64
+            exec "$DOTFILES_DIR/wm.sh" "$2" ;;
+        *) echo "Usage: $0 --service yabai|aerospace" >&2; exit 64 ;;
+    esac
+fi
+
 STATE_FILE="${TMPDIR:-/tmp}/.display-mode-state"
 DISPLAY_STATE_FILE="${STATE_FILE}.displays"
+WORKSPACE_STATE_FILE="${STATE_FILE}.workspaces"
 
 # Serialize launchd and display-change runs without killing a switch midway.
 # macOS releases this descriptor lock even if the process exits unexpectedly.
-exec 9>"${STATE_FILE}.lock"
-lockf -s -t 10 9 || exit 1
+if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
+    exec 9>"${STATE_FILE}.lock"
+    lockf -s -t 10 9 || exit 1
+fi
+
+# Native Spaces need different hotplug handling from AeroSpace workspaces.
+if launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
+    exec 9>&-
+    exec "$DOTFILES_DIR/yabai/.config/yabai/scripts/display-profile.sh"
+fi
 
 # Require two matching, nonzero readings while macOS settles after hotplug.
 # Missing/failed detection must never be interpreted as a laptop-only layout.
@@ -41,6 +62,12 @@ done
 if [ "$DISPLAY_COUNT" -eq 0 ]; then
     echo "Display detection did not settle; leaving the current profile unchanged" >&2
     exit 1
+fi
+
+WORKSPACE_PLAN=""
+if pgrep -x AeroSpace >/dev/null; then
+    WORKSPACE_PLAN=$("$DOTFILES_DIR/yabai/.config/yabai/scripts/display-layout.sh" --aerospace) || exit 1
+    WORKSPACE_SIGNATURE=$(printf '%s\n%s\n' "$(pgrep -x AeroSpace)" "$(jq -cS . <<< "$WORKSPACE_PLAN")" | cksum)
 fi
 
 # Determine if docked (2+ displays) or not (1 display)
@@ -98,6 +125,8 @@ elif $BAR_RUNNING && [ "$LOADED_MODE" != "$MODE" ]; then
     REASON="loaded profile differs"
 elif $BAR_RUNNING && [ -n "$CURRENT_DISPLAYS" ] && [ "$CURRENT_DISPLAYS" != "$DISPLAY_SIGNATURE" ]; then
     REASON="display layout changed"
+elif [ -n "$WORKSPACE_PLAN" ] && [ "$(cat "$WORKSPACE_STATE_FILE" 2>/dev/null || true)" != "$WORKSPACE_SIGNATURE" ]; then
+    REASON="workspace monitor assignments changed"
 fi
 
 if [ -z "$REASON" ]; then
@@ -130,6 +159,21 @@ if $CONFIG_CHANGED; then
     fi
 fi
 
+# AeroSpace can move entire workspaces without the native-Space restrictions.
+# Numeric patterns are AeroSpace's own monitor IDs, joined by display name.
+if [ -n "$WORKSPACE_PLAN" ]; then
+    assignments=$(aerospace list-workspaces --all --format '%{workspace}|%{monitor-id}')
+    while IFS=$'\t' read -r workspace monitor; do
+        current=$(awk -F'|' -v ws="$workspace" '$1 == ws {print $2}' <<< "$assignments")
+        [ "$current" != "$monitor" ] || continue
+        aerospace move-workspace-to-monitor --workspace "$workspace" "$monitor"
+    done < <(jq -r '.[] | .index as $monitor | .workspaces[] | [.,$monitor] | @tsv' <<< "$WORKSPACE_PLAN")
+    mkdir -p "$HOME/.local/state/dotfiles-wm"
+    temp=$(mktemp "$HOME/.local/state/dotfiles-wm/display-layout.XXXXXX")
+    printf '%s\n' "$WORKSPACE_PLAN" > "$temp"
+    mv "$temp" "$HOME/.local/state/dotfiles-wm/display-layout.json"
+fi
+
 # Reload sketchybar. Note: `brew services restart sketchybar` fails when the
 # felixkratz tap is untrusted, so use the in-process reload which re-runs the
 # newly stowed config and rebuilds every item. Pass the path explicitly: a bare
@@ -158,3 +202,4 @@ echo "$MODE" > "$STATE_FILE"
 if $BAR_RUNNING; then
     echo "$DISPLAY_SIGNATURE" > "$DISPLAY_STATE_FILE"
 fi
+if [ -n "$WORKSPACE_PLAN" ]; then echo "$WORKSPACE_SIGNATURE" > "$WORKSPACE_STATE_FILE"; fi

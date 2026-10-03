@@ -1,0 +1,137 @@
+#!/bin/bash
+set -euo pipefail
+export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+
+# No scripting addition or SIP changes. Based on the docked AeroSpace profile.
+yabai -m config layout bsp
+yabai -m config split_ratio 0.50
+yabai -m config auto_balance off
+yabai -m config window_placement second_child
+yabai -m config window_origin_display focused
+yabai -m config focus_follows_mouse off
+yabai -m config mouse_follows_focus off
+yabai -m config mouse_modifier alt
+yabai -m config mouse_action1 move
+yabai -m config mouse_action2 resize
+yabai -m config window_gap 15
+yabai -m config top_padding 50
+yabai -m config bottom_padding 8
+yabai -m config left_padding 10
+yabai -m config right_padding 10
+
+# Apply the selection border even when AeroSpace has not run this session.
+if command -v borders >/dev/null 2>&1; then
+    (
+        if [ -r "$HOME/.config/omarchy/current/borders.sh" ]; then
+            source "$HOME/.config/omarchy/current/borders.sh"
+        fi
+        borders active_color="${BORDER_ACTIVE:-0xffcba6f7}" \
+            inactive_color="${BORDER_INACTIVE:-0xff585b70}" \
+            width="${BORDER_WIDTH:-8.0}"
+    ) >/dev/null 2>&1 &
+fi
+
+# Labelled rules replace themselves on reload. App names are yabai's API.
+yabai -m rule --add label=dotfiles-utilities \
+    app='^(System Settings|System Preferences|Activity Monitor|App Store|Clock|FaceTime|1Password)$' manage=off
+yabai -m rule --add label=dotfiles-stack-manager \
+    app='^Electron$' title='^Worktree & Stack Manager$' manage=off
+
+# Retire the old fixed-workspace rules in an already-running session, too.
+yabai -m rule --remove dotfiles-dev 2>/dev/null || true
+yabai -m rule --remove dotfiles-collaboration 2>/dev/null || true
+
+# New windows from the formerly pinned apps should receive keyboard focus.
+yabai -m signal --add label=dotfiles-focus-new-app-window event=window_created \
+    app='^(Warp|PyCharm|GitHub Desktop|Slack)$' \
+    action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; yabai -m window --focus "$YABAI_WINDOW_ID"'
+
+# Chrome can overwrite its tile while detaching a tab. Repair after mouse-up.
+yabai -m signal --add label=dotfiles-chrome-detach event=window_created \
+    app='^Google Chrome$' \
+    action='/usr/bin/python3 "$HOME/.config/yabai/scripts/settle-tiles.py" "$YABAI_WINDOW_ID"'
+
+# A window leaving can strand an empty tile or a window that missed its resize.
+# Repair visible Spaces; one worker drains bursts such as an app quitting.
+for event in window_destroyed window_minimized application_hidden application_terminated space_changed display_changed; do
+    yabai -m signal --add label="dotfiles-settle-$event" event="$event" \
+        action='/usr/bin/python3 "$HOME/.config/yabai/scripts/settle-tiles.py" --spaces'
+done
+
+# Cmd+Tab can switch to a hidden or minimized app without revealing it.
+yabai -m signal --add label=dotfiles-unhide-front-app event=application_front_switched \
+    action='"$HOME/.config/yabai/scripts/reveal-app.sh" "$YABAI_PROCESS_ID"'
+
+# Minimizing an app's last window leaves it frontmost, and reselecting the front
+# app in Cmd+Tab fires no event. Move focus away so Cmd+Tab back is a real switch.
+yabai -m signal --add label=dotfiles-minimize-refocus event=window_minimized \
+    action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; /usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" --restore; [ "$(yabai -m query --windows --window 2>/dev/null | jq -r ".\"is-minimized\"")" = false ] || yabai -m window --focus recent'
+
+# Remember each window's workspace so display changes can put it back. The
+# script ignores events while the screens differ from the applied layout.
+for event in window_created window_destroyed window_focused space_changed; do
+    yabai -m signal --add label="dotfiles-memory-$event" event="$event" \
+        action='/usr/bin/python3 "$HOME/.config/yabai/scripts/workspace-memory.py" save'
+done
+
+# Native 'recent' excludes floating windows, so retain a pair from focus events.
+/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" reset
+yabai -m signal --add label=dotfiles-focus-history event=window_focused \
+    action='/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-previous.py" record'
+
+# Pills show apps, not titles. Retire the title signal on config reload too.
+yabai -m signal --remove dotfiles-window_title_changed 2>/dev/null || true
+for event in window_created window_destroyed window_focused application_hidden application_visible application_terminated; do
+    yabai -m signal --add label="dotfiles-$event" event="$event" \
+        action='PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"; command -v sketchybar >/dev/null && sketchybar --trigger yabai_windows_changed EVENT='"$event"' WINDOW_ID="${YABAI_WINDOW_ID:-}" PROCESS_ID="${YABAI_PROCESS_ID:-}"'
+done
+
+# Native Space/display activation can leave Finder active with no focused window.
+# Keyboard/bar switches also run this guard, including clicks on the current Space.
+for event in space_changed display_changed; do
+    yabai -m signal --add label="dotfiles-focus-$event" event="$event" \
+        action='/usr/bin/python3 "$HOME/.config/yabai/scripts/focus-space.py" --restore'
+done
+
+# Hotplug works even if SketchyBar is stopped. The helper debounces geometry
+# changes and never switches the window manager or repairs physical displays.
+# Undocking fires several of these at once while displays are still settling;
+# a run that loses the lock or sees a moving topology exits 1, so retry.
+# New screens drop any manual bar pick and follow what is connected. macOS keeps
+# shuffling desktops for a few seconds, so sweep leftover empty ones once more.
+for event in display_added display_removed display_moved display_resized; do
+    yabai -m signal --add label="dotfiles-$event" event="$event" \
+        action='(echo "$(date "+%F %T") '"$event"'"; for try in 1 2 3 4 5 6 7 8 9 10; do "$HOME/.config/yabai/scripts/display-profile.sh" --hotplug && { sleep 5; "$HOME/.config/yabai/scripts/ensure-spaces.sh"; break; }; sleep 3; done) >>"$HOME/.local/state/dotfiles-wm/display-profile.log" 2>&1 &'
+done
+
+# wm.sh creates and labels desktops once the daemon is ready.
+if [ -n "${DOTFILES_YABAI_READY:-}" ]; then
+    touch "$DOTFILES_YABAI_READY"
+fi
+
+# The bar chooses its workspace backend when its config loads. After a boot
+# where the bar came up before yabai, or a launchd relaunch, reload it.
+if command -v sketchybar >/dev/null && [ "$(sketchybar --query wm.backend 2>/dev/null | jq -r '.label.value // ""')" != yabai ]; then
+    sketchybar --reload "$HOME/.config/sketchybar/sketchybarrc" >/dev/null 2>&1 || true
+fi
+
+# launchd restarts yabai after a crash without wm.sh, which drops the Space
+# labels the shortcuts and bar depend on. The profile script keys its signature
+# on the yabai pid, so every fresh daemon re-applies labels and the bar profile.
+# Displays can still be reconfiguring or asleep after a wake; retry until it
+# succeeds or this yabai is gone.
+mkdir -p "$HOME/.local/state/dotfiles-wm"
+(
+    blind=false
+    until "$HOME/.config/yabai/scripts/display-profile.sh"; do
+        pgrep -x yabai >/dev/null || exit
+        yabai -m query --displays 2>/dev/null | jq -e 'length > 0' >/dev/null 2>&1 || blind=true
+        sleep 10
+    done
+    # A daemon that started with no active displays never rebuilds its window
+    # tree once they return: windows stay invisible and actions cannot find them.
+    if $blind; then
+        echo 'yabai started without active displays; restarting on awake displays.'
+        launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai"
+    fi
+) >>"$HOME/.local/state/dotfiles-wm/display-profile.log" 2>&1 &

@@ -1,0 +1,14 @@
+{
+  "odd_monitor": "LG HDR QHD",
+  "even_monitor": "PA278QV",
+  "built_in_top_padding": 16,
+  "external_top_padding": 50,
+  "clamshell_repair": {
+    "enabled": true,
+    "odd_display_uuid": "98C1FB25-A9D8-4BF1-A6FB-B5F43EFF2313",
+    "even_display_uuid": "72BE38E4-ED54-416E-A1C5-004D9725F0C7",
+    "built_in_uuid": "37D8832A-2D66-02CA-B9F7-8F30A301B230",
+    "odd_settings": "res:2560x1440 hz:75 color_depth:8 enabled:true scaling:off origin:(0,0) degree:0",
+    "even_settings": "res:2560x1440 hz:75 color_depth:8 enabled:true scaling:off origin:(2560,0) degree:0"
+  }
+}

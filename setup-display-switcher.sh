@@ -57,6 +57,10 @@ if ! command -v stow &> /dev/null; then
     MISSING_DEPS+=("stow")
 fi
 
+if ! command -v jq &> /dev/null; then
+    MISSING_DEPS+=("jq")
+fi
+
 if ! command -v brew &> /dev/null; then
     echo -e "${YELLOW}⚠ homebrew not found${NC}"
     MISSING_DEPS+=("homebrew")
@@ -80,7 +84,7 @@ if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     done
     echo ""
     echo "Please install missing dependencies:"
-    echo "  brew install stow"
+    echo "  brew install stow jq"
     echo "  brew install --cask nikitabobko/tap/aerospace"
     echo "  brew install sketchybar"
     exit 1
@@ -91,7 +95,7 @@ echo ""
 
 # Check for required directories
 echo "Checking configuration directories..."
-REQUIRED_DIRS=("aerospace" "aerospace-docked" "sketchybar" "sketchybar-docked")
+REQUIRED_DIRS=("aerospace" "aerospace-docked" "sketchybar" "sketchybar-docked" "yabai")
 MISSING_DIRS=()
 
 for dir in "${REQUIRED_DIRS[@]}"; do
@@ -111,6 +115,8 @@ fi
 echo -e "${GREEN}✓ All required directories found${NC}"
 echo ""
 
+"$SCRIPT_DIR/yabai/.config/yabai/scripts/build-spaces-helper.sh"
+
 # Make the switch script executable
 echo "Setting up display mode switcher script..."
 if [ -f "$SCRIPT_DIR/switch-display-mode.sh" ]; then
@@ -124,50 +130,11 @@ echo ""
 
 # Install LaunchAgent if --auto flag is passed
 if [ "$AUTO_MODE" = true ]; then
-    echo "Setting up automatic mode (LaunchAgent)..."
+    # Use the same installer as wm.sh; never recreate a separate polling job.
+    /usr/bin/python3 "$SCRIPT_DIR/wm-startup.py" install
+    echo "Desktop service enabled. It starts the saved manager and checks displays every 30 seconds."
+    echo "Disable with: $SCRIPT_DIR/wm.sh default off"
 
-    CURRENT_USER=$(whoami)
-    HOME_DIR="$HOME"
-
-    if [ ! -f "$SCRIPT_DIR/com.user.display-mode-switcher.plist" ]; then
-        echo -e "${RED}ERROR: com.user.display-mode-switcher.plist not found${NC}"
-        exit 1
-    fi
-
-    # Create a temporary plist with updated paths
-    sed "s|/Users/nishsitapara|$HOME_DIR|g" "$SCRIPT_DIR/com.user.display-mode-switcher.plist" > /tmp/display-switcher-temp.plist
-
-    # Copy to LaunchAgents directory
-    mkdir -p "$HOME_DIR/Library/LaunchAgents"
-    cp /tmp/display-switcher-temp.plist "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-    rm /tmp/display-switcher-temp.plist
-
-    # Unload existing agent if it exists
-    launchctl unload "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist" 2>/dev/null || true
-
-    # Load the LaunchAgent
-    launchctl load "$HOME_DIR/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-
-    # Check if it loaded successfully
-    if launchctl list | grep -q "com.user.display-mode-switcher"; then
-        echo -e "${GREEN}✓ LaunchAgent installed and running${NC}"
-        echo ""
-        echo "========================================"
-        echo -e "${GREEN}Setup Complete!${NC}"
-        echo "========================================"
-        echo ""
-        echo "Automatic mode is now enabled."
-        echo "The switcher will check every 30 seconds for display changes."
-        echo ""
-        echo "Commands:"
-        echo "  Run manually:  $SCRIPT_DIR/switch-display-mode.sh"
-        echo "  View logs:     tail -f /tmp/display-mode-switcher.log"
-        echo "  Disable auto:  launchctl unload ~/Library/LaunchAgents/com.user.display-mode-switcher.plist"
-        echo ""
-    else
-        echo -e "${RED}ERROR: Failed to load LaunchAgent${NC}"
-        exit 1
-    fi
 else
     echo "========================================"
     echo -e "${GREEN}Setup Complete!${NC}"
