@@ -1,4 +1,4 @@
-general.import = [ "~/.config/omarchy/current/theme/alacritty.toml" ]
+general.import = [ "~/.config/omarchy/current/alacritty.toml", "~/.local/state/omarchy/current/theme/alacritty.toml" ]
 
 [env]
 TERM = "xterm-256color"
@@ -7,7 +7,7 @@ TERM = "xterm-256color"
 normal = { family = "CaskaydiaMono Nerd Font", style = "Regular" }
 bold = { family = "CaskaydiaMono Nerd Font", style = "Bold" }
 italic = { family = "CaskaydiaMono Nerd Font", style = "Italic" }
-size = 14
+size = 11
 
 [window]
 padding.x = 14
@@ -17,7 +17,11 @@ decorations = "None"
 [keyboard]
 bindings = [
 { key = "Insert", mods = "Shift", action = "Paste" },
-{ key = "Insert", mods = "Control", action = "Copy" }
+{ key = "Insert", mods = "Control", action = "Copy" },
+  # Send Shift+Return as CSI-u so TUIs can distinguish it from Return without treating it as Alt+Return.
+  { key = "Return", mods = "Shift", chars = "\u001B[13;2u" },
+  # Legacy encoding sends Alt+Shift+Return the same as Alt+Return; send CSI-u so tmux can match M-S-Enter.
+  { key = "Return", mods = "Alt|Shift", chars = "\u001B[13;4u" }
 ]
 
 [selection]

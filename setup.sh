@@ -6,8 +6,8 @@ set -euo pipefail
 # Detects the OS and uses the appropriate package manager
 #   Linux: yay (AUR helper)
 #   macOS: Homebrew
-# Stows the correct dotfiles per platform, then restores
-# the git version via checkout after adopt.
+# Stows the correct dotfiles per platform while preserving saved settings.
+# Omarchy Quattro uses scripts/restore-omarchy for its directory links.
 # ──────────────────────────────────────────────────────────────
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -170,7 +170,7 @@ set_default_shell() {
 # ══════════════════════════════════════════════════════════════
 
 # Maps a stow package name to the command it requires.
-# Packages not listed here have no binary dependency (e.g. themes, bin).
+# Packages not listed here have no binary dependency (e.g. themes-mac, bin).
 pkg_to_cmd() {
     case "$1" in
         kitty)       echo "kitty" ;;
@@ -183,7 +183,6 @@ pkg_to_cmd() {
         yazi)        echo "yazi" ;;
         zsh|zsh-mac) echo "zsh" ;;
         hypr)        echo "Hyprland" ;;
-        waybar)      echo "waybar" ;;
         aerospace)   echo "aerospace" ;;
         sketchybar)  echo "sketchybar" ;;
         *)           echo "" ;;  # no dependency to check
@@ -242,16 +241,19 @@ stow_dotfiles() {
         stow_packages=(
             "${shared_packages[@]}"
             zsh
-            hypr
-            waybar
-            themes
         )
+        if command -v omarchy &>/dev/null && [[ -f /usr/share/omarchy/shell/shell.qml ]]; then
+            info "Quattro: Hyprland and shell settings will use restore-omarchy"
+        else
+            warn "Omarchy Quattro is required to restore the Linux desktop configuration"
+        fi
     elif [[ "$OS" == "Darwin" ]]; then
         stow_packages=(
             "${shared_packages[@]}"
             zsh-mac
             aerospace
             sketchybar
+            themes-mac
         )
     fi
 
@@ -264,15 +266,24 @@ stow_dotfiles() {
     for pkg in "${stow_packages[@]}"; do
         if [[ -d "$DOTFILES_DIR/$pkg" ]]; then
             info "  Stowing: $pkg"
+            # Adoption brings fresh install files into the package. Restore
+            # the saved working copy afterward, including uncommitted edits,
+            # rather than resetting the whole repository to a Git revision.
+            local package_snapshot
+            package_snapshot=$(mktemp -d)
+            cp -a "$DOTFILES_DIR/$pkg/." "$package_snapshot/"
             stow --adopt "$pkg" 2>/dev/null || warn "  Failed to stow $pkg, skipping"
+            cp -a "$package_snapshot/." "$DOTFILES_DIR/$pkg/"
+            rm -rf "$package_snapshot"
         else
             warn "  Package dir not found: $pkg, skipping"
         fi
     done
 
-    info "Restoring dotfiles to git version..."
-    git checkout .
-    info "Dotfiles restored to git version"
+    if [[ "$OS" == "Linux" ]] && command -v omarchy &>/dev/null && [[ -f /usr/share/omarchy/shell/shell.qml ]]; then
+        info "Restoring Omarchy Quattro settings and plugins..."
+        "$DOTFILES_DIR/scripts/restore-omarchy"
+    fi
 
     # ── Post-stow symlinks (platform-agnostic) ────────────
     # eza theme.yml must point to the omarchy current theme.
@@ -280,6 +291,9 @@ stow_dotfiles() {
     # which differs between macOS (/Users/x) and Linux (/home/x).
     local eza_theme="$HOME/.config/eza/theme.yml"
     local eza_target="$HOME/.config/omarchy/current/eza-theme.yml"
+    if [[ "$OS" == "Linux" ]] && [[ -f "$HOME/.local/state/omarchy/current/theme/eza-theme.yml" ]]; then
+        eza_target="$HOME/.local/state/omarchy/current/theme/eza-theme.yml"
+    fi
     if [[ -f "$eza_target" || -L "$eza_target" ]]; then
         ln -sf "$eza_target" "$eza_theme"
         info "Linked eza theme.yml -> $eza_target"
@@ -475,6 +489,11 @@ setup_mac_extras() {
 # ══════════════════════════════════════════════════════════════
 
 main() {
+    if [[ ${1:-} == "--omarchy-only" ]]; then
+        shift
+        "$DOTFILES_DIR/scripts/restore-omarchy" "$@"
+        return
+    fi
     info "Starting post-install setup from $DOTFILES_DIR"
     info "Detected OS: $OS"
 

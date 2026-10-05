@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "theme": "tokyo-night",
+  "plugins": [
+    {
+      "id": "harshith.system-monitor",
+      "url": "https://github.com/Harshith292002/omarchy-system-monitor.git",
+      "revision": "60baf04f3122611a1da8c316d1ea5f41b7125d58",
+      "branch": "main"
+    },
+    {
+      "id": "jankeesvw.notification-center",
+      "url": "https://github.com/jankeesvw/omarchy-notification-center.git",
+      "revision": "e4c4568daaf93751097f86a79f98b35c4c00da44",
+      "branch": "main"
+    },
+    {
+      "id": "omaplug",
+      "url": "https://github.com/fross100/omaplug.git",
+      "revision": "9da73fc13fc2027be5b44915b4ab89440beb74ab",
+      "branch": "main"
+    },
+    {
+      "id": "tornikegomareli.spaces",
+      "url": "https://github.com/tornikegomareli/omarchy-spaces.git",
+      "revision": "e3f341fd9d90afe65d9cfc2e44630082efa4fdbc",
+      "branch": "main"
+    },
+    {
+      "id": "vinicgobbi.clipboard",
+      "url": "https://github.com/vinicgobbi/omarchy-plugin-clipboard.git",
+      "revision": "c6b18df01a0e23ff217e547ee23b9cb9981f12a5",
+      "branch": "main"
+    }
+  ]
+}
