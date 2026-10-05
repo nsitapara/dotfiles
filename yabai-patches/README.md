@@ -15,6 +15,14 @@ against empty, skipped, and unavailable display/space fixtures before compiling.
 SketchyBar separately preserves its last valid frame and retries transient query
 failures, including failures from an older installed build.
 
+Two patches handle apps that hide a window on close instead of destroying it,
+such as Spotify and ChatGPT. `ordered-out.patch` removes the window's tile when
+it is hidden and tiles it again when it is shown. `reopened-window.patch`
+handles reopening, when the app creates a new accessibility element under the
+same window id. Stock yabai ignores that element because it already knows the
+id, so it keeps moving the dead element and leaves a gap. The patch replaces
+the window instead.
+
 ## Sources
 
 - yabai base: `dd845723416f5fe92af49fad5ebab00369e07edd`, version 7.1.25.
@@ -24,6 +32,9 @@ failures, including failures from an older installed build.
   supplies the IOHID event serializer. Its MIT license is included in the patch.
 - [yabai #2800](https://github.com/asmvik/yabai/issues/2800) describes using the
   macOS 26 main-binary paths on macOS 27. This patch limits that alias to 27.
+- [yabai #2828](https://github.com/asmvik/yabai/issues/2828) supplies
+  `ordered-out.patch` (idvorkin's patch 2/2, `src/` only). Patch 1/2 duplicates
+  the macOS 27 alias above.
 
 The local integration sends Began, Changed, and Ended phases, with velocity only
 on Ended. It constructs all three before posting. Positive progress/velocity

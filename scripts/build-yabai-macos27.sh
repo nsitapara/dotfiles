@@ -19,6 +19,8 @@ git -C "$build_dir/source" fetch -q --depth=1 https://github.com/asmvik/yabai.gi
 git -C "$build_dir/source" checkout -q --detach FETCH_HEAD
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/macos27.patch"
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/query-json.patch"
+git -C "$build_dir/source" apply "$repo_dir/yabai-patches/ordered-out.patch"
+git -C "$build_dir/source" apply "$repo_dir/yabai-patches/reopened-window.patch"
 python3 "$repo_dir/tests/check_yabai_query_json.py" "$build_dir/source"
 make -C "$build_dir/source" install
 

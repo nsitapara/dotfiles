@@ -1,0 +1,212 @@
+Untile windows their app orders out without minimizing or hiding.
+Source: https://github.com/idvorkin/yabai/compare/master...upstream-pr/untile-ordered-out
+(yabai #2828, patch 2/2, src/ only; patch 1/2 is covered by macos27.patch).
+
+diff --git a/src/event_loop.c b/src/event_loop.c
+index f66d11c..ed9018a 100644
+--- a/src/event_loop.c
++++ b/src/event_loop.c
+@@ -949,6 +949,51 @@ static EVENT_HANDLER(SLS_WINDOW_ORDERED)
+     if (node) SLSOrderWindow(g_connection, node->feedback_window.id, 1, node->window_order[0]);
+ }
+ 
++// NOTE: Apps that hide a window on close (e.g. Electron) order it out without minimizing it or
++// hiding the app, so none of those events arrives to untile it; the window server's own visibility
++// notifications do. The ordered-in state is checked again because these are queued: the window
++// may have been ordered back in (or out) by the time the event is handled.
++static EVENT_HANDLER(SLS_WINDOW_IS_INVISIBLE)
++{
++    uint32_t wid = (uint64_t)(intptr_t) context;
++    debug("%s: %d\n", __FUNCTION__, wid);
++
++    struct window *window = window_manager_find_window(&g_window_manager, wid);
++    if (!window) return;
++
++    if (!__sync_bool_compare_and_swap(&window->id_ptr, &window->id, &window->id)) {
++        debug("%s: %d has been marked invalid by the system, ignoring event..\n", __FUNCTION__, wid);
++        return;
++    }
++
++    uint8_t ordered_in = 0;
++    SLSWindowIsOrderedIn(g_connection, wid, &ordered_in);
++    if (ordered_in) return;
++
++    window_manager_window_did_order_out(&g_window_manager, window);
++}
++
++static EVENT_HANDLER(SLS_WINDOW_IS_VISIBLE)
++{
++    uint32_t wid = (uint64_t)(intptr_t) context;
++    debug("%s: %d\n", __FUNCTION__, wid);
++
++    struct window *window = window_manager_find_window(&g_window_manager, wid);
++    if (!window || !window_check_flag(window, WINDOW_ORDERED_OUT)) return;
++
++    if (!__sync_bool_compare_and_swap(&window->id_ptr, &window->id, &window->id)) {
++        debug("%s: %d has been marked invalid by the system, ignoring event..\n", __FUNCTION__, wid);
++        return;
++    }
++
++    uint8_t ordered_in = 0;
++    SLSWindowIsOrderedIn(g_connection, wid, &ordered_in);
++    if (!ordered_in) return;
++
++    uint64_t sid = space_manager_active_space();
++    window_manager_window_did_order_in(&g_window_manager, window, space_manager_is_window_on_space(sid, window) ? sid : 0);
++}
++
+ static EVENT_HANDLER(SLS_WINDOW_DESTROYED)
+ {
+     uint32_t wid = (uint64_t)(intptr_t) context;
+diff --git a/src/event_loop.h b/src/event_loop.h
+index add0ae4..dee4101 100644
+--- a/src/event_loop.h
++++ b/src/event_loop.h
+@@ -18,6 +18,8 @@
+     EVENT_TYPE_ENTRY(WINDOW_DEMINIMIZED) \
+     EVENT_TYPE_ENTRY(WINDOW_TITLE_CHANGED) \
+     EVENT_TYPE_ENTRY(SLS_WINDOW_ORDERED) \
++    EVENT_TYPE_ENTRY(SLS_WINDOW_IS_VISIBLE) \
++    EVENT_TYPE_ENTRY(SLS_WINDOW_IS_INVISIBLE) \
+     EVENT_TYPE_ENTRY(SLS_WINDOW_DESTROYED) \
+     EVENT_TYPE_ENTRY(SLS_SPACE_CREATED) \
+     EVENT_TYPE_ENTRY(SLS_SPACE_DESTROYED) \
+diff --git a/src/mission_control.c b/src/mission_control.c
+index 4c4d61e..b110275 100644
+--- a/src/mission_control.c
++++ b/src/mission_control.c
+@@ -17,6 +17,12 @@ static CONNECTION_CALLBACK(connection_handler)
+     } else if (type == 808) {
+         uint32_t wid; memcpy(&wid, data, sizeof(uint32_t));
+         event_loop_post(&g_event_loop, SLS_WINDOW_ORDERED, (void *) (intptr_t) wid, 0);
++    } else if (type == 815) {
++        uint32_t wid; memcpy(&wid, data, sizeof(uint32_t));
++        event_loop_post(&g_event_loop, SLS_WINDOW_IS_VISIBLE, (void *) (intptr_t) wid, 0);
++    } else if (type == 816) {
++        uint32_t wid; memcpy(&wid, data, sizeof(uint32_t));
++        event_loop_post(&g_event_loop, SLS_WINDOW_IS_INVISIBLE, (void *) (intptr_t) wid, 0);
+     } else if (type == 804) {
+         uint32_t wid; memcpy(&wid, data, sizeof(uint32_t));
+         event_loop_post(&g_event_loop, SLS_WINDOW_DESTROYED, (void *) (intptr_t) wid, 0);
+diff --git a/src/window.h b/src/window.h
+index e5e3893..255cddf 100644
+--- a/src/window.h
++++ b/src/window.h
+@@ -99,7 +99,7 @@ struct window
+     bool is_eligible;
+     uint8_t notification;
+     uint8_t rule_flags;
+-    uint8_t flags;
++    uint16_t flags;
+     float opacity;
+     int layer;
+     char *scratchpad;
+@@ -107,14 +107,15 @@ struct window
+ 
+ enum window_flag
+ {
+-    WINDOW_SHADOW     = 0x01,
+-    WINDOW_FULLSCREEN = 0x02,
+-    WINDOW_MINIMIZE   = 0x04,
+-    WINDOW_FLOAT      = 0x08,
+-    WINDOW_STICKY     = 0x10,
+-    WINDOW_WINDOWED   = 0x20,
+-    WINDOW_MOVABLE    = 0x40,
+-    WINDOW_RESIZABLE  = 0x80
++    WINDOW_SHADOW      = 0x001,
++    WINDOW_FULLSCREEN  = 0x002,
++    WINDOW_MINIMIZE    = 0x004,
++    WINDOW_FLOAT       = 0x008,
++    WINDOW_STICKY      = 0x010,
++    WINDOW_WINDOWED    = 0x020,
++    WINDOW_MOVABLE     = 0x040,
++    WINDOW_RESIZABLE   = 0x080,
++    WINDOW_ORDERED_OUT = 0x100
+ };
+ 
+ enum window_rule_flag
+diff --git a/src/window_manager.c b/src/window_manager.c
+index 13bc245..9f47526 100644
+--- a/src/window_manager.c
++++ b/src/window_manager.c
+@@ -271,11 +271,12 @@ void window_manager_center_mouse(struct window_manager *wm, struct window *windo
+ 
+ bool window_manager_should_manage_window(struct window *window)
+ {
+-    if (!window->is_root)                           return false;
+-    if (window_check_flag(window, WINDOW_FLOAT))    return false;
+-    if (window_is_sticky(window->id))               return false;
+-    if (window_check_flag(window, WINDOW_MINIMIZE)) return false;
+-    if (window->application->is_hidden)             return false;
++    if (!window->is_root)                              return false;
++    if (window_check_flag(window, WINDOW_FLOAT))       return false;
++    if (window_is_sticky(window->id))                  return false;
++    if (window_check_flag(window, WINDOW_MINIMIZE))    return false;
++    if (window_check_flag(window, WINDOW_ORDERED_OUT)) return false;
++    if (window->application->is_hidden)                return false;
+ 
+     return (window_is_standard(window) && window_level_is_standard(window) && window_can_move(window)) || window_check_rule_flag(window, WINDOW_RULE_MANAGED);
+ }
+@@ -297,6 +298,34 @@ void window_manager_add_managed_window(struct window_manager *wm, struct window
+     window_manager_purify_window(wm, window);
+ }
+ 
++void window_manager_window_did_order_out(struct window_manager *wm, struct window *window)
++{
++    window_set_flag(window, WINDOW_ORDERED_OUT);
++
++    struct view *view = window_manager_find_managed_window(wm, window);
++    if (view) {
++        space_manager_untile_window(view, window);
++        window_manager_remove_managed_window(wm, window->id);
++        window_manager_purify_window(wm, window);
++    }
++}
++
++// NOTE: sid is the active space when the window is on it, and 0 otherwise; a window
++// ordered in on an inactive space is tiled when that space becomes active.
++void window_manager_window_did_order_in(struct window_manager *wm, struct window *window, uint64_t sid)
++{
++    window_clear_flag(window, WINDOW_ORDERED_OUT);
++
++    if (!sid) return;
++    if (!window_manager_should_manage_window(window)) return;
++    if (window_manager_find_managed_window(wm, window)) return;
++
++    struct window *last_window = window_manager_find_window(wm, wm->last_window_id);
++    uint32_t insertion_point = last_window && last_window->application->pid != window->application->pid ? last_window->id : 0;
++    struct view *view = space_manager_tile_window_on_space_with_insertion_point(&g_space_manager, window, sid, insertion_point);
++    window_manager_add_managed_window(wm, window, view);
++}
++
+ enum window_op_error window_manager_adjust_window_ratio(struct window_manager *wm, struct window *window, int type, float ratio)
+ {
+     TIME_FUNCTION;
+diff --git a/src/window_manager.h b/src/window_manager.h
+index 4db0849..0d176be 100644
+--- a/src/window_manager.h
++++ b/src/window_manager.h
+@@ -153,6 +153,8 @@ struct application *window_manager_focused_application(struct window_manager *wm
+ struct view *window_manager_find_managed_window(struct window_manager *wm, struct window *window);
+ void window_manager_remove_managed_window(struct window_manager *wm, uint32_t wid);
+ void window_manager_add_managed_window(struct window_manager *wm, struct window *window, struct view *view);
++void window_manager_window_did_order_out(struct window_manager *wm, struct window *window);
++void window_manager_window_did_order_in(struct window_manager *wm, struct window *window, uint64_t sid);
+ bool window_manager_find_lost_front_switched_event(struct window_manager *wm, pid_t pid);
+ void window_manager_remove_lost_front_switched_event(struct window_manager *wm, pid_t pid);
+ void window_manager_add_lost_front_switched_event(struct window_manager *wm, pid_t pid);
+diff --git a/src/yabai.c b/src/yabai.c
+index eb1ecf1..0aaa5f6 100644
+--- a/src/yabai.c
++++ b/src/yabai.c
+@@ -331,6 +331,10 @@ int main(int argc, char **argv)
+ 
+     if (workspace_is_macos_sequoia() || workspace_is_macos_tahoe()) {
+         SLSRegisterConnectionNotifyProc(g_connection, connection_handler, 804, NULL);
++
++        // NOTE: Only delivered for windows subscribed to, which is every window from Sequoia on.
++        SLSRegisterConnectionNotifyProc(g_connection, connection_handler, 815, NULL);
++        SLSRegisterConnectionNotifyProc(g_connection, connection_handler, 816, NULL);
+     }
+ 
+     window_manager_init(&g_window_manager);
