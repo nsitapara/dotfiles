@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+# The bar places the icon on its last frame at once; yabai answers no query
+# for 1-2 s after a cross-display move.
+announce() { sketchybar --trigger yabai_window_moved WINDOW_ID="$1" SPACE="$2" >/dev/null 2>&1 & }
 case "${1:-}" in
     float)
         exec /usr/bin/python3 "$HOME/dotfiles/wm-float.py" ;;
@@ -8,7 +11,9 @@ case "${1:-}" in
         exec /usr/bin/python3 "$HOME/dotfiles/wm-resize.py" "${2:?Missing resize axis}" "${3:?Missing resize delta}" ;;
     send-space)
         target=$(yabai -m query --spaces --space "${2:?Missing space}" | jq -er '.index')
-        yabai -m window --space "$target" && yabai -m space --focus "$target" ;;
+        selected=$(yabai -m query --windows --window | jq -er '.id')
+        announce "$selected" "$target"
+        yabai -m window "$selected" --space "$target" && yabai -m space --focus "$target" ;;
     send-display)
         selector=${2:?Missing display}
         if ! target=$(yabai -m query --displays --display "$selector" | jq -er '.index'); then
@@ -16,6 +21,7 @@ case "${1:-}" in
             target=$(yabai -m query --displays --display "$selector" | jq -er '.index')
         fi
         selected=$(yabai -m query --windows --window | jq -er '.id')
+        announce "$selected" "$(yabai -m query --spaces --display "$target" | jq -er '.[] | select(.["is-visible"]) | .index')"
         yabai -m window "$selected" --display "$target" && yabai -m window --focus "$selected" ;;
     layout)
         current=$(yabai -m query --spaces --space | jq -r '.type')

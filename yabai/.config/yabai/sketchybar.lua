@@ -21,6 +21,7 @@ local prefix = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"; "
 sbar.add("event", namespace .. "_windows_changed")
 sbar.add("event", namespace .. "_mode_changed")
 sbar.add("event", namespace .. "_space_focus")
+sbar.add("event", namespace .. "_window_moved")
 
 local mode = sbar.add("item", namespace .. ".mode", {
   position = "left", drawing = false, updates = true,
@@ -464,6 +465,19 @@ observer:subscribe(namespace .. "_space_focus", function(env)
   apply_space_focus(env.TARGET)
   -- Asking at once can read the old state before the WindowServer starts
   -- holding queries; a little later the answer waits for the switch to land.
+  sbar.delay(0.2, requested_update)
+end)
+-- yabai_window_moved WINDOW_ID SPACE: window.sh and wm-direction.py name the
+-- window and its destination Space before yabai moves it, and focus follows.
+-- yabai answers no query for 1-2 s after a cross-display move, so the icon
+-- would otherwise trail the window by that long.
+observer:subscribe(namespace .. "_window_moved", function(env)
+  local id, target = tonumber(env.WINDOW_ID), tonumber(env.SPACE)
+  if not (last_snapshot and id and target) then return end
+  for _, window in ipairs(last_snapshot.windows) do
+    if window.id == id then window.space = target end
+  end
+  apply_space_focus(target)
   sbar.delay(0.2, requested_update)
 end)
 observer:subscribe({ "display_change", "system_woke" }, function(env)

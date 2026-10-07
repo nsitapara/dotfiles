@@ -5,6 +5,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import time
 
@@ -18,6 +19,16 @@ AS_FORMAT = '%{window-id} %{workspace} %{window-layout} %{window-is-fullscreen} 
 
 def query(*args):
     return json.loads(run('yabai', '-m', 'query', *args).stdout)
+
+
+def announce(event, **env):
+    """Tell the bar before yabai acts: it answers no query for 1-2 s after a
+    cross-display move, and macOS reports a display focus change ~300 ms late."""
+    try:
+        subprocess.Popen(['sketchybar', '--trigger', event] + [k + '=' + str(v) for k, v in env.items()],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass  # No bar to notify.
 
 
 def window(id, *args):
@@ -110,6 +121,7 @@ def cross_yabai(selected, direction):
         # default second-child insertion visibly places it on the wrong side.
         if anchor:
             insert(anchor['id'], hint)
+        announce('yabai_window_moved', WINDOW_ID=selected['id'], SPACE=destination['index'])
         window(selected['id'], '--display', target['index'])
     except RuntimeError:
         if anchor:
@@ -158,6 +170,7 @@ def focus_yabai(direction):
     target_window = entry_window([w for w in windows if w['display'] == target['index']],
                                  selected['frame'] if selected else source['frame'], direction)
     if target_window:
+        announce('yabai_space_focus', TARGET=target_window['space'])
         run('yabai', '-m', 'window', '--focus', target_window['id'])
     else:
         run('yabai', '-m', 'display', '--focus', target['index'])
