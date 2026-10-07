@@ -32,8 +32,10 @@ if command -v borders >/dev/null 2>&1; then
 fi
 
 # Labelled rules replace themselves on reload. App names are yabai's API.
+# Spotify's close button only hides its window, and the reopened window gets an
+# AX element yabai ignores for a known id, so yabai can no longer move it.
 yabai -m rule --add label=dotfiles-utilities \
-    app='^(System Settings|System Preferences|Activity Monitor|App Store|Clock|FaceTime|1Password)$' manage=off
+    app='^(System Settings|System Preferences|Activity Monitor|App Store|Clock|FaceTime|1Password|Spotify)$' manage=off
 yabai -m rule --add label=dotfiles-stack-manager \
     app='^Electron$' title='^Worktree & Stack Manager$' manage=off
 
