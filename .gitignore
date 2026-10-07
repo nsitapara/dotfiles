@@ -18,6 +18,7 @@ __pycache__/
 /omarchy/.config/omarchy/plugins/*
 !/omarchy/.config/omarchy/plugins/nsitapara.bar/
 !/omarchy/.config/omarchy/plugins/nsitapara.system-monitor/
+!/omarchy/.config/omarchy/plugins/nsitapara.tray/
 /omarchy/.config/omarchy/**/*.bak*
 /hypr/.config/hypr/*.bak*
 /omarchy/.config/omarchy/.plugins.lock.tmp
