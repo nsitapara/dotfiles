@@ -41,7 +41,7 @@ alias dsr="cd $HOME/Documents/web-platform && docker compose up --remove-orphans
 alias dal="cd $HOME/Documents/web-platform && docker compose logs --follow api"
 alias as="cd $HOME/Documents/web-platform && pnpm dev"
 alias pw_config="cursor ~/Documents/web-platform/apps/staff/e2e/debug-config.json"
-alias console="python3 $HOME/.agents/skills/agent-console/console.py ensure --open"
+alias aiconsole="python3 $HOME/.agents/skills/agent-console/console.py ensure --open"
 
 # eza aliases (modern ls replacement)
 alias ls="eza --icons --git"
