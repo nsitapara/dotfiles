@@ -89,6 +89,9 @@ install_packages_linux() {
 
 install_packages_mac() {
     local formulae=(
+        # SketchyBar CPU temperature
+        narugit/tap/smctemp
+
         # Shell & terminal
         zsh
         fzf

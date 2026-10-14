@@ -13,3 +13,9 @@ Yabai is the Mac window manager. The monitor menu's **Yabai** section has
 but won't tile, or its bar icon is missing) and starts yabai after a quit, and
 **Quit**, which stops yabai and skhd and leaves apps open. AeroSpace's config is
 kept; `./wm.sh use aerospace` still switches to it from a terminal.
+
+Both SketchyBar profiles show CPU temperature beside CPU usage with a thermometer
+icon and a history trace matching the CPU widget's layout and color bands.
+Install the reader with `brew install narugit/tap/smctemp`, then run
+`sketchybar --reload`. It samples every five seconds, displays rounded Celsius,
+and shows `—` when a reading is unavailable.
