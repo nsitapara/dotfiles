@@ -41,9 +41,9 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
 
   for i, case in ipairs({
     { "[INFO]: found 6 keys\n[Te05] 51.4\n[Tp01] 0\n[TCMb] 59.7\n[TCMz] 95\n[Tg05] 100\n[TB0T] 30\n",
-      0, "60°C", colors.yellow, 1 },
+      0, "60C", colors.yellow, 1 },
     { "[Te05] 0\n[Tp01] -4\n[TCMb] 68.7\n",
-      0, "69°C", colors.orange, 2 },
+      0, "69C", colors.orange, 2 },
     { "[TCMb] 72\n", 1, "—", colors.orange, 2 },
     { "[Tg05] 70\n[Te05] 60\n[Tp01] 70\n", 0, "—", colors.orange, 2 },
     { "[TCMb] 0\n", 0, "—", colors.orange, 2 },
@@ -53,7 +53,7 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
     { "[TCMb] 999\n", 0, "—", colors.orange, 2 },
     { "invalid", 0, "—", colors.orange, 2 },
     { "", 127, "—", colors.orange, 2 },
-    { "[TCMb] 80.1\n", 0, "80°C", colors.red, 3 },
+    { "[TCMb] 80.1\n", 0, "80C", colors.red, 3 },
   }) do
     events.routine()
     callback(case[1], case[2])

@@ -80,7 +80,7 @@ local function update_temperature()
     end
     temperature:set({
       graph = { color = color },
-      label = string.format("%d°C", math.floor(value + 0.5)),
+      label = string.format("%dC", math.floor(value + 0.5)),
     })
   end)
 end
