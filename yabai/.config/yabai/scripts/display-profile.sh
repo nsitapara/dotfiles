@@ -50,10 +50,9 @@ if pgrep -x sketchybar >/dev/null; then
     bar_running=true
     loaded=$(sketchybar --query display_mode 2>/dev/null |
         sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p') || exit 1
-    # Don't interrupt a bar reload in progress. Nothing polls, so a hotplug run
-    # must fail here to be retried; the bar also goes blank while screens change.
+    # Don't interrupt a bar reload in progress. Startup and hotplug callers
+    # retry failures; success here would abandon labels/padding for this daemon.
     if [ -z "$loaded" ] && ! $force; then
-        $hotplug || exit 0
         echo 'SketchyBar is busy; will retry.' >&2; exit 1
     fi
 fi

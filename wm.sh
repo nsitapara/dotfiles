@@ -18,6 +18,33 @@ try:
 except subprocess.TimeoutExpired:
     sys.exit(1)' "$@"
 }
+probe_yabai() {
+    # A successful socket request can still return [] (or incomplete JSON) while
+    # WindowServer is restoring displays. Wait for a usable Space on each one.
+    /usr/bin/python3 - <<'PYTHON'
+import json
+import subprocess
+import sys
+
+try:
+    snapshots = []
+    for query in ("--displays", "--spaces"):
+        result = subprocess.run(
+            ["yabai", "-m", "query", query], check=True, timeout=1,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+        )
+        data = json.loads(result.stdout)
+        if not isinstance(data, list) or not data:
+            sys.exit(1)
+        snapshots.append(data)
+    displays, spaces = snapshots
+    display_ids = {display["index"] for display in displays}
+    space_displays = {space["display"] for space in spaces}
+    sys.exit(0 if display_ids == space_displays else 1)
+except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
+    sys.exit(1)
+PYTHON
+}
 skhd_log_offset() {
     if [ -f "$STATE/skhd.err.log" ]; then wc -c < "$STATE/skhd.err.log"; else echo 0; fi
 }

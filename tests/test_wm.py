@@ -118,7 +118,10 @@ elif name == "yabai":
     if args == ["--version"]: print("yabai-v" + state.get("version", "7.1.25"))
     elif args[:3] == ["-m", "query", "--spaces"]:
         if "yabai" not in state["running"]: sys.exit(1)
-        print(json.dumps(state["spaces"]))
+        if state.get("unready_queries", 0):
+            state["unready_queries"] -= 1; save()
+            print(state["unready_response"])
+        else: print(json.dumps(state["spaces"]))
     elif args[:3] == ["-m", "query", "--displays"]: print(json.dumps(state["displays"]))
     elif args[:2] == ["-m", "space"] and args[3] == "--label":
         for space in state["spaces"]:
@@ -180,7 +183,7 @@ class WmTests(unittest.TestCase):
         self.env["PATH"] = str(self.bin) + ":" + os.environ["PATH"]
         self.state = dict(running=["AeroSpace", "sketchybar"], jobs=[],
                           prefs={"spans-displays": 0, "mru-spaces": 0},
-                          spaces=[], displays=[])
+                          spaces=[dict(index=1, display=1)], displays=[dict(index=1)])
         self.save()
 
     def save(self):
@@ -229,6 +232,19 @@ class WmTests(unittest.TestCase):
         self.assertEqual(set(self.state["running"]), {"AeroSpace", "sketchybar"})
         self.assertEqual(self.state["jobs"], [])
         self.assertFalse(any("--start-service" in c for c in self.calls("yabai") + self.calls("skhd")))
+
+    def test_start_waits_for_usable_spaces_before_shortcuts(self):
+        for response in ('[]', '[', 'null', '[{"index": 1, "display": 2}]'):
+            with self.subTest(response=response):
+                self.state.update(running=[], jobs=[], unready_queries=2,
+                                  unready_response=response)
+                self.save()
+                before = len(self.calls("yabai")) if (self.path / "calls.jsonl").exists() else 0
+                self.run_wm("yabai")
+                self.assertEqual(self.state["unready_queries"], 0)
+                queries = [c for c in self.calls("yabai")[before:] if c[1:] == ["-m", "query", "--spaces"]]
+                self.assertEqual(len(queries), 3)
+                self.assertIn("skhd", self.state["running"])
 
     def test_start_applies_profile_without_an_earlier_bar_reload(self):
         self.run_wm("yabai")
@@ -332,6 +348,7 @@ class WmTests(unittest.TestCase):
         self.assertEqual(self.state["prefs"], {"spans-displays": 1})
 
     def native_spaces(self, counts):
+        self.state["spaces"] = []
         self.state["running"].append("yabai")
         self.state["displays"] = [dict(index=i+1, frame=dict(x=i*1920,y=0)) for i in range(len(counts))]
         for display, count in enumerate(counts,1):

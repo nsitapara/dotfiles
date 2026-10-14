@@ -71,9 +71,9 @@ start_manager() {
                 /usr/bin/env ${developer_env[@]+"${developer_env[@]}"} "PATH=$PATH" "HOME=$HOME" "USER=$USER" "DOTFILES_YABAI_READY=$STATE/yabai-ready" \
                 "$(command -v yabai)" -c "$HOME/.config/yabai/yabairc"
             # Right after login the displays can still be re-probing, which makes
-            # the space query fail for a while; give the daemon up to 60 s.
+            # queries empty or inconsistent; retry with bounded socket waits.
             for _ in {1..300}; do
-                if [ -f "$STATE/yabai-ready" ] && probe_command yabai -m query --spaces; then ready=true; break; fi
+                if [ -f "$STATE/yabai-ready" ] && probe_yabai; then ready=true; break; fi
                 sleep 0.2
             done
             $ready || die "yabai did not become ready. Check Accessibility access."
@@ -120,7 +120,7 @@ switch_manager() {
     preflight "$target_manager"
     if [ "$previous_manager" = "$target_manager" ]; then
         case "$target_manager" in
-            yabai) probe_command yabai -m query --spaces ;;
+            yabai) probe_yabai ;;
             aerospace) probe_command aerospace list-monitors ;;
         esac
         if [ "$target_manager" != aerospace ] && ! running skhd; then

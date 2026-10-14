@@ -38,6 +38,12 @@ the pinned display profile. Nothing polls displays afterwards; pick a profile fr
 the bar menu or `./wm.sh profile NAME` (auto, docked, single, laptop). A failed
 initial manager startup stops the service and records the error.
 
+Yabai startup waits for valid, nonempty display and Space queries, with a Space
+assigned to every reported display, before starting shortcuts or applying the
+profile. A successful query with empty or malformed output is not readiness.
+If SketchyBar is still loading, the background profile helper reports a retryable
+failure so startup recovery continues until it can apply labels and padding.
+
 The installer unloads and archives the former `local.dotfiles.wm-login` and
 `com.user.display-mode-switcher` jobs. `./setup-display-switcher.sh --auto` uses
 the same installer and preserves the saved manager, so it cannot recreate a

@@ -202,12 +202,17 @@ class NativeProfileTests(unittest.TestCase):
         self.run_profile(hotplug=True)
         self.assertFalse(pin.exists())
 
-    def test_busy_bar_retries_only_after_hotplug(self):
+    def test_busy_bar_retries_during_startup_and_hotplug(self):
         self.run_profile()
         self.state['plan'][0]['frame']['x'] += 1
         self.state['loaded'] = ''
-        self.run_profile()
+        before = self.signature.read_text()
+        self.run_profile(success=False)
         self.run_profile(success=False, hotplug=True)
+        self.assertEqual(self.signature.read_text(), before)
+        self.state['loaded'] = 'non-docked'
+        self.run_profile()
+        self.assertNotEqual(self.signature.read_text(), before)
 
     def test_three_screens_apply_both_padding_values_and_nine_slots(self):
         self.state['plan'][0]['workspaces'] = [7,8,9]
@@ -258,7 +263,7 @@ class NativeProfileTests(unittest.TestCase):
 
     def test_forced_restore_during_bar_reload_does_not_skip_labels(self):
         self.state['loaded'] = ''
-        self.run_profile()
+        self.run_profile(success=False)
         self.assertEqual(self.calls('ensure-spaces.sh'), [])
         self.assertFalse(self.signature.exists())
         self.run_profile(force=True)
