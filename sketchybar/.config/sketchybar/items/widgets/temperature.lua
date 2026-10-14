@@ -3,6 +3,17 @@ local icons = require("icons")
 local settings = require("settings")
 local pending = false
 
+local function cpu_temperature(result)
+  if type(result) ~= "string" then return nil end
+  -- CPU die average avoids incomplete per-core maps on the M4 Pro.
+  -- TCMb is documented at github.com/dkorunic/iSMC/blob/master/src/temp.txt.
+  for line in result:gmatch("[^\r\n]+") do
+    local raw = line:match("^%[TCMb%]%s+(%S+)%s*$")
+    local value = tonumber(raw)
+    if value and value > 10 and value < 120 then return value end
+  end
+end
+
 local temperature = sbar.add("graph", "widgets.temperature", 36, {
   position = "right",
   update_freq = 5,
@@ -47,12 +58,11 @@ sbar.add("item", "widgets.temperature.padding", {
 local function update_temperature()
   if pending then return end
   pending = true
-  -- Read only CPU temperature; no persistent monitor or extra JSON parser.
-  -- Bound retries for transient sensor misses to three reads, 25 ms apart.
-  sbar.exec("/opt/homebrew/bin/smctemp -c -n3 -i25 2>/dev/null", function(result, exit_code)
+  -- Reuse the installed Stats reader without another daemon or parser process.
+  sbar.exec("'/Applications/Stats.app/Contents/Resources/smc' list -t 2>/dev/null", function(result, exit_code)
     pending = false
-    local value = tonumber(result)
-    if exit_code ~= 0 or not value or value ~= value or value <= 0 or value > 150 then
+    local value = cpu_temperature(result)
+    if exit_code ~= 0 or not value then
       temperature:set({ label = "—" })
       return
     end

@@ -16,6 +16,7 @@ kept; `./wm.sh use aerospace` still switches to it from a terminal.
 
 Both SketchyBar profiles show CPU temperature beside CPU usage with a thermometer
 icon and a history trace matching the CPU widget's layout and color bands.
-Install the reader with `brew install narugit/tap/smctemp`, then run
-`sketchybar --reload`. It samples every five seconds, displays rounded Celsius,
-and shows `—` when a reading is unavailable.
+The reader reuses `/Applications/Stats.app/Contents/Resources/smc` from the
+installed Stats app. It samples the CPU die-average sensor (`TCMb`, verified on
+the M4 Pro) every five seconds, displays rounded Celsius, and shows `—` when a
+reading is unavailable. No separate temperature Homebrew package is needed.
