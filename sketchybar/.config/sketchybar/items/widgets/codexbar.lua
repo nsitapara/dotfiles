@@ -30,6 +30,7 @@ for _, provider in ipairs({ "codex", "claude" }) do
     alias = not native_items and { scale = 1.0, color = colors.white, update_freq = 5 } or nil,
     update_freq = native_items and provider == "codex" and 5 or 0,
     icon = { drawing = native_items, string = provider == "codex" and ":openai:" or ":claude:",
+      color = provider == "claude" and colors.orange or colors.white,
       font = "sketchybar-app-font:Regular:18.0", padding_left = 8, padding_right = 4 },
     label = { drawing = native_items, string = "--", padding_right = 8 },
     -- One five-point gap per card; padding both sides doubles the spacing.
