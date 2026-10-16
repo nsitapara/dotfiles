@@ -1,16 +1,19 @@
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
 -- List current monitors and supported resolutions with: hyprctl monitors all
 
-hl.env("GDK_SCALE", "1")
+-- Omarchy's display adjuster persists these values when changing scale.
+local omarchy_gdk_scale = 1
+local omarchy_monitor_scale = 1.25
 
--- Explicit positions (not "auto") so monitor power-cycling can't re-swap sides.
--- Both displays use scale 1.25 (2048 logical pixels wide).
--- DP-1 (LG) on the left; DP-2 (ASUS) starts at its right edge.
-hl.monitor({ output = "DP-1", mode = "2560x1440@74.97", position = "0x0", scale = 1.25 })
-hl.monitor({ output = "DP-2", mode = "2560x1440@74.92", position = "2048x0", scale = 1.25 })
+hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
+
+-- Place screens automatically so scale changes cannot leave a fixed pixel gap.
+-- Keep LG on the left, ASUS on the right, and retain their 75Hz modes.
+hl.monitor({ output = "DP-1", mode = "2560x1440@74.97", position = "auto-left", scale = omarchy_monitor_scale })
+hl.monitor({ output = "DP-2", mode = "2560x1440@74.92", position = "auto-right", scale = omarchy_monitor_scale })
 
 -- Fallback for any other display that gets plugged in.
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.25 })
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
 
 -- Workspace assignments: LG monitor gets odd (1,3,5), ASUS gets even (2,4,6).
 hl.workspace_rule({ workspace = "1", monitor = "DP-1", persistent = true })
