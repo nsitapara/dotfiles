@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Local database image helpers for HeraSight worktrees."""
+"""Local database image helpers for HeraSight worktrees, on the Docker or native backend."""
 
 import argparse
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import gzip
 import fcntl
 import re
 import json
 import os
 from pathlib import Path
+import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -24,6 +27,11 @@ OVERRIDE = 'compose.override.yaml'
 MARKER = '# Managed by local HeraSight snapshot commands.\n'
 PROVENANCE_LABEL = 'io.herasight.prod-baseline.source'
 BUILD_BASE_IMAGE = 'postgres:17.11-alpine'
+# Native backend (scripts/native-stack.sh): the production baseline is a stopped
+# Postgres 17 cluster outside every worktree, cloned into a worktree by prod_seed.
+NATIVE_BASELINE = Path.home() / '.local' / 'share' / 'herasight' / 'prod-baseline'
+NATIVE_MARKER = Path('.local') / 'native' / 'prod-seed'
+PG_BIN = Path(os.environ.get('HOMEBREW_PREFIX', '/opt/homebrew')) / 'opt' / 'postgresql@17' / 'bin'
 
 
 def duration(seconds):
@@ -90,6 +98,35 @@ def fail(message):
     raise RuntimeError(message)
 
 
+_backend_modes = {}
+
+
+def backend_mode(root):
+    """'native' when the worktree runs scripts/native-stack.sh's backend, else 'docker'."""
+    if root not in _backend_modes:
+        script = root / 'scripts' / 'native-stack.sh'
+        active = script.is_file() and run([str(script), 'is-active'], root, capture=True, check=False).returncode == 0
+        _backend_modes[root] = 'native' if active else 'docker'
+    return _backend_modes[root]
+
+
+def native(root, *args, **kwargs):
+    return run([str(root / 'scripts' / 'native-stack.sh'), *args], root, **kwargs)
+
+
+def manage(root, *args, **kwargs):
+    if backend_mode(root) == 'native':
+        return native(root, 'manage', *args, **kwargs)
+    return compose(root, 'exec', '-T', 'api', 'uv', 'run', 'manage.py', *args, **kwargs)
+
+
+def prod_data_loaded(root):
+    if backend_mode(root) == 'native':
+        return (root / NATIVE_MARKER).exists()
+    override = root / OVERRIDE
+    return override.exists() and override.read_text().startswith(MARKER)
+
+
 def target_root():
     root = Path(output(['git', 'rev-parse', '--show-toplevel'], Path.cwd())).resolve()
     def common(path):
@@ -100,6 +137,9 @@ def target_root():
     for filename in ('.env.local', 'compose.yml', 'justfile'):
         if not (root / filename).exists():
             fail(f'Missing {filename}. Complete normal worktree setup first.')
+    if backend_mode(root) == 'native':
+        print(f'Worktree: {root}\nBackend: native (scripts/native-stack.sh)', flush=True)
+        return root
     target = config(root)
     if root != MAIN.resolve() and target['name'] == config(MAIN)['name']:
         fail('This worktree shares the main Compose project name. Give it a unique COMPOSE_PROJECT_NAME in .env.local first.')
@@ -236,17 +276,114 @@ def create(image):
     print(f'Saved {image} from {dump.name}.\nprod_build completed in {duration(time.monotonic() - started)}.\nIn the checkout you want to seed, run: prod_seed', flush=True)
 
 
+def free_port():
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        return probe.getsockname()[1]
+
+
+def create_native():
+    """Build the native baseline: the dump restored into a stopped, private Postgres 17 cluster."""
+    started = time.monotonic()
+    dump = MAIN / 'db.sql.gz'
+    if not dump.is_file() or dump.stat().st_size == 0:
+        fail(f'Production dump is missing or empty: {dump}. Nothing was changed.')
+    with gzip.open(dump, 'rb') as f:
+        header = f.read(512)
+    if b'PostgreSQL database dump' not in header or header.startswith(b'PGDMP'):
+        fail(f'{dump} must contain a gzip-compressed PostgreSQL SQL dump.')
+    if not (PG_BIN / 'postgres').exists():
+        fail('Postgres 17 is missing: brew install postgresql@17')
+    original_stat = dump.stat()
+    NATIVE_BASELINE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # mkdtemp is private (0700) and on the baseline's filesystem, so publishing is a rename.
+    staging = Path(tempfile.mkdtemp(prefix='.prod-baseline-build-', dir=NATIVE_BASELINE.parent))
+    data = staging / 'pg'
+    pg_ctl = str(PG_BIN / 'pg_ctl')
+    running = False
+    log_path = Path(__file__).with_name('prod-build-restore.log')
+    os.environ['LC_ALL'] = 'en_US.UTF-8'
+    print(f'Production dump: {dump}\nBuilding the native baseline in a private Postgres. Worktree databases stay untouched.', flush=True)
+    try:
+        with build_step('Starting temporary Postgres'):
+            run([str(PG_BIN / 'initdb'), '-D', str(data), '-U', 'postgres', '--auth=trust',
+                 '-E', 'UTF8', '--locale=en_US.UTF-8'], MAIN, capture=True)
+            # Same settings as scripts/native-stack.sh, so a clone starts like any worktree cluster.
+            with (data / 'postgresql.conf').open('a') as conf:
+                conf.write("\nlisten_addresses = 'localhost'\nunix_socket_directories = ''\n")
+            port = free_port()
+            run([pg_ctl, '-D', str(data), '-l', str(staging / 'postgres.log'), '-o', f'-p {port}', '-w', 'start'], MAIN, capture=True)
+            running = True
+        # The log is local and private because PostgreSQL errors can include row data.
+        fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, 'w') as restore_log, build_step('Restoring production SQL dump'):
+            restored = run(['bash', '-o', 'pipefail', '-c',
+                            'gzip -dc -- "$1" | "$2" -X -q -v ON_ERROR_STOP=1 -h localhost -p "$3" -U postgres -d postgres',
+                            'prod-build', str(dump), str(PG_BIN / 'psql'), str(port)], MAIN, check=False, log=restore_log)
+            if restored.returncode != 0:
+                fail(f'Production restore failed. The baseline was not replaced. Details are in {log_path}.')
+        after_stat = dump.stat()
+        if (original_stat.st_ino, original_stat.st_size, original_stat.st_mtime_ns) != (after_stat.st_ino, after_stat.st_size, after_stat.st_mtime_ns):
+            fail('The dump changed during restoration. The baseline was not replaced; rerun prod_build.')
+        with build_step('Stopping temporary Postgres for a consistent copy'):
+            run([pg_ctl, '-D', str(data), '-m', 'fast', '-w', 'stop'], MAIN, capture=True)
+            running = False
+        (staging / 'postgres.log').unlink(missing_ok=True)
+        (staging / 'provenance.json').write_text(json.dumps({
+            'source': 'sql-dump',
+            'dump': str(dump),
+            'dump_size': original_stat.st_size,
+            'dump_mtime': datetime.fromtimestamp(original_stat.st_mtime, timezone.utc).isoformat(),
+            'built_at': datetime.now(timezone.utc).isoformat(),
+        }) + '\n')
+        # Publish only after the restore succeeded; worktree clones are independent copies.
+        previous = None
+        if NATIVE_BASELINE.exists():
+            previous = NATIVE_BASELINE.with_name(f'.prod-baseline-old-{uuid.uuid4().hex[:12]}')
+            NATIVE_BASELINE.rename(previous)
+        staging.rename(NATIVE_BASELINE)
+        staging = None
+        if previous:
+            shutil.rmtree(previous)
+        log_path.unlink(missing_ok=True)
+    finally:
+        if running:
+            run([pg_ctl, '-D', str(data), '-m', 'immediate', '-w', 'stop'], MAIN, capture=True, check=False)
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
+    print(f'Saved the native baseline in {NATIVE_BASELINE} from {dump.name}.\nprod_build (native) completed in {duration(time.monotonic() - started)}.', flush=True)
+
+
+def available_backends():
+    found = []
+    if (PG_BIN / 'postgres').exists():
+        found.append('native')
+    if run(['docker', 'info'], MAIN, capture=True, check=False).returncode == 0:
+        found.append('docker')
+    return found
+
+
+def build(backends):
+    if not backends:
+        fail('Neither backend is available: install postgresql@17 (native) or start Docker Desktop.')
+    print(f'Building the production baseline for: {", ".join(backends)}', flush=True)
+    if 'native' in backends:
+        create_native()
+    if 'docker' in backends:
+        create(DEFAULT_IMAGE)
+
+
 def migrate(root):
-    result = compose(root, 'exec', '-T', 'api', 'uv', 'run', 'manage.py',
-                     'migrate', '--check', capture=True, check=False)
+    result = manage(root, 'migrate', '--check', capture=True, check=False)
     if result.returncode == 0:
         print('No pending migrations.', flush=True)
         return
     if result.returncode != 1 or 'Traceback (most recent call last)' in result.stderr:
         fail(f'Migration check failed:\n{result.stdout}\n{result.stderr}')
-    compose(root, 'exec', '-T', 'api', 'uv', 'run', 'manage.py', 'migrate', '--plan')
+    manage(root, 'migrate', '--plan')
     with build_step('Applying database migrations'):
-        compose(root, 'exec', '-T', 'api', 'uv', 'run', 'manage.py', 'migrate', '--noinput')
+        manage(root, 'migrate', '--noinput')
 
 
 def backend_ports(root):
@@ -294,7 +431,7 @@ def wait_for_backend(port):
             return
         except (URLError, TimeoutError, ConnectionError):
             time.sleep(1)
-    fail(f'The API did not start on its existing port {port}. Check the api container logs.')
+    fail(f'The API did not start on its existing port {port}. Check the API logs (just log, or just nlogs api).')
 
 
 def start_api(root, ports):
@@ -317,8 +454,86 @@ def replace_database(root, start_api_after_reset=True):
     return ports
 
 
+def native_ports(root):
+    ports = {}
+    path = root / '.local' / 'native' / 'ports'
+    if path.exists():
+        for line in path.read_text().splitlines():
+            key, separator, value = line.partition('=')
+            if separator and value.strip().isdigit():
+                ports[key.strip()] = value.strip()
+    if not {'API_PORT', 'DB_PORT', 'REDIS_PORT'} <= ports.keys():
+        fail('Native backend ports are not initialized. Start the stack once (Start Stack (Native) or just ndev), then retry. No database was changed.')
+    return ports
+
+
+def native_baseline():
+    try:
+        provenance = json.loads((NATIVE_BASELINE / 'provenance.json').read_text())
+    except (OSError, ValueError):
+        provenance = {}
+    if provenance.get('source') != 'sql-dump' or not (NATIVE_BASELINE / 'pg' / 'PG_VERSION').is_file():
+        fail(f'No native production baseline in {NATIVE_BASELINE}. Run prod_build first.')
+    return provenance
+
+
+def start_native_api(root, ports):
+    with build_step('Restarting API on its existing port'):
+        native(root, 'up', 'api')
+        wait_for_backend(ports['API_PORT'])
+
+
+def discard_native_database(root):
+    """Stop the writers and Postgres, then delete the cluster (like `compose rm -fsv db`)."""
+    native(root, 'stop', 'celery', 'api', 'postgres')
+    (root / '.local' / 'dev-db-state').unlink(missing_ok=True)
+    (root / '.local' / 'native' / 'dev-db-state').unlink(missing_ok=True)
+    shutil.rmtree(root / '.local' / 'native' / 'pg', ignore_errors=True)
+
+
+def seed_native(root):
+    provenance = native_baseline()
+    ports = native_ports(root)
+    print(f'Replacing this worktree database with production data (dump from {provenance.get("dump_mtime", "unknown")}). Its current data will be discarded.', flush=True)
+    discard_native_database(root)
+    data = root / '.local' / 'native' / 'pg'
+    with build_step('Cloning the production baseline'):
+        # APFS clones share blocks with the baseline until either side writes.
+        cloned = run(['cp', '-c', '-R', str(NATIVE_BASELINE / 'pg'), str(data)], root, capture=True, check=False)
+        if cloned.returncode:
+            shutil.rmtree(data, ignore_errors=True)
+            run(['cp', '-R', str(NATIVE_BASELINE / 'pg'), str(data)], root)
+        data.chmod(0o700)
+    marker = root / NATIVE_MARKER
+    fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        stream.write(json.dumps({**provenance, 'seeded_at': datetime.now(timezone.utc).isoformat()}) + '\n')
+    with build_step('Starting database and Redis on their existing ports'):
+        native(root, 'up', 'postgres')
+        native(root, 'run', 'sh', '-c', 'redis-cli -p "$REDIS_PORT" flushall', capture=True)
+    start_native_api(root, ports)
+    migrate(root)
+    native(root, 'up', 'api', 'celery')
+    print(f'Production data loaded. Backend ready on API port {ports["API_PORT"]}.\nYour existing frontend session can keep running; refresh the browser.', flush=True)
+
+
+def remove_native(root):
+    if not (root / NATIVE_MARKER).exists():
+        fail('No production data from prod_seed is loaded in this worktree. Nothing was removed.')
+    plan = dev_cache_plan(root)
+    discard_native_database(root)
+    (root / NATIVE_MARKER).unlink(missing_ok=True)
+    with build_step('Restoring development data'):
+        # ndev-db is ndev's database half: cache restore or bootstrap, branch seed, dev state.
+        dev_recipe(root, {'DB_CACHE_DIR': str(plan['directory'])}, 'ndev-db', *plan['args'])
+    print('Production data removed. Normal development data is ready using the ndev --report 0 cache/bootstrap workflow.\nYour existing frontend session and backend ports are unchanged; refresh the browser.', flush=True)
+
+
 def seed(image):
     root = target_root()
+    if backend_mode(root) == 'native':
+        seed_native(root)
+        return
     path = managed_override(root)
     provenance = run(['docker', 'image', 'inspect', '--format',
                       '{{ index .Config.Labels "' + PROVENANCE_LABEL + '" }}', image], root, capture=True).stdout.strip()
@@ -399,6 +614,9 @@ def restore_development_data(root, ports, plan):
 
 def remove():
     root = target_root()
+    if backend_mode(root) == 'native':
+        remove_native(root)
+        return
     path = managed_override(root, required=True)
     if output(['git', 'ls-files', '--', OVERRIDE], root):
         fail('The override is tracked by Git. Refusing to remove it.')
@@ -479,6 +697,9 @@ def select_snapshot(root, directory, name, saving=False):
 
 def save_snapshot(name=None):
     root = target_root()
+    if prod_data_loaded(root):
+        fail('This worktree holds production data from prod_seed; it is never snapshotted. Run prod_remove first.')
+    recipe = 'nsave-snapshot' if backend_mode(root) == 'native' else 'save-snapshot'
     directory = snapshot_directory(root)
     with snapshot_lock(directory):
         name = select_snapshot(root, directory, name, saving=True)
@@ -487,7 +708,7 @@ def save_snapshot(name=None):
         with tempfile.TemporaryDirectory(prefix='.saving-', dir=directory) as temporary:
             staging = Path(temporary)
             with build_step(f'Saving snapshot {name}'):
-                dev_recipe(root, {'DB_SNAPSHOTS_DIR': str(staging)}, 'save-snapshot', name)
+                dev_recipe(root, {'DB_SNAPSHOTS_DIR': str(staging)}, recipe, name)
                 archive = staging / f'{name}.sql.gz'
                 run(['gzip', '-t', str(archive)], root)
                 metadata = staging / f'{name}.meta.json'
@@ -532,6 +753,9 @@ def load_snapshot(name=None, force=False):
             print(result.stdout, end='', flush=True)
             if result.returncode and not (force and result.returncode == 1 and not result.stderr.strip()):
                 fail('Snapshot compatibility check failed. Changed migration files require --force; missing migrations or metadata errors cannot be overridden.')
+        if backend_mode(root) == 'native':
+            load_native_snapshot(root, name, archive, directory)
+            return
         ports = backend_ports(root)
         print(f'Replacing this worktree database with {name}. Current database data and Redis cache will be discarded.', flush=True)
         compose(root, 'stop', 'api', 'celery')
@@ -563,6 +787,42 @@ def load_snapshot(name=None, force=False):
         print(f'Loaded {name}. Backend ready on API port {ports["API_PORT"]}. Refresh your existing frontend.', flush=True)
 
 
+def load_native_snapshot(root, name, archive, directory):
+    ports = native_ports(root)
+    print(f'Replacing this worktree database with {name}. Current database data and Redis cache will be discarded.', flush=True)
+    native(root, 'stop', 'celery', 'api')
+    (root / '.local' / 'dev-db-state').unlink(missing_ok=True)
+    (root / '.local' / 'native' / 'dev-db-state').unlink(missing_ok=True)
+    with build_step('Starting database and Redis on their existing ports'):
+        native(root, 'up', 'postgres')
+    log_path = directory / '.restore.log'
+    try:
+        with build_step(f'Restoring snapshot {name}'):
+            native(root, 'dropdb', '--maintenance-db=template1', '--force', '--if-exists', 'postgres')
+            native(root, 'createdb', '--maintenance-db=template1', 'postgres')
+            # Production data, if any, is gone with the dropped database.
+            (root / NATIVE_MARKER).unlink(missing_ok=True)
+            fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, 'w') as log:
+                restored = run(['bash', '-o', 'pipefail', '-c',
+                                'gzip -dc -- "$1" | "$2" psql -X -q -v ON_ERROR_STOP=1 -d postgres',
+                                'load-snapshot', str(archive), str(root / 'scripts' / 'native-stack.sh')],
+                               root, check=False, log=log)
+            if restored.returncode:
+                fail(f'SQL restore failed. Details are in {log_path}.')
+            native(root, 'run', 'sh', '-c', 'redis-cli -p "$REDIS_PORT" FLUSHALL', capture=True)
+            log_path.unlink(missing_ok=True)
+        start_native_api(root, ports)
+        migrate(root)
+        native(root, 'up', 'api', 'celery')
+    except BaseException:
+        native(root, 'stop', 'celery', 'api', check=False)
+        print('Snapshot loading failed. API and Celery were stopped; fix the error and retry load_snapshot.', flush=True)
+        raise
+    print(f'Loaded {name}. Backend ready on API port {ports["API_PORT"]}. Refresh your existing frontend.', flush=True)
+
+
 def list_snapshots():
     root = target_root()
     directory = snapshot_directory(root)
@@ -575,14 +835,24 @@ def main():
     parser.add_argument('action', choices=('create', 'seed', 'remove', 'save-snapshot', 'load-snapshot', 'list-snapshots'))
     parser.add_argument('name', nargs='?')
     parser.add_argument('--force', action='store_true')
+    only = parser.add_mutually_exclusive_group()
+    only.add_argument('--native', action='store_true', help='create: build only the native baseline')
+    only.add_argument('--docker', action='store_true', help='create: build only the Docker image')
     args = parser.parse_args()
     if args.name and args.action not in ('save-snapshot', 'load-snapshot'):
         parser.error('This command does not accept a snapshot name.')
     if args.force and args.action != 'load-snapshot':
         parser.error('--force is only supported by load-snapshot.')
+    if (args.native or args.docker) and args.action != 'create':
+        parser.error('--native and --docker are only supported by create (prod_build).')
     try:
         if args.action == 'create':
-            create(DEFAULT_IMAGE)
+            if args.native:
+                build(['native'])
+            elif args.docker:
+                build(['docker'])
+            else:
+                build(available_backends())
         elif args.action == 'seed':
             seed(DEFAULT_IMAGE)
         elif args.action == 'remove':

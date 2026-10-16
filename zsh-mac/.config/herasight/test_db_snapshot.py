@@ -452,6 +452,241 @@ class SqlSnapshotTests(unittest.TestCase):
             recipe.assert_called_once_with(root, {'DB_SNAPSHOTS_DIR': str(directory)}, 'list-snapshots')
 
 
+class NativeBackendTests(unittest.TestCase):
+    """The same commands on a worktree that runs scripts/native-stack.sh instead of Docker."""
+
+    def setUp(self):
+        snapshot._backend_modes.clear()
+        self.addCleanup(snapshot._backend_modes.clear)
+
+    def native_root(self, temp):
+        root = Path(temp) / 'checkout'
+        (root / 'scripts').mkdir(parents=True)
+        (root / 'scripts' / 'native-stack.sh').touch()
+        (root / '.local' / 'native').mkdir(parents=True)
+        (root / '.local' / 'native' / 'ports').write_text('API_PORT=8123\nDB_PORT=5543\nREDIS_PORT=6480\nS3_PORT=8444\n')
+        snapshot._backend_modes[root] = 'native'
+        return root
+
+    def baseline(self, temp):
+        baseline = Path(temp) / 'share' / 'prod-baseline'
+        (baseline / 'pg').mkdir(parents=True)
+        (baseline / 'pg' / 'PG_VERSION').write_text('17\n')
+        (baseline / 'provenance.json').write_text(json.dumps({'source': 'sql-dump', 'dump_mtime': '2026-09-11'}))
+        return baseline
+
+    def test_backend_mode_follows_native_stack_is_active(self):
+        for has_script, exit_code, expected in ((False, None, 'docker'), (True, 0, 'native'), (True, 1, 'docker')):
+            with self.subTest(has_script=has_script, exit_code=exit_code), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                if has_script:
+                    (root / 'scripts').mkdir()
+                    (root / 'scripts' / 'native-stack.sh').touch()
+                result = subprocess.CompletedProcess([], exit_code or 0, '', '')
+                with patch.object(snapshot, 'run', return_value=result) as run:
+                    self.assertEqual(snapshot.backend_mode(root), expected)
+                if has_script:
+                    self.assertEqual(run.call_args.args[0], [str(root / 'scripts' / 'native-stack.sh'), 'is-active'])
+                else:
+                    run.assert_not_called()
+
+    def test_native_worktree_skips_compose_project_checks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp).resolve()
+            snapshot._backend_modes[root] = 'native'
+            for name in ('.env.local', 'compose.yml', 'justfile'):
+                (root / name).touch()
+            with patch.object(snapshot, 'MAIN', root), patch.object(snapshot, 'output', side_effect=[str(root), '/same/git', '/same/git']), patch.object(snapshot, 'config', side_effect=AssertionError('native worktrees need no Docker')):
+                self.assertEqual(snapshot.target_root(), root)
+
+    def test_native_seed_clones_baseline_with_writers_stopped_then_migrates(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            baseline = self.baseline(temp)
+            (root / '.local' / 'native' / 'pg').mkdir()
+            (root / '.local' / 'native' / 'pg' / 'dev-data').touch()
+            (root / '.local' / 'native' / 'dev-db-state').write_text('key id\n')
+            calls = []
+            def run(args, *a, **kw):
+                calls.append(('run', *args))
+                if args[0] == 'cp':
+                    Path(args[-1]).mkdir()
+                return subprocess.CompletedProcess(args, 0, '', '')
+            with patch.object(snapshot, 'NATIVE_BASELINE', baseline), patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'run', side_effect=run), patch.object(snapshot, 'native', side_effect=lambda root, *args, **kw: calls.append(('native', *args))), patch.object(snapshot, 'wait_for_backend', side_effect=lambda port: calls.append(('wait', port))), patch.object(snapshot, 'migrate', side_effect=lambda root: calls.append(('migrate',))):
+                snapshot.seed(snapshot.DEFAULT_IMAGE)
+            clone = next(i for i, call in enumerate(calls) if call[:2] == ('run', 'cp'))
+            self.assertIn('-c', calls[clone])
+            self.assertLess(calls.index(('native', 'stop', 'celery', 'api', 'postgres')), clone)
+            self.assertLess(clone, calls.index(('native', 'up', 'postgres')))
+            self.assertLess(calls.index(('native', 'up', 'api')), calls.index(('wait', '8123')))
+            self.assertLess(calls.index(('wait', '8123')), calls.index(('migrate',)))
+            self.assertEqual(calls[-1], ('native', 'up', 'api', 'celery'))
+            self.assertFalse((root / '.local' / 'native' / 'pg' / 'dev-data').exists())
+            self.assertFalse((root / '.local' / 'native' / 'dev-db-state').exists())
+            marker = root / snapshot.NATIVE_MARKER
+            self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(json.loads(marker.read_text())['source'], 'sql-dump')
+
+    def test_native_seed_without_baseline_changes_nothing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            with patch.object(snapshot, 'NATIVE_BASELINE', Path(temp) / 'missing'), patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'native') as native:
+                with self.assertRaisesRegex(RuntimeError, 'Run prod_build first'):
+                    snapshot.seed(snapshot.DEFAULT_IMAGE)
+                native.assert_not_called()
+            self.assertFalse((root / snapshot.NATIVE_MARKER).exists())
+
+    def test_native_remove_without_production_data_changes_nothing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'native') as native, patch.object(snapshot, 'dev_recipe') as recipe:
+                with self.assertRaisesRegex(RuntimeError, 'Nothing was removed'):
+                    snapshot.remove()
+                native.assert_not_called()
+                recipe.assert_not_called()
+
+    def test_native_remove_discards_production_data_then_rebuilds_dev_data(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            (root / snapshot.NATIVE_MARKER).write_text('{}')
+            (root / '.local' / 'native' / 'pg').mkdir()
+            plan = {'args': ['--report', '0'], 'key': 'k', 'directory': Path('/shared/cache'), 'file': Path('/shared/cache/k.sql.gz')}
+            calls = []
+            with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'dev_cache_plan', return_value=plan), patch.object(snapshot, 'native', side_effect=lambda root, *args, **kw: calls.append(('native', *args))), patch.object(snapshot, 'dev_recipe', side_effect=lambda root, env, *args: calls.append(('recipe', env, *args))):
+                snapshot.remove()
+            self.assertEqual(calls, [('native', 'stop', 'celery', 'api', 'postgres'), ('recipe', {'DB_CACHE_DIR': '/shared/cache'}, 'ndev-db', '--report', '0')])
+            self.assertFalse((root / snapshot.NATIVE_MARKER).exists())
+            self.assertFalse((root / '.local' / 'native' / 'pg').exists())
+
+    def test_production_data_is_never_snapshotted(self):
+        for mode in ('native', 'docker'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp:
+                root = self.native_root(temp)
+                snapshot._backend_modes[root] = mode
+                if mode == 'native':
+                    (root / snapshot.NATIVE_MARKER).write_text('{}')
+                else:
+                    (root / snapshot.OVERRIDE).write_text(snapshot.MARKER + 'services: {}\n')
+                with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'dev_recipe') as recipe:
+                    with self.assertRaisesRegex(RuntimeError, 'never snapshotted'):
+                        snapshot.save_snapshot('checkpoint')
+                    recipe.assert_not_called()
+
+    def test_native_save_uses_native_recipe(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            directory = SqlSnapshotTests().fixture(root)
+            def recipe(checkout, environment, command, name):
+                self.assertEqual(command, 'nsave-snapshot')
+                staging = Path(environment['DB_SNAPSHOTS_DIR'])
+                with gzip.open(staging / f'{name}.sql.gz', 'wb') as stream:
+                    stream.write(b'native dump')
+                (staging / f'{name}.meta.json').write_text('{}')
+            with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'snapshot_directory', return_value=directory), patch.object(snapshot, 'dev_recipe', side_effect=recipe):
+                snapshot.save_snapshot('checkpoint')
+            with gzip.open(directory / 'checkpoint.sql.gz') as stream:
+                self.assertEqual(stream.read(), b'native dump')
+
+    def test_native_load_restores_with_writers_stopped_and_clears_production_marker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            directory = SqlSnapshotTests().fixture(root)
+            (root / snapshot.NATIVE_MARKER).write_text('{}')
+            calls = []
+            def run(args, *a, **kw):
+                calls.append(('run', *args))
+                return subprocess.CompletedProcess(args, 0, '', '')
+            with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'snapshot_directory', return_value=directory), patch.object(snapshot, 'just', return_value=subprocess.CompletedProcess([], 0, '', '')), patch.object(snapshot, 'run', side_effect=run), patch.object(snapshot, 'native', side_effect=lambda root, *args, **kw: calls.append(('native', *args))), patch.object(snapshot, 'wait_for_backend'), patch.object(snapshot, 'migrate', side_effect=lambda root: calls.append(('migrate',))):
+                snapshot.load_snapshot('checkpoint')
+            restore = next(i for i, call in enumerate(calls) if any('ON_ERROR_STOP=1' in str(part) for part in call))
+            self.assertLess(calls.index(('native', 'stop', 'celery', 'api')), calls.index(('native', 'up', 'postgres')))
+            self.assertLess(calls.index(('native', 'dropdb', '--maintenance-db=template1', '--force', '--if-exists', 'postgres')), restore)
+            self.assertLess(restore, calls.index(('native', 'up', 'api')))
+            self.assertLess(calls.index(('native', 'up', 'api')), calls.index(('migrate',)))
+            self.assertEqual(calls[-1], ('native', 'up', 'api', 'celery'))
+            self.assertFalse((root / snapshot.NATIVE_MARKER).exists())
+
+    def test_native_load_failure_leaves_writers_stopped(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            directory = SqlSnapshotTests().fixture(root)
+            calls = []
+            def run(args, *a, **kw):
+                return subprocess.CompletedProcess(args, 1 if args[0] == 'bash' else 0, '', '')
+            with patch.object(snapshot, 'target_root', return_value=root), patch.object(snapshot, 'snapshot_directory', return_value=directory), patch.object(snapshot, 'just', return_value=subprocess.CompletedProcess([], 0, '', '')), patch.object(snapshot, 'run', side_effect=run), patch.object(snapshot, 'native', side_effect=lambda root, *args, **kw: calls.append(args)):
+                with self.assertRaisesRegex(RuntimeError, 'SQL restore failed'):
+                    snapshot.load_snapshot('checkpoint')
+            self.assertEqual(calls[-1], ('stop', 'celery', 'api'))
+            self.assertNotIn(('up', 'api'), calls)
+
+    def test_native_migrations_run_through_native_stack(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.native_root(temp)
+            with patch.object(snapshot, 'native', return_value=subprocess.CompletedProcess([], 0, '', '')) as native, patch.object(snapshot, 'compose', side_effect=AssertionError('native worktrees need no Docker')):
+                snapshot.migrate(root)
+            native.assert_called_once_with(root, 'manage', 'migrate', '--check', capture=True, check=False)
+
+    def native_build_fixture(self, temp, restore_exit):
+        main = Path(temp) / 'main'
+        main.mkdir()
+        with gzip.open(main / 'db.sql.gz', 'wb') as f:
+            f.write(b'-- PostgreSQL database dump\nCREATE TABLE proof (id integer);\n')
+        pg_bin = Path(temp) / 'pg-bin'
+        pg_bin.mkdir()
+        (pg_bin / 'postgres').touch()
+        baseline = Path(temp) / 'share' / 'prod-baseline'
+        baseline.mkdir(parents=True)
+        (baseline / 'previous').write_text('previous baseline')
+        commands = []
+        def run(args, *a, **kw):
+            commands.append(args)
+            if args[0].endswith('initdb'):
+                data = Path(args[args.index('-D') + 1])
+                data.mkdir()
+                (data / 'postgresql.conf').touch()
+            return subprocess.CompletedProcess(args, restore_exit if args[0] == 'bash' else 0, '', '')
+        patches = [patch.object(snapshot, 'MAIN', main), patch.object(snapshot, 'PG_BIN', pg_bin), patch.object(snapshot, 'NATIVE_BASELINE', baseline), patch.object(snapshot, '__file__', str(Path(temp) / 'db_snapshot.py')), patch.object(snapshot, 'run', side_effect=run), patch.dict(snapshot.os.environ)]
+        return baseline, commands, patches
+
+    def test_native_build_publishes_baseline_only_after_restore(self):
+        with tempfile.TemporaryDirectory() as temp:
+            baseline, commands, patches = self.native_build_fixture(temp, restore_exit=0)
+            with contextlib.ExitStack() as stack:
+                for p in patches:
+                    stack.enter_context(p)
+                snapshot.create_native()
+            order = [Path(c[0]).name if c[0] != 'bash' else 'restore' for c in commands]
+            self.assertEqual(order, ['initdb', 'pg_ctl', 'restore', 'pg_ctl'])
+            self.assertIn('start', commands[1])
+            self.assertIn('stop', commands[3])
+            self.assertEqual(json.loads((baseline / 'provenance.json').read_text())['source'], 'sql-dump')
+            self.assertIn("unix_socket_directories = ''", (baseline / 'pg' / 'postgresql.conf').read_text())
+            self.assertFalse((baseline / 'previous').exists())
+            self.assertEqual([p.name for p in baseline.parent.iterdir()], ['prod-baseline'])
+
+    def test_native_build_failed_restore_keeps_previous_baseline(self):
+        with tempfile.TemporaryDirectory() as temp:
+            baseline, commands, patches = self.native_build_fixture(temp, restore_exit=1)
+            with contextlib.ExitStack() as stack:
+                for p in patches:
+                    stack.enter_context(p)
+                with self.assertRaisesRegex(RuntimeError, 'restore failed'):
+                    snapshot.create_native()
+            self.assertEqual((baseline / 'previous').read_text(), 'previous baseline')
+            self.assertEqual([p.name for p in baseline.parent.iterdir()], ['prod-baseline'])
+            self.assertIn('immediate', commands[-1])
+
+    def test_build_flags_pick_backends_and_only_apply_to_create(self):
+        cases = ((['create', '--native'], ['native']), (['create', '--docker'], ['docker']), (['create'], ['native', 'docker']))
+        for argv, expected in cases:
+            with self.subTest(argv=argv), patch.object(snapshot.sys, 'argv', ['db_snapshot.py', *argv]), patch.object(snapshot, 'available_backends', return_value=['native', 'docker']), patch.object(snapshot, 'build') as build:
+                self.assertEqual(snapshot.main(), 0)
+                build.assert_called_once_with(expected)
+        with patch.object(snapshot.sys, 'argv', ['db_snapshot.py', 'seed', '--native']), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                snapshot.main()
+
+
 class WorktreeSetupTests(unittest.TestCase):
     def test_setup_keeps_shared_cache_but_detaches_named_snapshots(self):
         with tempfile.TemporaryDirectory() as temp:
