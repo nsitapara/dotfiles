@@ -4,9 +4,10 @@
 hl.env("GDK_SCALE", "1")
 
 -- Explicit positions (not "auto") so monitor power-cycling can't re-swap sides.
--- DP-1 (LG) on the left, DP-2 (ASUS, scale 1.25 -> 2048 logical wide) on the right.
-hl.monitor({ output = "DP-1", mode = "2560x1440@74.97", position = "0x0", scale = 1 })
-hl.monitor({ output = "DP-2", mode = "2560x1440@74.92", position = "2560x0", scale = 1.25 })
+-- Both displays use scale 1.25 (2048 logical pixels wide).
+-- DP-1 (LG) on the left; DP-2 (ASUS) starts at its right edge.
+hl.monitor({ output = "DP-1", mode = "2560x1440@74.97", position = "0x0", scale = 1.25 })
+hl.monitor({ output = "DP-2", mode = "2560x1440@74.92", position = "2048x0", scale = 1.25 })
 
 -- Fallback for any other display that gets plugged in.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.25 })
