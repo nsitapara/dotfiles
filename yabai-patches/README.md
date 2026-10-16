@@ -23,6 +23,21 @@ same window id. Stock yabai ignores that element because it already knows the
 id, so it keeps moving the dead element and leaves a gap. The patch replaces
 the window instead.
 
+`click-during-retile.patch` stops a click from rewriting the layout. On
+mouse-up, yabai compares the pressed window's frame with its frame at
+mouse-down and reads any difference as a drag of its edge or title bar: it
+moves the split by that amount or swaps windows. yabai's own retiling changes
+that frame too, during the press (a window opens beside it, or a dragged Chrome
+tab becomes a window) or just before it, while the app's resize notification is
+still in flight. Clicking into a window that just opened then pins its split at
+yabai's 0.1/0.9 clamp, and Chrome, which will not shrink below 500 px, overlaps
+its neighbor until `space --balance`. The patch records when yabai last framed
+each window. For a press without the mouse modifier, it ignores the change and
+restores the tile when the cursor stayed within 4 px, or when yabai framed the
+window during the press or in the second before it. Other edge and title-bar
+drags behave as before. Upstream master has the same code, so an official
+release alone does not fix this.
+
 ## Sources
 
 - yabai base: `dd845723416f5fe92af49fad5ebab00369e07edd`, version 7.1.25.
@@ -125,8 +140,12 @@ this setup's problem. Track the linked issues above for that distinction.
 5. If a check fails, run `python3 scripts/use-yabai-macos27.py activate` to
    restore the approved local app. Investigate before removing it.
 6. Once the official build passes, remove the workaround in a focused commit:
+   - Check the official build for the click race `click-during-retile.patch`
+     fixes: hold the mouse on a tiled window while another window opens beside
+     it, then release. If the split jumps, keep a build with that patch.
    - Delete `yabai-patches/`, `scripts/build-yabai-macos27.sh`,
-     `scripts/use-yabai-macos27.py`, and `tests/test_yabai_gesture.c`.
+     `scripts/use-yabai-macos27.py`, `tests/test_yabai_gesture.c`, and
+     `tests/test_yabai_mouse_press.c`.
    - Remove the temporary-build section from `YABAI.md`.
    - Remove `~/Applications/Yabai macOS 27.app` and its permission entry.
    - Remove the saved `yabai-macos27-backup.json` and the build caches under
@@ -160,6 +179,10 @@ successfully; the live desktop tests used the installed ARM64 build.
 - Desktop sequences 2 → 3 → 2 → 4 → 2 and 6 → 5 → 4 → 6 passed.
 - The background service passed the same desktop-switching checks after app approval.
 - An injected Cmd+5 shortcut selected desktop 5; the test restored the original desktop.
+- October 16, 2026, `click-during-retile.patch`: the unpatched build left a
+  split at its 0.9 clamp after a click on a window that had just opened. With
+  the patch, a press held on Orca while a window joined its Space left both at
+  1262 px, and an injected edge drag still moved the split to 1488/1036 px.
 
 AddressSanitizer from the installed Xcode hung during runtime initialization on
 this OS, before the test's `main`. The checked-in test uses UndefinedBehaviorSanitizer.

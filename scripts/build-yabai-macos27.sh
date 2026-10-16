@@ -21,6 +21,7 @@ git -C "$build_dir/source" apply "$repo_dir/yabai-patches/macos27.patch"
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/query-json.patch"
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/ordered-out.patch"
 git -C "$build_dir/source" apply "$repo_dir/yabai-patches/reopened-window.patch"
+git -C "$build_dir/source" apply "$repo_dir/yabai-patches/click-during-retile.patch"
 python3 "$repo_dir/tests/check_yabai_query_json.py" "$build_dir/source"
 make -C "$build_dir/source" install
 
@@ -29,6 +30,10 @@ xcrun clang -std=c11 -g -fsanitize=undefined \
     -I "$build_dir/source/src" "$repo_dir/tests/test_yabai_gesture.c" \
     -framework ApplicationServices -o "$build_dir/test-gesture"
 "$build_dir/test-gesture"
+xcrun clang -std=c11 -g -fsanitize=undefined \
+    -I "$build_dir/source/src" "$repo_dir/tests/test_yabai_mouse_press.c" \
+    -framework ApplicationServices -o "$build_dir/test-mouse-press"
+"$build_dir/test-mouse-press"
 
 mkdir -p "$build_dir/Yabai macOS 27.app/Contents/MacOS"
 cp "$build_dir/source/bin/yabai" "$build_dir/Yabai macOS 27.app/Contents/MacOS/yabai"
