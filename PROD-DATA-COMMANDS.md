@@ -1,27 +1,42 @@
 # Local database commands
 
-The `zsh-mac` Stow package installs these helpers under
-`~/.config/herasight/`. Its `.zshrc` loads their shell functions.
-For an already-open terminal, load them with:
+The `zsh-mac` Stow package installs `~/.config/herasight/db_snapshot.zsh`,
+and its `.zshrc` loads it. Each shell function in it calls pilotcli
+(`~/.local/bin/pilotcli`, from `~/Documents/GitHub/pilotCLI`). For an
+already-open terminal, load them with:
 
 ```zsh
 source ~/.config/herasight/db_snapshot.zsh
 ```
 
+| Function | pilotcli command |
+|---|---|
+| `prod_build [--native\|--docker]` | `env create-baseline --project web-platform --backend available\|native\|docker` |
+| `prod_seed` | `env update-db -C "$PWD" --source prod` |
+| `prod_remove` | `env update-db -C "$PWD" --source dev` |
+| `save_snapshot [name]` | `env create-snapshot -C "$PWD" [name]` |
+| `list_snapshots` (or `list_snapshot`) | `env list-snapshots -C "$PWD"` |
+| `load_snapshot [name] [--force]` | `env update-db -C "$PWD" --source snapshot [--snapshot name] [--force true]` |
+
+Every function passes `-C "$PWD"`, so it acts on the checkout you are in,
+never on `$PILOT_WORKTREE_PATH`'s. Each prints its progress and closing line
+as text (`--format text`).
+
 ## Build the shared baseline
 
-Run `prod_build` from any directory. It restores
-`~/Documents/web-platform/db.sql.gz` into isolated temporary Postgres,
-builds `herasight-db:prod-baseline`, and removes the temporary resources.
-It leaves existing development databases alone.
+Run `prod_build` from any directory. It restores the main checkout's
+`db.sql.gz` into an isolated temporary Postgres and publishes the result. It
+leaves existing development databases alone. By default it builds each
+backend that is available:
 
-Each invocation restores and rebuilds, even when the dump is unchanged.
-The fixed tag is replaced only after the restore and build succeed.
-Older images are removed when unused; images referenced by containers and
-Docker build caches may remain. The source dump is retained.
+- **native:** a Postgres 17 cluster under `~/.local/share/herasight/prod-baseline`;
+- **Docker:** the image `herasight-db:prod-baseline`, when Docker answers.
 
-Long steps report elapsed time every ten seconds. Compression also reports
-the archive size, and a successful build prints its total duration.
+`prod_build --native` or `prod_build --docker` builds one. Each invocation
+restores and rebuilds, even when the dump is unchanged. The baseline is
+replaced only after the restore and build succeed, and the source dump is
+kept. Long steps report elapsed time every ten seconds, and a successful
+build prints its total duration.
 
 ## Use or remove production data
 
@@ -32,9 +47,10 @@ checkout or a feature worktree and run:
 prod_seed
 ```
 
-This replaces that checkout's database and Redis cache with the shared
-production baseline, applies migrations automatically, and restarts only
-the backend on its existing ports. It does not launch frontends.
+This replaces that checkout's database and Redis cache with the production
+baseline, on the backend the checkout runs (native stack or Docker), applies
+migrations automatically, and restarts only the backend on its existing
+ports. It does not launch frontends.
 
 To return to development data, run:
 
@@ -42,36 +58,37 @@ To return to development data, run:
 prod_remove
 ```
 
-This removes the local Compose image override and follows the cache and
-bootstrap workflow for `just dev --report 0`: restore the matching cached
-database, or bootstrap and cache it if absent, then run the branch seed.
-It preserves frontend processes and backend ports.
+This removes the production baseline from the checkout and follows the
+cache and bootstrap workflow for `just dev --report 0`: restore the matching
+cached database, or bootstrap and cache it if absent, then run the branch
+seed. It preserves frontend processes and backend ports.
 
 Both commands discard the target checkout's current database and cache.
-They verify that its Compose containers belong to that checkout.
-The worktree must have its normal environment setup and backend ports
-initialized, for example by an earlier `just start` or `just dev`.
+They verify that the backend they replace belongs to that checkout. The
+worktree must have its normal environment setup and backend ports
+initialized, for example by an earlier `just ndev`/`just nstart` (or `just
+dev`/`just start` on Docker).
 
-## Requirements and verification
+## Configuration and tests
 
-The helpers use Python 3, Docker, Just, gzip, and the web-platform repository
-scripts. The main checkout path is configured by `MAIN` in `db_snapshot.py`.
+pilotcli reads the facts from `~/.config/pilotcli/config.toml`:
+`main_checkout` under `[projects.web-platform]`, and `prod_dump`,
+`db_cache`, `prod_baseline`, `prod_image` and `pg_bin` under
+`[projects.web-platform.env]`.
 
-Run the isolated unit tests:
-
-```sh
-python3 ~/.config/herasight/test_db_snapshot.py
-```
-
-The Docker integration test builds a separate image from a tiny synthetic
-dump, verifies restored rows and failed-restore protection, and cleans up:
+The tests live in pilotCLI:
 
 ```sh
-python3 ~/.config/herasight/test_db_snapshot_docker.py
+cd ~/Documents/GitHub/pilotCLI
+go test ./internal/devdb/ ./internal/modules/env/   # unit tests
+make live-env   # a throwaway native stack: a test run and a checkpoint round trip
+make live-db    # the baseline builders, native and Docker, on a tiny synthetic dump
 ```
 
-Production dumps, Docker images, environment files, and restore logs are
-local runtime data and are not part of the dotfiles repository.
+The two `make live-*` tests start real stacks; run them deliberately.
+
+Production dumps, baselines, Docker images, environment files, and restore
+logs are local runtime data and are not part of the dotfiles repository.
 
 ## Worktree SQL checkpoints
 
@@ -85,57 +102,42 @@ load_snapshot before-edit
 
 `save_snapshot` without a name generates a branch-based name such as
 `my-branch-1`. `load_snapshot` without a name selects the most recently
-saved SQL archive in this checkout. `list_snapshot` is also accepted.
-Saving an existing name replaces that checkpoint only after a successful
-dump and metadata write. Failed saves preserve the previous checkpoint.
+saved SQL archive in this checkout. Saving an existing name replaces that
+checkpoint only after a successful dump and metadata write. Failed saves
+preserve the previous checkpoint. A checkout holding production data from
+`prod_seed` refuses to save.
 
 Every checkpoint is a full gzip-compressed SQL dump, plus the existing
-Just migration metadata. Files live in `<worktree>/.db-snapshots/` and are
-excluded from Git. If worktree setup linked this directory to the main
-checkout, the first command replaces only that symlink with a private
-directory. Existing snapshots remain in the original shared directory. A shared `DB_SNAPSHOTS_DIR` setting is ignored by these
-shell helpers. Switching branches within one checkout retains its
-checkpoints; a separate worktree has separate checkpoints. Deleting the
-worktree also deletes its checkpoint directory.
+Just migration metadata. Files live in `<worktree>/.db-snapshots/` (private,
+0700) and are excluded from Git. Switching branches within one checkout
+retains its checkpoints; a separate worktree has separate checkpoints.
+Deleting the worktree also deletes its checkpoint directory.
 
 Saving leaves the stack running. Loading validates the archive and
 migration compatibility, stops this checkout's API and Celery, replaces
 its database, clears its Redis cache, runs migrations automatically, and
 starts its backend on the existing ports. Frontend processes keep running.
-The production-image override, if installed, is retained. Checkpoints do
-not include Redis, uploaded files, external services, or code changes.
+Checkpoints do not include Redis, uploaded files, external services, or
+code changes.
 
 Changed migration files require `load_snapshot NAME --force`, matching
 the Just policy. Missing migration files and metadata errors block the
 restore even with force. A failed SQL restore or migration leaves API and
 Celery stopped so you can fix the error and retry. Restore error details
-are saved privately in `.db-snapshots/.restore.log`.
-
-The shell layer reuses `just save-snapshot`, `just list-snapshots`, and
-`scripts/check_snapshot_compat.py`. It performs the SQL restore with
-strict error handling and backend coordination instead of calling the
-uncoordinated `just load-snapshot` recipe. Commands in the same worktree
-are locked against concurrent snapshot saves or loads.
-
-Run the SQL checkpoint integration test with:
-
-```sh
-python3 ~/.config/herasight/test_sql_snapshots_docker.py
-```
-
-It saves and restores synthetic rows using real Postgres and the Just
-recipes, verifies Redis clearing and SQL failure handling, and checks
-that existing Compose stacks stayed unchanged. Django migration calls
-are mocked in this fixture; unit tests check their invocation and ordering.
+are saved privately in `.db-snapshots/.restore.log`. Commands in the same
+worktree are locked against concurrent snapshot saves or loads.
 
 ## Worktree creation
 
-`~/.config/herasight/link-worktree-db.sh` is the database setup hook shared
-by the local T3, gtr, and CodeNexus entry points. It links `db.sql.gz` to
-the main production dump and `.db-cache` to the shared development cache,
-then creates a private `.db-snapshots/` directory in the new worktree.
-Existing checkpoint symlinks are detached without deleting shared files.
+`pilotcli env create-db-links -C .` is the database setup step for every
+new web-platform worktree: the gtr hook (web-platform's local
+`gtr.hook.postcreate`), CodeNexus's `.codenexus/scripts/postcreate.sh`
+(which Orca's `.orca/scripts/setup.sh` runs), and `pilotcli env create`'s
+own setup. It links `db.sql.gz` to the main checkout's production dump and
+`.db-cache` to the shared development cache, then creates a private
+`.db-snapshots/` directory. An existing checkpoint symlink is detached
+without deleting shared files.
 
-The console labels `.db-cache` as the shared `just dev` cache and
-`.db-snapshots` as worktree SQL checkpoints. Cache keys, cached files,
-and the `just dev --report 0` cache-hit workflow are unchanged.
+`.db-cache` is the shared `just dev` cache and `.db-snapshots` holds the
+worktree's SQL checkpoints. Cache keys, cached files, and the
+`just dev --report 0` cache-hit workflow are unchanged.

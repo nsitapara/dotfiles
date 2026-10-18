@@ -1,24 +1,19 @@
-# Build the production baseline from the main checkout's db.sql.gz in an isolated
-# Postgres: a native cluster and/or a Docker image. --native or --docker builds one;
-# by default it builds each backend that is available.
-prod_build() {
-  python3 "$HOME/.config/herasight/db_snapshot.py" create "$@"
-}
-
-# Replace this checkout's database with the saved production baseline, on the
-# backend the checkout runs (native stack or Docker).
-prod_seed() {
-  python3 "$HOME/.config/herasight/db_snapshot.py" seed "$@"
-}
-
-# Remove this checkout's production data and restore development data.
-prod_remove() {
-  python3 "$HOME/.config/herasight/db_snapshot.py" remove "$@"
-}
-
-# SQL checkpoints are scoped to the current checkout directory, on either backend.
-# They refuse to save while production data from prod_seed is loaded.
-save_snapshot() { python3 "$HOME/.config/herasight/db_snapshot.py" save-snapshot "$@"; }
-load_snapshot() { python3 "$HOME/.config/herasight/db_snapshot.py" load-snapshot "$@"; }
-list_snapshots() { python3 "$HOME/.config/herasight/db_snapshot.py" list-snapshots "$@"; }
-list_snapshot() { list_snapshots "$@"; }
+# The HeraSight database helpers, as zsh functions over pilotcli (pilotCLI milestone 11; they replace db_snapshot.py).
+# Each passes -C "$PWD", so it acts on the checkout you are in, never $PILOT_WORKTREE_PATH's.
+#   save_snapshot [name]     pilotcli env create-snapshot: a named SQL checkpoint of this checkout's database
+#   list_snapshots           pilotcli env list-snapshots
+#   load_snapshot [name] [--force]
+#                            pilotcli env update-db --source snapshot: replace this checkout's database with a checkpoint
+#                            (the latest when unnamed); --force accepts changed migration files
+#   prod_build [--native|--docker]
+#                            pilotcli env create-baseline: build the production baseline from the main checkout's
+#                            db.sql.gz, on each available backend by default
+#   prod_seed                pilotcli env update-db --source prod: load the production baseline into this checkout
+#   prod_remove              pilotcli env update-db --source dev: remove it and restore development data
+save_snapshot()  { pilotcli env create-snapshot -C "$PWD" "$@" --format text; }
+list_snapshots() { pilotcli env list-snapshots -C "$PWD" --format text; }
+list_snapshot()  { list_snapshots "$@"; }
+load_snapshot()  { local -a a=(); local x; for x; do case $x in --force) a+=(--force true);; *) a+=(--snapshot "$x");; esac; done; pilotcli env update-db -C "$PWD" --source snapshot "${a[@]}" --format text; }
+prod_build()     { local b=available; case ${1-} in --native) b=native;; --docker) b=docker;; esac; pilotcli env create-baseline --project web-platform --backend "$b" --format text; }
+prod_seed()      { pilotcli env update-db -C "$PWD" --source prod --format text; }
+prod_remove()    { pilotcli env update-db -C "$PWD" --source dev --format text; }
