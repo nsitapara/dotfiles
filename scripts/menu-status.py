@@ -28,9 +28,12 @@ end tell
 ''')
     status = {}
     for line in titles.splitlines():
-        match = re.match(r"(Codex|Claude) icon, Usage (\d+)%", line)
+        # A provider can name its window ("Claude icon, Weekly: Usage 4%");
+        # show its initial the way CodexBar's own item does ("W 4%").
+        match = re.match(r"(Codex|Claude) icon, (?:(\w)\w*: )?Usage (\d+)%", line)
         if match:
-            status[match[1].lower()] = match[2] + "%"
+            window = match[2] + " " if match[2] else ""
+            status[match[1].lower()] = window + match[3] + "%"
     return status
 
 
