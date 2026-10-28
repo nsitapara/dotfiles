@@ -27,3 +27,6 @@ require("default.hypr.toggles")
 
 -- Add any other personal Hyprland configuration below.
 -- o.window("qemu", { workspace = "5" })
+
+-- Launch Dota 2 on the LG monitor, regardless of the focused monitor.
+o.window("^dota2$", { monitor = "DP-1" })

@@ -23,7 +23,7 @@ git clone https://github.com/nsitapara/dotfiles.git ~/.dotfiles
 
 `./setup.sh --omarchy-only` runs the same restore. The helper backs up existing directories under `~/.local/state/dotfiles-backups/quattro/`, installs missing plugins at the recorded Git revisions, restores the theme, reloads Hyprland and restarts the shell. Run it from the desktop session. For restoration from a TTY, use `--no-reload --skip-theme` and select the saved theme after logging in.
 
-The two custom plugins (`nsitapara.bar` and `nsitapara.system-monitor`) are tracked directly. Third-party plugin checkouts are ignored; their URLs and revisions are stored in `omarchy/.config/omarchy/plugins.lock.json`. Existing installed plugins are kept, including local changes or newer versions. Original bar/system-monitor plugins can remain installed while the saved layout uses the custom versions.
+The three custom plugins (`nsitapara.bar`, `nsitapara.system-monitor` and `nsitapara.tray`) are tracked directly. The tray uses a foreground-colored Steam glyph so it stays visible on a transparent bar. Third-party plugin checkouts are ignored; their URLs and revisions are stored in `omarchy/.config/omarchy/plugins.lock.json`. Existing installed plugins are kept, including local changes or newer versions. Original bar/system-monitor plugins can remain installed while the saved layout uses the custom versions.
 
 ## Preserve later changes
 
