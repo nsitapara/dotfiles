@@ -166,14 +166,30 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> (Int, Int) {
             let thumbnail: AXUIElement? = waitFor {
                 guard let display = displayGroup(screen), let group = child(display, "mc.spaces"),
                       let list = child(group, "mc.spaces.list") else { return nil }
+                // macOS 27.2 capitalises it as "Exit To Desktop 1".
                 let thumbnails = children(list).filter {
-                    (attribute($0, "AXDescription") as? String)?.hasPrefix("exit to Desktop") == true
+                    (attribute($0, "AXDescription") as? String)?
+                        .range(of: "exit to desktop", options: [.anchored, .caseInsensitive]) != nil
                 }
                 return position < thumbnails.count ? thumbnails[position] : nil
             }
-            guard let button = thumbnail,
-                  AXUIElementPerformAction(button, "AXRemoveDesktop" as CFString) == .success else {
-                throw Failure(description: "Could not remove desktop \(victim.index) on display \(screen.index).")
+            // Say what Mission Control exposed, so a macOS change to it is visible in the log.
+            func exposed() -> String {
+                guard let display = displayGroup(screen), let group = child(display, "mc.spaces"),
+                      let list = child(group, "mc.spaces.list") else { return "no mc.spaces.list" }
+                return children(list).map { element in
+                    var names: CFArray?
+                    AXUIElementCopyActionNames(element, &names)
+                    let description = attribute(element, "AXDescription") as? String ?? "?"
+                    return "\(description) \((names as? [String]) ?? [])"
+                }.joined(separator: "; ")
+            }
+            guard let button = thumbnail else {
+                throw Failure(description: "No thumbnail \(position) for desktop \(victim.index) on display \(screen.index): \(exposed())")
+            }
+            let result = AXUIElementPerformAction(button, "AXRemoveDesktop" as CFString)
+            guard result == .success else {
+                throw Failure(description: "Could not remove desktop \(victim.index) on display \(screen.index) (AX error \(result.rawValue)): \(exposed())")
             }
             guard try waitFor({ try spaces().count < all.count ? true : nil }) != nil else {
                 throw Failure(description: "macOS did not remove the desktop; stopped to avoid repeated clicks.")
