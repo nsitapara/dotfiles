@@ -3,18 +3,23 @@ import ApplicationServices
 
 // A short-lived, separately permissioned app. Presses Mission Control's Add
 // Desktop buttons and removes surplus desktops that are unlabelled and empty.
-// Labelled desktops and desktops with windows are never touched.
+// Labelled desktops and desktops with non-sticky windows are never touched.
 struct Failure: Error, CustomStringConvertible { let description: String }
 struct Space: Decodable {
     let index: Int
     let display: Int
     let label: String
-    let windows: [Int]
+    var windows: [Int]
     let fullscreen: Bool
     enum CodingKeys: String, CodingKey {
         case index, display, label, windows
         case fullscreen = "is-native-fullscreen"
     }
+}
+struct Window: Decodable {
+    let id: Int
+    let sticky: Bool
+    enum CodingKeys: String, CodingKey { case id; case sticky = "is-sticky" }
 }
 struct Display: Decodable { let id: Int; let index: Int }
 struct DisplayPlan: Decodable { let id: Int; let index: Int; let workspaces: [Int] }
@@ -54,8 +59,17 @@ func ensureSpaces(yabai: String, plan: [DisplayPlan]) throws -> (Int, Int) {
     func displays() throws -> [Display] {
         try JSONDecoder().decode([Display].self, from: run(yabai, ["-m", "query", "--displays"]))
     }
+    // yabai lists a sticky window (Wispr Flow's status pill) on every desktop of
+    // its display, so it must not make a surplus desktop look occupied.
     func spaces() throws -> [Space] {
-        try JSONDecoder().decode([Space].self, from: run(yabai, ["-m", "query", "--spaces"]))
+        let all = try JSONDecoder().decode([Space].self, from: run(yabai, ["-m", "query", "--spaces"]))
+        let windows = try JSONDecoder().decode([Window].self, from: run(yabai, ["-m", "query", "--windows"]))
+        let sticky = Set(windows.filter(\.sticky).map(\.id))
+        return all.map { space in
+            var space = space
+            space.windows.removeAll { sticky.contains($0) }
+            return space
+        }
     }
     func ordinary(_ all: [Space], _ display: Display) -> [Space] {
         all.filter {
