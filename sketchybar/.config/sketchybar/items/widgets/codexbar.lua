@@ -12,23 +12,25 @@ local function refresh()
   status_pending = true
   sbar.exec('/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" status', function(result, code)
     status_pending = false
+    -- Keep the last reading when a fetch fails rather than flashing "?".
+    if code ~= 0 or type(result) ~= "table" then return end
     for provider, item in pairs(items) do
-      local text = code == 0 and type(result) == "table" and result[provider] or "?"
-      item:set({ label = { string = text or "--" } })
+      item:set({ label = { string = result[provider] or "--" } })
     end
   end)
 end
 
 -- CodexBar must have Merge Icons disabled. macOS 27 no longer exposes these
--- status-item windows to SketchyBar's aliases, so read the app's AX titles.
--- Older systems use the original aliases and need Screen Recording.
+-- status-item windows to SketchyBar's aliases, so read usage from its CLI,
+-- which takes ~10s per fetch. Older systems use the original aliases and
+-- need Screen Recording.
 for _, provider in ipairs({ "codex", "claude" }) do
   local alias_name = "CodexBar,codexbar-" .. provider
   local item = sbar.add(native_items and "item" or "alias", alias_name, {
     position = "right",
     width = "dynamic",
     alias = not native_items and { scale = 1.0, color = colors.white, update_freq = 5 } or nil,
-    update_freq = native_items and provider == "codex" and 5 or 0,
+    update_freq = native_items and provider == "codex" and 60 or 0,
     icon = { drawing = native_items, string = provider == "codex" and ":openai:" or ":claude:",
       color = provider == "claude" and colors.orange or colors.white,
       font = "sketchybar-app-font:Regular:18.0", padding_left = 8, padding_right = 4 },
