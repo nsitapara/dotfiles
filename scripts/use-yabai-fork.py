@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Activate the approved macOS 27 app, or restore the saved Homebrew symlink."""
+"""Activate the approved yabai fork app, or restore the saved Homebrew symlink."""
 import json
 import os
 from pathlib import Path
@@ -7,9 +7,9 @@ import subprocess
 import sys
 import time
 
-APP = Path.home() / "Applications/Yabai macOS 27.app"
+APP = Path.home() / "Applications/Yabai Fork.app"
 BINARY = APP / "Contents/MacOS/yabai"
-STATE = Path.home() / ".local/state/dotfiles-wm/yabai-macos27-backup.json"
+STATE = Path.home() / ".local/state/dotfiles-wm/yabai-fork-backup.json"
 SERVICE = f"gui/{os.getuid()}/local.dotfiles.yabai"
 PROFILE = Path(__file__).resolve().parents[1] / "yabai/.config/yabai/scripts/display-profile.sh"
 
@@ -61,14 +61,14 @@ def main(action):
     if action == "activate":
         subprocess.run(["codesign", "--verify", "--strict", str(APP)], check=True)
         if not BINARY.is_file():
-            raise RuntimeError("Build the macOS 27 app first")
+            raise RuntimeError("Build the yabai fork app first")
         if previous != str(BINARY):
             STATE.parent.mkdir(parents=True, exist_ok=True)
             STATE.write_text(json.dumps({"link": str(link), "target": previous}, indent=2) + "\n")
         target = str(BINARY)
     elif action == "rollback":
         if previous != str(BINARY):
-            raise RuntimeError("The macOS 27 app is not selected; leaving the current link alone")
+            raise RuntimeError("The yabai fork app is not selected; leaving the current link alone")
         saved = json.loads(STATE.read_text())
         if saved["link"] != str(link):
             raise RuntimeError("Backup belongs to a different Homebrew prefix")
@@ -76,7 +76,7 @@ def main(action):
         if not (link.parent / target).is_file():
             raise RuntimeError("The saved Homebrew binary no longer exists")
     else:
-        raise ValueError("Usage: use-yabai-macos27.py activate|rollback")
+        raise ValueError("Usage: use-yabai-fork.py activate|rollback")
     replace_link(link, target)
     try:
         restart(link)

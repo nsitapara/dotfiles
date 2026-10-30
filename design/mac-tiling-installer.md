@@ -56,8 +56,8 @@ none starts the brew services. `setup.sh` installs AeroSpace and stows
 
 | Build | What it does | Needed? |
 |---|---|---|
-| `scripts/build-yabai-macos27.sh` + `yabai-patches/` | yabai 7.1.25 (`dd84572`) with `macos27.patch` (SIP-safe Space switching, macOS 26 code paths on 27) and `query-json.patch`; outputs `~/Applications/Yabai macOS 27.app` | **Yes on macOS 27.** Cmd+N Space switching needs it (`focus-space.py:130`); not needed on ≤ 26 |
-| `scripts/use-yabai-macos27.py activate` | Points `$(brew --prefix)/bin/yabai` at the patched app, saves a backup, kickstarts yabai | Needs `local.dotfiles.yabai` loaded first (`:59`) |
+| `scripts/build-yabai-fork.sh` + `yabai-fork/` | Pinned commit of our fork nsitapara/yabai (Christian-SC26 v7.1.40 plus our fixes: SIP-safe Space switching, hide-on-close windows, query JSON, and more); outputs `~/Applications/Yabai Fork.app` | **Yes on macOS 27.** Cmd+N Space switching needs it (`focus-space.py:130`); not needed on ≤ 26 |
+| `scripts/use-yabai-fork.py activate` | Points `$(brew --prefix)/bin/yabai` at the fork app, saves a backup, kickstarts yabai | Needs `local.dotfiles.yabai` loaded first (`:59`) |
 | `scripts/build-sketchybar-window-order.sh` + `sketchybar-patches/` | SketchyBar v2.24.0 with `window-order.patch`; outputs `~/Applications/SketchyBar Window Order.app` | Cosmetic (fixes the bar dimming on a blank click). Activation means editing the brew plist (`sketchybar-patches/README.md:27-36`) |
 
 - **Live state:** yabai, and the running SketchyBar daemon, use the patched apps.
@@ -78,11 +78,11 @@ none starts the brew services. `setup.sh` installs AeroSpace and stows
   - **#2828:** closing windows doesn't re-layout, with two patches:
     1. **Version check:** upstream compares the macOS major version exactly,
        so on 27 it falls back to pre-Ventura paths and never subscribes to
-       window destroyed/ordered events. The local `macos27.patch` already
-       covers this.
+       window destroyed/ordered events. The fork's macOS 27 version
+       predicate covers this.
     2. **Hide-on-close:** untile windows an app orders out, re-tile them on
-       order-in. This is the real fix for the Spotify gap; see Spotify notes
-       below.
+       order-in. This is the real fix for the Spotify gap, and the fork
+       carries it; see Spotify notes below.
   - **#2802, #2832:** scripting-addition offsets for macOS 27. Not needed,
     since this setup runs without the scripting addition.
 - **Recheck before building:** whether stock yabai works on 27.0.1 hasn't been
@@ -184,7 +184,7 @@ directory link into the repo.
 
 **Side effects on re-run:**
 - `wm.sh default yabai` kickstarts the login job again.
-- `use-yabai-macos27.py activate` restarts yabai every time.
+- `use-yabai-fork.py activate` restarts yabai every time.
 - Both `build-*.sh` scripts exit 1 when their app already exists.
 - `ensure-spaces.sh` can open Mission Control.
 - Copying the SketchyBar plist again overwrites the saved original.
@@ -251,6 +251,6 @@ first and skips itself if that state is already correct.
 - **Reopen on switch:** `reveal-app.sh` sends a reopen when every known window
   of the app it's switching to is ordered out, so Cmd+Tab brings Spotify's
   window back.
-- **Cleanup later:** if the #2828 hide-on-close patch lands upstream, or is
-  added to `yabai-patches/`, re-test Spotify as a tiled window and consider
-  dropping both workarounds.
+- **Cleanup later:** the fork now carries the #2828 hide-on-close and
+  reopened-window fixes. Re-test Spotify as a tiled window (close, then
+  reopen) and consider dropping both workarounds.
