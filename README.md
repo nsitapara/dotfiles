@@ -6,6 +6,9 @@ For the current Omarchy Quattro desktop, see [restore instructions](OMARCHY-QUAT
 
 The full `./setup.sh` installs platform dependencies, links shared dotfiles and offers machine-specific setup. macOS uses the separate `themes-mac` and SketchyBar packages.
 
+On Linux, `./setup.sh --clip-bridge-only` sets up copy and paste with an iPhone
+via Back Tap over Tailscale. See [iPhone clipboard bridge](IPHONE-CLIPBOARD.md).
+
 ## Window manager alternatives
 
 Yabai is the Mac window manager. The monitor menu's **Yabai** section has
