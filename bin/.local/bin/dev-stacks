@@ -1,0 +1,380 @@
+#!/usr/bin/python3 -I
+"""List and stop web-platform's native dev stacks.
+
+A worktree's native backend (scripts/native-stack.sh: Postgres, Redis, S3, the
+API and Celery) runs detached from every terminal, so it keeps running after
+the tab that started it closes. This finds every running one, says how long it
+has gone without serving a request, and stops it with
+`scripts/native-stack.sh stop` (what `just nstop` runs), which keeps the
+database; `just nstart` brings it back.
+
+  dev-stacks [list] [--hours N] [--json]      what runs, and for how long idle
+  dev-stacks stop-idle [HOURS] [--ask]        stop stacks idle >= HOURS (6)
+  dev-stacks stop WORKTREE [--unless-shared] [--force]
+
+A stack is in use, and never stopped as idle, while its Start Stack tab
+(`just ndev`) runs or a test run works in its worktree.
+"""
+from __future__ import annotations
+
+import argparse
+import calendar
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+DEFAULT_HOURS = 6.0
+MAIN_CHECKOUT = Path(os.environ.get("WEB_PLATFORM_ROOT", "~/Documents/web-platform")).expanduser()
+
+# Pid file -> a word its process's command line must contain, so a recycled
+# pid never counts as a running service.
+SERVICES = {
+    "postgres": ("pg/postmaster.pid", "postgres"),
+    "redis": ("run/redis.pid", "redis"),
+    "s3": ("run/s3.pid", "weed"),
+    "api": ("run/api.pid", "runserver"),
+    "celery": ("run/celery.pid", "celery"),
+}
+REQUEST = re.compile(rb'^\[(\d{2}/[A-Z][a-z]{2}/\d{4} \d{2}:\d{2}:\d{2})\] "[A-Z]+ ([^ "?]*)')
+# Port checks hit these; they say nothing about anyone using the stack.
+PROBE_PATHS = {b"/", b"/health", b"/health/"}
+TEST_RUN = re.compile(r"manage\.py test|playwright|pytest")
+
+Processes = Dict[int, Tuple[float, str]]
+
+
+@dataclass
+class Stack:
+    path: Path
+    services: List[str]
+    idle_since: Optional[float]
+    busy: List[str] = field(default_factory=list)
+
+    @property
+    def name(self) -> str:
+        return self.path.name
+
+    @property
+    def label(self) -> str:
+        match = re.match(r"(web-\d+)", self.name)
+        return match.group(1) if match else self.name[:24]
+
+
+def run(cmd: List[str], timeout: float = 30, **kwargs) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kwargs)
+
+
+def worktrees(main: Path = MAIN_CHECKOUT) -> List[Path]:
+    out = run(["git", "-C", str(main), "worktree", "list", "--porcelain"]).stdout
+    paths = [Path(line[len("worktree "):]) for line in out.splitlines() if line.startswith("worktree ")]
+    return [path for path in paths if (path / ".local/native").is_dir()]
+
+
+def read_pid(path: Path) -> Optional[int]:
+    try:
+        return int(path.read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True
+    except (OSError, OverflowError):
+        return False
+    return True
+
+
+def processes(pids: List[int]) -> Processes:
+    """Start time and command line of each pid that is still alive."""
+    # One out-of-range pid makes ps print nothing at all, so ask only about live ones.
+    pids = [pid for pid in pids if alive(pid)]
+    if not pids:
+        return {}
+    out = run(["ps", "-o", "pid=,lstart=,command=", "-p", ",".join(map(str, pids))]).stdout
+    table = {}
+    for line in out.splitlines():
+        parts = line.split(None, 6)
+        if len(parts) < 7:
+            continue
+        pid, _weekday, month, day, clock, year, command = parts
+        started = time.mktime(time.strptime(f"{month} {day} {clock} {year}", "%b %d %H:%M:%S %Y"))
+        table[int(pid)] = (started, command)
+    return table
+
+
+def last_request(log: Path, block: int = 65536) -> Optional[float]:
+    """Time of the newest API request in a runserver log, skipping port probes."""
+    try:
+        handle = log.open("rb")
+    except OSError:
+        return None
+    with handle:
+        handle.seek(0, os.SEEK_END)
+        end, carry = handle.tell(), b""
+        while end > 0:
+            start = max(0, end - block)
+            handle.seek(start)
+            lines = (handle.read(end - start) + carry).split(b"\n")
+            # The first line may continue in the block before this one.
+            carry = lines.pop(0) if start > 0 else b""
+            for line in reversed(lines):
+                match = REQUEST.match(line)
+                if match and match.group(2) not in PROBE_PATHS:
+                    # Django sets TZ from TIME_ZONE (UTC), so runserver stamps requests in UTC.
+                    return calendar.timegm(time.strptime(match.group(1).decode(), "%d/%b/%Y %H:%M:%S"))
+            end = start
+    return None
+
+
+def test_runs() -> List[Tuple[str, str]]:
+    """(command, cwd) of every running test process."""
+    out = run(["ps", "-axo", "pid=,command="]).stdout
+    found = {}
+    for line in out.splitlines():
+        pid, _, command = line.strip().partition(" ")
+        if TEST_RUN.search(command) and pid.isdigit() and int(pid) != os.getpid():
+            found[pid] = command
+    if not found:
+        return []
+    cwds, pid = {}, None
+    out = run(["lsof", "-a", "-p", ",".join(found), "-d", "cwd", "-Fpn"]).stdout
+    for line in out.splitlines():
+        if line.startswith("p"):
+            pid = line[1:]
+        elif line.startswith("n") and pid:
+            cwds[pid] = line[1:]
+    return [(command, cwds.get(pid, "")) for pid, command in found.items()]
+
+
+def inside(path: str, root: Path) -> bool:
+    return path == str(root) or path.startswith(f"{root}/")
+
+
+def collect(paths: Optional[List[Path]] = None) -> List[Stack]:
+    """Every worktree with at least one native service up."""
+    paths = worktrees() if paths is None else paths
+    pid_files = {(path, name): read_pid(path / ".local/native" / file)
+                 for path in paths for name, (file, _) in SERVICES.items()}
+    ndev_pids = {path: read_pid(path / ".local/native/ndev.pid") for path in paths}
+    table = processes([pid for pid in [*pid_files.values(), *ndev_pids.values()] if pid])
+    tests = None
+    stacks = []
+    for path in paths:
+        services, starts = [], []
+        for name, (_, word) in SERVICES.items():
+            proc = table.get(pid_files[(path, name)] or -1)
+            if proc and word in proc[1]:
+                services.append(name)
+                starts.append(proc[0])
+        if not services:
+            continue
+        request = last_request(path / ".local/native/log/api.log")
+        # Starting a service is use too: a fresh restart is not idle.
+        stack = Stack(path, services, max([request or 0, *starts]) or None)
+        ndev = table.get(ndev_pids[path] or -1)
+        if ndev and "ndev" in ndev[1]:
+            stack.busy.append("its Start Stack tab (just ndev) is running")
+        if tests is None:
+            tests = test_runs()
+        if any(inside(cwd, path) or str(path) in command for command, cwd in tests):
+            stack.busy.append("a test run is working in it")
+        stacks.append(stack)
+    return stacks
+
+
+def state(stack: Stack, hours: float, now: float) -> str:
+    if stack.busy:
+        return "busy"
+    if stack.idle_since is None or now - stack.idle_since >= hours * 3600:
+        return "idle"
+    return "active"
+
+
+def duration(seconds: Optional[float]) -> str:
+    if seconds is None:
+        return "?"
+    minutes = int(seconds // 60)
+    days, minutes = divmod(minutes, 1440)
+    hrs, minutes = divmod(minutes, 60)
+    if days:
+        return f"{days}d {hrs}h"
+    return f"{hrs}h {minutes}m" if hrs else f"{minutes}m"
+
+
+def idle_for(stack: Stack, now: float) -> Optional[float]:
+    return None if stack.idle_since is None else max(0.0, now - stack.idle_since)
+
+
+def describe(stack: Stack, hours: float, now: float) -> str:
+    current = state(stack, hours, now)
+    if current == "busy":
+        return "in use: " + "; ".join(stack.busy)
+    return f"idle at least {hours:g}h" if current == "idle" else f"used in the last {hours:g}h"
+
+
+def as_json(stacks: List[Stack], hours: float, now: float) -> dict:
+    return {
+        "hours": hours,
+        "stacks": [{
+            "name": s.name,
+            "label": s.label,
+            "path": str(s.path),
+            "services": s.services,
+            "idle_seconds": None if idle_for(s, now) is None else int(idle_for(s, now)),
+            "idle": duration(idle_for(s, now)),
+            "state": state(s, hours, now),
+            "reason": "; ".join(s.busy),
+        } for s in sorted(stacks, key=lambda s: s.idle_since or 0)],
+    }
+
+
+def print_table(stacks: List[Stack], hours: float, now: float) -> None:
+    if not stacks:
+        print("No native dev stacks are running.")
+        return
+    width = max(len(s.name) for s in stacks)
+    for s in sorted(stacks, key=lambda s: s.idle_since or 0):
+        print(f"{s.name:<{width}}  {duration(idle_for(s, now)):>7} idle  "
+              f"{' '.join(s.services):<29}  {describe(s, hours, now)}")
+
+
+def stop_stack(stack: Stack) -> Tuple[bool, str]:
+    script = stack.path / "scripts/native-stack.sh"
+    if not script.is_file():
+        return False, f"{stack.name}: no scripts/native-stack.sh, so it can't be stopped from here"
+    result = run(["bash", str(script), "stop"], timeout=180, cwd=str(stack.path))
+    output = (result.stdout + result.stderr).strip().splitlines()
+    return result.returncode == 0, f"{stack.name}: {output[-1] if output else 'exit ' + str(result.returncode)}"
+
+
+def other_live_terminals(path: Path) -> Optional[List[str]]:
+    """Titles of Pilot terminals live in this worktree besides the caller's; None when Pilot can't say."""
+    cli = shutil.which("pilot")
+    if not cli:
+        return None
+    try:
+        result = run([cli, "terminal", "list", "--worktree", f"path:{path}", "--json"], timeout=15)
+        terminals = json.loads(result.stdout)["result"]["terminals"]
+    except (subprocess.SubprocessError, ValueError, KeyError, TypeError):
+        return None
+    mine = os.environ.get("ORCA_TERMINAL_HANDLE")
+    return [t.get("title") or t.get("handle", "?") for t in terminals
+            if t.get("connected") and t.get("handle") != mine]
+
+
+def find(stacks: List[Stack], target: str) -> List[Stack]:
+    path = Path(target).expanduser()
+    if path.is_dir():
+        return [s for s in stacks if s.path.resolve() == path.resolve()]
+    exact = [s for s in stacks if s.name == target]
+    return exact or [s for s in stacks if s.name.startswith(target)]
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    now, stacks = time.time(), collect()
+    if args.json:
+        print(json.dumps(as_json(stacks, args.hours, now)))
+    else:
+        print_table(stacks, args.hours, now)
+    return 0
+
+
+def cmd_stop_idle(args: argparse.Namespace) -> int:
+    now, stacks = time.time(), collect()
+    hours = args.hours
+    if args.ask and sys.stdin.isatty():
+        print_table(stacks, hours, now)
+        if not stacks:
+            return 0
+        answer = input(f"\nStop the stacks idle at least how many hours? [{hours:g}] ").strip()
+        if answer:
+            try:
+                hours = float(answer)
+            except ValueError:
+                print(f"Not a number: {answer}", file=sys.stderr)
+                return 2
+        print()
+    targets = []
+    for stack in sorted(stacks, key=lambda s: s.idle_since or 0):
+        if state(stack, hours, now) == "idle":
+            targets.append(stack)
+        else:
+            print(f"Kept    {stack.name}: {describe(stack, hours, now)} ({duration(idle_for(stack, now))} idle)")
+    failed = stopped = 0
+    if targets:
+        print(f"Stopping {len(targets)} idle stacks…", flush=True)
+        # Each stop waits up to 15 s per service to exit, so stop them side by side.
+        with ThreadPoolExecutor(max_workers=len(targets)) as pool:
+            futures = {pool.submit(stop_stack, stack): stack for stack in targets}
+            for future in as_completed(futures):
+                ok, message = future.result()
+                stopped += ok
+                failed += not ok
+                idle = duration(idle_for(futures[future], now))
+                print(f"{'Stopped' if ok else 'FAILED '} {message} ({idle} idle)", flush=True)
+    kept = len(stacks) - stopped - failed
+    print(f"\nStopped {stopped}, kept {kept}" + (f", failed {failed}" if failed else "") +
+          f" (idle limit {hours:g}h). Databases are kept; `just nstart` brings a stack back.")
+    return 1 if failed else 0
+
+
+def cmd_stop(args: argparse.Namespace) -> int:
+    matches = find(collect(), args.worktree)
+    if not matches:
+        print(f"No native dev stack is running in {args.worktree}.")
+        return 0
+    if len(matches) > 1:
+        print(f"{args.worktree} matches {len(matches)} stacks: " + ", ".join(s.name for s in matches), file=sys.stderr)
+        return 2
+    stack = matches[0]
+    if stack.busy and not args.force:
+        print(f"Kept {stack.name}: in use: {'; '.join(stack.busy)}.")
+        return 0
+    if args.unless_shared:
+        others = other_live_terminals(stack.path)
+        if others is None:
+            print(f"Kept {stack.name}: couldn't ask Pilot which sessions are open in it.")
+            return 0
+        if others:
+            print(f"Kept {stack.name}: other live sessions in it: {', '.join(others)}.")
+            return 0
+    ok, message = stop_stack(stack)
+    print(("Stopped " if ok else "FAILED ") + message)
+    return 0 if ok else 1
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(prog="dev-stacks", description=__doc__.split("\n\n")[0])
+    sub = parser.add_subparsers(dest="command")
+    listing = sub.add_parser("list", help="show running stacks (the default)")
+    listing.add_argument("--hours", type=float, default=DEFAULT_HOURS, help="idle limit (default 6)")
+    listing.add_argument("--json", action="store_true")
+    sweep = sub.add_parser("stop-idle", help="stop every stack idle at least HOURS")
+    sweep.add_argument("hours", nargs="?", type=float, default=DEFAULT_HOURS, help="idle limit (default 6)")
+    sweep.add_argument("--ask", action="store_true", help="show the stacks and ask for the limit first")
+    one = sub.add_parser("stop", help="stop one worktree's stack now")
+    one.add_argument("worktree", help="worktree path, folder name or unique prefix (web-2486)")
+    one.add_argument("--unless-shared", action="store_true",
+                     help="keep it when another live Pilot terminal is open in the worktree")
+    one.add_argument("--force", action="store_true", help="stop it even while in use")
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if not argv or argv[0] not in {"list", "stop-idle", "stop", "-h", "--help"}:
+        argv.insert(0, "list")
+    args = parser.parse_args(argv)
+    handlers = {"list": cmd_list, "stop-idle": cmd_stop_idle, "stop": cmd_stop}
+    return handlers[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
