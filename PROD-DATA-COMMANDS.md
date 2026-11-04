@@ -14,9 +14,9 @@ source ~/.config/herasight/db_snapshot.zsh
 | `prod_build [--native\|--docker]` | `env create-baseline --project web-platform --backend available\|native\|docker` |
 | `prod_seed` | `env update-db -C "$PWD" --source prod` |
 | `prod_remove` | `env update-db -C "$PWD" --source dev` |
-| `save_snapshot [name]` | `env create-snapshot -C "$PWD" [name]` |
-| `list_snapshots` (or `list_snapshot`) | `env list-snapshots -C "$PWD"` |
-| `load_snapshot [name] [--force]` | `env update-db -C "$PWD" --source snapshot [--snapshot name] [--force true]` |
+| `snapshot_save [name]` | `env create-snapshot -C "$PWD" [name]` |
+| `snapshot_list` | `env list-snapshots -C "$PWD"` |
+| `snapshot_load [name] [--force]` | `env update-db -C "$PWD" --source snapshot [--snapshot name] [--force true]` |
 
 Every function passes `-C "$PWD"`, so it acts on the checkout you are in,
 never on `$PILOT_WORKTREE_PATH`'s. Each prints its progress and closing line
@@ -95,13 +95,13 @@ logs are local runtime data and are not part of the dotfiles repository.
 Run these from any subdirectory of a configured web-platform checkout:
 
 ```zsh
-save_snapshot before-edit
-list_snapshots
-load_snapshot before-edit
+snapshot_save before-edit
+snapshot_list
+snapshot_load before-edit
 ```
 
-`save_snapshot` without a name generates a branch-based name such as
-`my-branch-1`. `load_snapshot` without a name selects the most recently
+`snapshot_save` without a name generates a branch-based name such as
+`my-branch-1`. `snapshot_load` without a name selects the most recently
 saved SQL archive in this checkout. Saving an existing name replaces that
 checkpoint only after a successful dump and metadata write. Failed saves
 preserve the previous checkpoint. A checkout holding production data from
@@ -120,7 +120,7 @@ starts its backend on the existing ports. Frontend processes keep running.
 Checkpoints do not include Redis, uploaded files, external services, or
 code changes.
 
-Changed migration files require `load_snapshot NAME --force`, matching
+Changed migration files require `snapshot_load NAME --force`, matching
 the Just policy. Missing migration files and metadata errors block the
 restore even with force. A failed SQL restore or migration leaves API and
 Celery stopped so you can fix the error and retry. Restore error details
