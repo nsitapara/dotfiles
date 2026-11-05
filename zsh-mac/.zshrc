@@ -205,6 +205,13 @@ ssh_aws_prod() {
   "$HOME/Documents/web-platform/scripts/ecs_shell.sh" web-platform-cluster ApiContainer
 }
 
+# Restart yabai (rediscovers every window), then SketchyBar (when the bar
+# stops taking clicks). yabairc reapplies the ws1..ws6 Space labels.
+restart_yabai() {
+  launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai"
+  launchctl kickstart -k "gui/$(id -u)/homebrew.mxcl.sketchybar"
+}
+
 # pnpm
 export PNPM_HOME="/Users/nishsitapara/Library/pnpm"
 case ":$PATH:" in
