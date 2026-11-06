@@ -23,6 +23,20 @@ prod_remove()    { pilotcli env update-db -C "$PWD" --source dev --format text; 
 # clean_pg --prod          reset every checkout that holds prod_seed data
 # clean_pg --all           reset every checkout's Postgres
 # clean_pg --stopped       reset every checkout whose native stack isn't running
+_clean_pg_usage() {
+  cat <<'USAGE'
+clean_pg                    list every checkout's native Postgres size (prod = prod_seed data, running = stack up)
+clean_pg <name|path|.>      reset that checkout's Postgres
+clean_pg --stopped          reset every checkout whose stack isn't running
+clean_pg --prod             reset every checkout holding prod_seed data
+clean_pg --all              reset every checkout
+clean_pg -h | --help        show this help
+
+A reset stops the checkout's stack and deletes .local/native (just ndown), after a y/N prompt.
+The next `just dev` there restores development data from the shared cache.
+USAGE
+}
+
 clean_pg() {
   local main=/Users/nishsitapara/Documents/web-platform wt d size flags pid
   local -a all=() targets=()
@@ -34,9 +48,12 @@ clean_pg() {
     printf '%6s %-13s %s\n' $size "${flags# }" ${1:t}
   }
   case ${1-} in
+    -h|--help) _clean_pg_usage; return ;;
+    -*) [[ $1 == --all || $1 == --prod || $1 == --stopped ]] || { echo "clean_pg: unknown option $1\n" >&2; _clean_pg_usage >&2; return 1; } ;|
     "")
       for wt in $all; do [[ -d $wt/.local/native ]] && _clean_pg_row $wt; done | sort -h
       df -h /System/Volumes/Data | awk 'NR==2 { print "\nfree: " $4 " (" $5 " used)" }'
+      echo "reset: clean_pg <name|.> | --stopped | --prod | --all   (clean_pg --help)"
       return ;;
     --all)  for wt in $all; do [[ -d $wt/.local/native ]] && targets+=$wt; done ;;
     --prod) for wt in $all; do [[ -e $wt/.local/native/prod-seed ]] && targets+=$wt; done ;;
