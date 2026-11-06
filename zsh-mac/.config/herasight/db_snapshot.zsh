@@ -22,6 +22,7 @@ prod_remove()    { pilotcli env update-db -C "$PWD" --source dev --format text; 
 #                          the next `just dev` restores development data from the shared cache
 # clean_pg --prod          reset every checkout that holds prod_seed data
 # clean_pg --all           reset every checkout's Postgres
+# clean_pg --stopped       reset every checkout whose native stack isn't running
 clean_pg() {
   local main=/Users/nishsitapara/Documents/web-platform wt d size flags pid
   local -a all=() targets=()
@@ -39,6 +40,13 @@ clean_pg() {
       return ;;
     --all)  for wt in $all; do [[ -d $wt/.local/native ]] && targets+=$wt; done ;;
     --prod) for wt in $all; do [[ -e $wt/.local/native/prod-seed ]] && targets+=$wt; done ;;
+    --stopped)
+      for wt in $all; do
+        [[ -d $wt/.local/native ]] || continue
+        local live=0
+        for pid in $wt/.local/native/run/*.pid(N); do kill -0 $(<$pid) 2>/dev/null && { live=1; break; }; done
+        (( live )) || targets+=$wt
+      done ;;
     *)
       if [[ -d $1 ]]; then wt=${1:A}
       else wt=${${(M)all:#*/$1}[1]}; fi
