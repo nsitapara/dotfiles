@@ -1,22 +1,9 @@
 local colors = require("colors")
 local icons = require("icons")
 local settings = require("settings")
-local pending = false
-
-local function cpu_temperature(result)
-  if type(result) ~= "string" then return nil end
-  -- CPU die average avoids incomplete per-core maps on the M4 Pro.
-  -- TCMb is documented at github.com/dkorunic/iSMC/blob/master/src/temp.txt.
-  for line in result:gmatch("[^\r\n]+") do
-    local raw = line:match("^%[TCMb%]%s+(%S+)%s*$")
-    local value = tonumber(raw)
-    if value and value > 10 and value < 120 then return value end
-  end
-end
 
 local temperature = sbar.add("graph", "widgets.temperature", 36, {
   position = "right",
-  update_freq = 5,
   graph = { color = colors.blue },
   background = {
     height = 22,
@@ -55,35 +42,28 @@ sbar.add("item", "widgets.temperature.padding", {
   width = settings.group_paddings,
 })
 
-local function update_temperature()
-  if pending then return end
-  pending = true
-  -- Reuse the installed Stats reader without another daemon or parser process.
-  sbar.exec("'/Applications/Stats.app/Contents/Resources/smc' list -t 2>/dev/null", function(result, exit_code)
-    pending = false
-    local value = cpu_temperature(result)
-    if exit_code ~= 0 or not value then
-      temperature:set({ label = "—" })
-      return
+-- Fed by the system_stats provider started in widgets/init.lua: the CPU die
+-- average (SMC key TCMb), which avoids incomplete per-core maps on the M4 Pro.
+temperature:subscribe("system_stats", function(env)
+  local value = tonumber(env.temp)
+  if not value or value ~= value or value <= 10 or value >= 120 then
+    temperature:set({ label = "—" })
+    return
+  end
+  -- Match the CPU graph's lower-third trace and color bands.
+  temperature:push({ math.min(value / 100, 1) * 0.3 })
+  local color = colors.blue
+  if value > 30 then
+    if value < 60 then
+      color = colors.yellow
+    elseif value < 80 then
+      color = colors.orange
+    else
+      color = colors.red
     end
-    -- Match the CPU graph's lower-third trace and color bands.
-    temperature:push({ math.min(value / 100, 1) * 0.3 })
-    local color = colors.blue
-    if value > 30 then
-      if value < 60 then
-        color = colors.yellow
-      elseif value < 80 then
-        color = colors.orange
-      else
-        color = colors.red
-      end
-    end
-    temperature:set({
-      graph = { color = color },
-      label = string.format("%dC", math.floor(value + 0.5)),
-    })
-  end)
-end
-
-temperature:subscribe({ "routine", "system_woke" }, update_temperature)
-update_temperature()
+  end
+  temperature:set({
+    graph = { color = color },
+    label = string.format("%dC", math.floor(value + 0.5)),
+  })
+end)

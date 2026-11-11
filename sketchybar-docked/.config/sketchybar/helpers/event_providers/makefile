@@ -1,3 +1,3 @@
 all:
-	(cd cpu_load && $(MAKE))
+	(cd system_stats && $(MAKE))
 	(cd network_load && $(MAKE))

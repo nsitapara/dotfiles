@@ -2,8 +2,6 @@ local colors = require("colors")
 local icons = require("icons")
 local settings = require("settings")
 local activity = {}
-local activity_pending = false
-local last_storage_update = 0
 
 local ssd = sbar.add("graph", "widgets.ssd", 36, {
   position = "right",
@@ -34,58 +32,8 @@ local ssd = sbar.add("graph", "widgets.ssd", 36, {
     color = { alpha = 0 },
     border_color = { alpha = 0 },
   },
-  update_freq = 2,
   click_script = "open -a Finder /",
 })
-
-local function update_storage()
-  last_storage_update = os.time()
-  -- APFS volumes share container space. Total minus available includes the
-  -- system and sibling volumes, unlike df's per-volume Used/Capacity columns.
-  sbar.exec("df -kP /System/Volumes/Data", function(result)
-    local total, available = result:match("\n%S+%s+(%d+)%s+%d+%s+(%d+)")
-    total, available = tonumber(total), tonumber(available)
-    if not total or total <= 0 or not available then
-      ssd:set({ label = "--%" })
-      return
-    end
-    local fraction = (total - available) / total
-    local used = math.floor(100 * fraction + 0.5)
-    ssd:set({ label = used .. "%" })
-  end)
-end
-
-local function update_activity()
-  if activity_pending then return end
-  activity_pending = true
-  -- The first iostat sample is a since-boot average; use the second interval.
-  sbar.exec("LC_ALL=C /usr/sbin/iostat -d -w 1 -c 2 disk0", function(result, exit_code)
-    activity_pending = false
-    if exit_code ~= 0 then return end
-    local mbps, samples = nil, 0
-    for line in result:gmatch("[^\r\n]+") do
-      local size, transfers, rate = line:match("^%s*(%S+)%s+(%S+)%s+(%S+)%s*$")
-      if tonumber(size) and tonumber(transfers) and tonumber(rate) then
-        mbps = tonumber(rate)
-        samples = samples + 1
-      end
-    end
-    if samples < 2 or not mbps then return end
-    table.insert(activity, math.max(0, mbps))
-    if #activity > 36 then table.remove(activity, 1) end
-
-    -- Rescale the whole history together; a 10 MB/s floor keeps idle noise small.
-    local peak = 10
-    for _, sample in ipairs(activity) do peak = math.max(peak, sample) end
-    local graph = {}
-    for _ = 1, 36 - #activity do table.insert(graph, 0) end
-    for _, sample in ipairs(activity) do
-      -- Reserve the lower third for the graph, below the percentage label.
-      table.insert(graph, sample / peak * 0.3)
-    end
-    ssd:push(graph)
-  end)
-end
 
 sbar.add("bracket", "widgets.ssd.bracket", { ssd.name }, {
   background = { color = colors.bg1 },
@@ -96,11 +44,34 @@ sbar.add("item", "widgets.ssd.padding", {
   width = settings.group_paddings,
 })
 
-ssd:subscribe({ "routine", "system_woke" }, function(env)
-  if env.SENDER == "system_woke" or os.time() - last_storage_update >= 60 then
-    update_storage()
+local function push_activity(mbps)
+  table.insert(activity, mbps)
+  if #activity > 36 then table.remove(activity, 1) end
+
+  -- Rescale the whole history together; a 10 MB/s floor keeps idle noise small.
+  local peak = 10
+  for _, sample in ipairs(activity) do peak = math.max(peak, sample) end
+  local graph = {}
+  for _ = 1, 36 - #activity do table.insert(graph, 0) end
+  for _, sample in ipairs(activity) do
+    -- Reserve the lower third for the graph, below the percentage label.
+    table.insert(graph, sample / peak * 0.3)
   end
-  update_activity()
+  ssd:push(graph)
+end
+
+-- Fed by the system_stats provider started in widgets/init.lua. The label is
+-- space used across the APFS container (refreshed every 5 minutes); the graph
+-- is disk0 read + write throughput. Disk values arrive only on the provider's
+-- slower disk ticks; CPU-only ticks leave this widget untouched.
+ssd:subscribe("system_stats", function(env)
+  if env.disk == nil then return end
+  local used = tonumber(env.disk)
+  if used and used >= 0 and used <= 100 then
+    ssd:set({ label = string.format("%d%%", used) })
+  else
+    ssd:set({ label = "--%" })
+  end
+  local mbps = tonumber(env.disk_mbps)
+  if mbps and mbps >= 0 and mbps == mbps and mbps < math.huge then push_activity(mbps) end
 end)
-update_storage()
-update_activity()

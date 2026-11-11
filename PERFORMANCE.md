@@ -20,6 +20,46 @@ every second. Clicks and power/wake events still update immediately. Slow power
 queries cannot overlap. Older macOS alias items retain pointer polling because
 image refreshes can produce unreliable mouse exit events.
 
+## Stats widgets: one native provider (2026-11-10, macOS 27.2.1)
+
+CPU, memory, SSD and temperature used to run their own timers and shell out:
+`iostat` every 2 s (each run blocks for a 1 s sample), `sysctl` + `vm_stat` and
+Stats.app's `smc` every 5 s, plus a separate `cpu_load` provider. They now share
+one C provider, `helpers/event_providers/system_stats`, which reads the kernel
+directly and fires a single `system_stats` event:
+
+| Reading | Source | Cadence |
+| --- | --- | --- |
+| CPU load | `host_statistics` | 2 s |
+| Memory | `host_statistics64` (same app + wired + compressed formula as before) | 2 s |
+| Temperature | AppleSMC user client, key `TCMb` (same key Stats.app reads) | 2 s |
+| Disk activity | disk0 `IOBlockStorageDriver` byte counters (what `iostat` reads) | 4 s |
+| Disk space | `statfs` on `/System/Volumes/Data` | 5 min and on wake |
+
+Readings were checked against the old commands at the same moment: memory 45.0%
+vs 45.1% from `vm_stat`, disk 74% from `df`, `TCMb` 48.3 vs 48.25 from `smc`, and
+per-second throughput within 0.03 MiB/s of `iostat`.
+
+| 60 s idle sample | Before | After |
+| --- | --- | --- |
+| Sensor commands spawned | 37 | 0 |
+| `sbar-hover` CPU | 0.40 s | 0.12–0.28 s (depends on pointer position) |
+| SketchyBar daemon CPU | 0.21 s | 0.11 s at 4 s ticks, 0.20 s at 2 s |
+| Provider CPU / memory | `cpu_load` 0.00 s | `system_stats` 0.00 s, 5.4 MB, flat |
+
+A forced 0.25 s tick put the cost of one update of all four graphs at about
+7.5 ms of daemon + Lua CPU, almost all of it SketchyBar redrawing. That is about
+0.2 s/min at 2 s ticks and 0.45 s/min at 1 s, so the graphs stay. The SSD graph
+(which rescales and redraws its whole 36-sample history) keeps its slower 4 s
+tick. Daemon samples are noisy: window and Space changes also redraw the bar.
+
+The hover helper polls the pointer at 10 Hz while it is more than 200 pt below
+the top (30 Hz near the top or during a hand-off), and checks the window list for
+keyboard-opened menus at 1 Hz instead of 2 Hz; the native bar draws above
+SketchyBar, so the later hide is invisible. The Amphetamine widget's closed-state
+power check went from 5 s to 15 s; clicks, power changes and wake still update it
+at once.
+
 ## Why keep Python
 
 Python is used for short control scripts, not for rendering the bar or tiling

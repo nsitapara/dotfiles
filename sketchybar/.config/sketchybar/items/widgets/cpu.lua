@@ -2,10 +2,6 @@ local icons = require("icons")
 local colors = require("colors")
 local settings = require("settings")
 
--- Execute the event provider binary which provides the event "cpu_update" for
--- the cpu load data, which is fired every 2.0 seconds.
-sbar.exec("killall cpu_load >/dev/null; $CONFIG_DIR/helpers/event_providers/cpu_load/bin/cpu_load cpu_update 2.0")
-
 local cpu = sbar.add("graph", "widgets.cpu" , 36, {
   position = "right",
   graph = { color = colors.blue },
@@ -31,9 +27,9 @@ local cpu = sbar.add("graph", "widgets.cpu" , 36, {
   padding_right = settings.paddings + 6
 })
 
-cpu:subscribe("cpu_update", function(env)
-  -- Also available: env.user_load, env.sys_load
-  local load = tonumber(env.total_load)
+-- Fed by the system_stats provider started in widgets/init.lua.
+cpu:subscribe("system_stats", function(env)
+  local load = tonumber(env.cpu)
   if not load or load < 0 or load > 100 then return end
   -- Keep the graph in the lower third, below the percentage label.
   cpu:push({ load / 100. * 0.3 })
@@ -51,7 +47,7 @@ cpu:subscribe("cpu_update", function(env)
 
   cpu:set({
     graph = { color = color },
-    label = env.total_load .. "%",
+    label = string.format("%d%%", load),
   })
 end)
 
