@@ -1,5 +1,5 @@
--- The SSD widget updates only on the system_stats provider's disk ticks:
--- disk space as the label, disk0 throughput as a rescaled 36-sample graph.
+-- The SSD widget shows disk space used, as the label and the graph, and
+-- updates only when the system_stats provider sends a disk reading.
 local root = assert(arg[1], "Pass repository path")
 package.preload.colors = function() return { blue = 1, bg1 = 7 } end
 package.preload.icons = function() return { disk = "disk" } end
@@ -32,18 +32,21 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   assert(requests == 0 and item.props.update_freq == nil, "SSD must not poll or spawn commands")
 
   events.system_stats({ cpu = "10", mem = "50.0", temp = "50.0" })
-  assert(sets == 0 and #pushes == 0, "CPU-only ticks must leave the SSD widget untouched")
+  assert(sets == 0 and #pushes == 0, "Ticks without a disk reading leave the SSD widget untouched")
 
-  events.system_stats({ disk = "74", disk_mbps = "5.00" })
-  assert(item.props.label.string == "74%" and #pushes == 1, "Disk tick sets label and graph")
-  assert(#pushes[1] == 36 and pushes[1][36] == 5 / 10 * 0.3, "Graph keeps 36 samples over a 10 MB/s floor")
-
-  events.system_stats({ disk = "-1", disk_mbps = "-1" })
-  assert(item.props.label.string == "--%" and #pushes == 1, "Unavailable disk values are not graphed")
-
-  events.system_stats({ disk = "75", disk_mbps = "20.00" })
-  local graph = pushes[2]
-  assert(item.props.label.string == "75%", "Recovers after an unavailable reading")
-  assert(graph[36] == 0.3 and graph[35] == 5 / 20 * 0.3, "History rescales to the new peak")
-  print(profile .. ": SSD disk ticks, CPU-only ticks, unavailable values and rescaling passed")
+  for i, case in ipairs({
+    { "74", "74%", 1, 0.74 * 0.3 },
+    { "-1", "--%", 1 },
+    { "", "--%", 1 },
+    { "101", "--%", 1 },
+    { "75", "75%", 2, 0.75 * 0.3 },
+  }) do
+    events.system_stats({ disk = case[1] })
+    assert(item.props.label.string == case[2], "Unexpected label in case " .. i)
+    assert(#pushes == case[3], "Only valid disk readings belong in the graph, case " .. i)
+    if case[4] then
+      assert(math.abs(pushes[#pushes][1] - case[4]) < 1e-12, "Graph plots used space, case " .. i)
+    end
+  end
+  print(profile .. ": SSD space label and graph, ticks without disk, unavailable values passed")
 end

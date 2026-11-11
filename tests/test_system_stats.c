@@ -31,10 +31,6 @@ int main(void) {
   assert(disk_used_percent(0, 0) == -1);
   assert(disk_used_percent(1000, 1001) == -1);
 
-  // Throughput in MiB/s from cumulative counters and the measured interval.
-  assert(near(disk_mib_per_second(0, 4 * 1048576, 2), 2));
-  assert(disk_mib_per_second(10, 5, 1) == -1);  // counter reset
-  assert(disk_mib_per_second(0, 10, 0) == -1);
   puts("system_stats accounting checks passed");
   return 0;
 }

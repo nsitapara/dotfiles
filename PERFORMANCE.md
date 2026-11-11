@@ -26,19 +26,18 @@ CPU, memory, SSD and temperature used to run their own timers and shell out:
 `iostat` every 2 s (each run blocks for a 1 s sample), `sysctl` + `vm_stat` and
 Stats.app's `smc` every 5 s, plus a separate `cpu_load` provider. They now share
 one C provider, `helpers/event_providers/system_stats`, which reads the kernel
-directly and fires a single `system_stats` event:
+directly and fires a single `system_stats` event. The SSD widget's graph now
+plots used space (the same value as its label) instead of disk throughput:
 
 | Reading | Source | Cadence |
 | --- | --- | --- |
 | CPU load | `host_statistics` | 2 s |
 | Memory | `host_statistics64` (same app + wired + compressed formula as before) | 2 s |
 | Temperature | AppleSMC user client, key `TCMb` (same key Stats.app reads) | 2 s |
-| Disk activity | disk0 `IOBlockStorageDriver` byte counters (what `iostat` reads) | 4 s |
-| Disk space | `statfs` on `/System/Volumes/Data` | 5 min and on wake |
+| Disk space (label and graph) | `statfs` on `/System/Volumes/Data` | 5 min and on wake |
 
 Readings were checked against the old commands at the same moment: memory 45.0%
-vs 45.1% from `vm_stat`, disk 74% from `df`, `TCMb` 48.3 vs 48.25 from `smc`, and
-per-second throughput within 0.03 MiB/s of `iostat`.
+vs 45.1% from `vm_stat`, disk 74% from `df`, and `TCMb` 48.3 vs 48.25 from `smc`.
 
 | 60 s idle sample | Before | After |
 | --- | --- | --- |
@@ -49,9 +48,8 @@ per-second throughput within 0.03 MiB/s of `iostat`.
 
 A forced 0.25 s tick put the cost of one update of all four graphs at about
 7.5 ms of daemon + Lua CPU, almost all of it SketchyBar redrawing. That is about
-0.2 s/min at 2 s ticks and 0.45 s/min at 1 s, so the graphs stay. The SSD graph
-(which rescales and redraws its whole 36-sample history) keeps its slower 4 s
-tick. Daemon samples are noisy: window and Space changes also redraw the bar.
+0.2 s/min at 2 s ticks and 0.45 s/min at 1 s, so the graphs stay. The SSD
+widget redraws only every 5 minutes. Daemon samples are noisy: window and Space changes also redraw the bar.
 
 The hover helper polls the pointer at 10 Hz while it is more than 200 pt below
 the top (30 Hz near the top or during a hand-off), and checks the window list for

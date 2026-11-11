@@ -23,10 +23,3 @@ static inline int disk_used_percent(uint64_t blocks, uint64_t available) {
   if (blocks == 0 || available > blocks) return -1;
   return (int)((double)(blocks - available) / (double)blocks * 100.0 + 0.5);
 }
-
-// Throughput in MiB/s between two cumulative byte counters, as iostat reports.
-static inline double disk_mib_per_second(uint64_t previous, uint64_t current,
-                                         double seconds) {
-  if (seconds <= 0 || current < previous) return -1;
-  return (double)(current - previous) / seconds / 1048576.0;
-}
