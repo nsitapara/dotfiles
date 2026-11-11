@@ -2,7 +2,7 @@
 
 Both Lua SketchyBar profiles start `run.py`. It builds the Swift helper in
 `~/.cache/dotfiles/sketchybar-hover` and replaces its previous instance on reload.
-The helper exits when the SketchyBar daemon stops. It polls the pointer at 30 Hz
+The helper exits when the SketchyBar daemon stops. It polls the pointer at 10–30 Hz
 without requiring Accessibility or Input Monitoring permission.
 The builder resolves Swift and its SDK through Xcode's `xcrun`, clears inherited
 SDK/deployment overrides, and targets macOS 13 or later. This avoids mixing the
@@ -23,11 +23,13 @@ including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
 
 The helper checks on-screen window metadata to detect the native menu bar,
-without capturing screen contents: 2 Hz while the bar is shown and the pointer
-is away from the top, 10 Hz while hidden, and 30 Hz while the pointer is in the
-menu zone. Screen geometry is cached and refreshed once a second. macOS 27 marks some window layers with
-bit 31; this flag is masked when identifying the menu layer. Pointer polling
-remains 30 Hz. `run.py` links the helper against the private SkyLight framework. The native menu must be configured to auto-hide.
+without capturing screen contents: 1 Hz while the bar is shown and the pointer
+is away from the top, 10 Hz while hidden, and every tick while the pointer is in
+the menu zone. Screen geometry is cached and refreshed once a second. macOS 27
+marks some window layers with bit 31; this flag is masked when identifying the
+menu layer. The pointer is polled at 30 Hz within 200 pt of the top or during a
+hand-off, and at 10 Hz otherwise. `run.py` links the helper against the private
+SkyLight framework. The native menu must be configured to auto-hide.
 
 SketchyBar remains at `y_offset=0`; there is no second row or window retiling.
 Visibility is global, so all displays hide/show together.

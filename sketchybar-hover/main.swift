@@ -74,7 +74,6 @@ for sig in [SIGTERM, SIGINT] {
 }
 
 var state = HoverState()
-var ticks = 0
 var menuVisible = false
 var masked = false
 // Screen geometry queries round-trip to the window server; refresh once a second
@@ -90,12 +89,22 @@ func refreshScreens() {
 refreshScreens()
 setNativeMenuAlpha(1) // In case a previous helper died while masking it.
 bar(["--bar", "topmost=window", "hidden=off", "y_offset=0"])
+// Poll the pointer at 30 Hz near the top or while a hand-off is in progress,
+// and at 10 Hz otherwise: that is enough to see it heading for the top before
+// macOS starts revealing its menu bar.
+let fastInterval = DispatchTimeInterval.milliseconds(33)
+let slowInterval = DispatchTimeInterval.milliseconds(100)
+let fastZone = 200.0
+var fast = true
+var lastScreenRefresh = 0.0
+var lastMenuCheck = 0.0
 let timer = DispatchSource.makeTimerSource(queue: .main)
-timer.schedule(deadline: .now(), repeating: .milliseconds(33), leeway: .milliseconds(5))
+timer.schedule(deadline: .now(), repeating: fastInterval, leeway: .milliseconds(5))
 timer.setEventHandler {
     autoreleasepool {
-        ticks += 1
-        if ticks % 30 == 0 {
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - lastScreenRefresh >= 1 {
+            lastScreenRefresh = now
             if kill(barPID, 0) != 0 { exit(0) }
             refreshScreens()
         }
@@ -103,17 +112,28 @@ timer.setEventHandler {
         let screen = screens.first { $0.frame.insetBy(dx: -1, dy: -1).contains(pointer) }
         let distance = screen.map { Double($0.frame.maxY - pointer.y) }
         let menuHeight = screen?.menuHeight ?? 36
-        // The window-list query is the costly part. Poll it at 30 Hz only while
+        // The window-list query is the costly part. Poll it every tick only while
         // the pointer is in the menu zone so the hide lands as the bar appears,
-        // 10 Hz while hidden to notice the menu closing, and 2 Hz otherwise for
-        // keyboard-driven menu activation.
+        // 10 Hz while hidden to notice the menu closing, and 1 Hz otherwise for
+        // keyboard-driven menu activation (the native bar already draws on top,
+        // so a late hide is invisible).
         let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
-        let menuInterval = nearTop ? 1 : (state.hidden ? 3 : 15)
-        if ticks % menuInterval == 0 { menuVisible = nativeMenuVisible() }
+        let menuEvery = nearTop ? 0 : (state.hidden ? 0.1 : 1.0)
+        if now - lastMenuCheck >= menuEvery {
+            lastMenuCheck = now
+            menuVisible = nativeMenuVisible()
+        }
         let change = state.update(distance: distance, menuHeight: menuHeight,
                                   mouseDown: NSEvent.pressedMouseButtons != 0,
-                                  menuVisible: menuVisible,
-                                  now: ProcessInfo.processInfo.systemUptime)
+                                  menuVisible: menuVisible, now: now)
+        let wantFast = state.hidden || state.maskNative
+            || (distance.map { $0 >= 0 && $0 <= fastZone } ?? false)
+        if wantFast != fast {
+            fast = wantFast
+            let interval = fast ? fastInterval : slowInterval
+            timer.schedule(deadline: .now() + interval, repeating: interval,
+                           leeway: .milliseconds(fast ? 5 : 20))
+        }
         // The native bar draws above SketchyBar, so keep it transparent while
         // the reveal delay runs. Reassert each tick: other tools reset it.
         if state.maskNative || state.maskNative != masked {
