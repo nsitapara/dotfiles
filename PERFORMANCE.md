@@ -47,9 +47,9 @@ vs 45.1% from `vm_stat`, disk 74% from `df`, and `TCMb` 48.3 vs 48.25 from `smc`
 
 A forced 0.25 s tick put the cost of one update of all four graphs at about
 7.5 ms of daemon + Lua CPU, almost all of it SketchyBar redrawing. The graphs
-were later removed: each widget is now an icon and a number coloured by usage
-(white, then yellow, orange and red), which redraws less and is about 5-10 pt
-narrower per widget. Daemon samples are noisy: window and Space changes also redraw the bar.
+were later removed: each widget is now an icon coloured by usage (green,
+yellow, red, like the battery icon) and a white number, which redraws less and
+is about 5-10 pt narrower per widget. Daemon samples are noisy: window and Space changes also redraw the bar.
 
 The hover helper polls the pointer at 10 Hz while it is more than 200 pt below
 the top (30 Hz near the top or during a hand-off), and checks the window list for

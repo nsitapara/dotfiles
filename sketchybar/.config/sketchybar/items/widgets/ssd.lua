@@ -32,11 +32,10 @@ sbar.add("item", "widgets.ssd.padding", {
   width = settings.group_paddings,
 })
 
--- White under 80%, then yellow, orange and red as the disk fills up.
+-- Green under 80%, yellow under 95%, red when the disk is nearly full.
 local function usage_color(used)
-  if used < 80 then return colors.white end
-  if used < 90 then return colors.yellow end
-  if used < 95 then return colors.orange end
+  if used < 80 then return colors.green end
+  if used < 95 then return colors.yellow end
   return colors.red
 end
 
@@ -47,8 +46,8 @@ ssd:subscribe("system_stats", function(env)
   if env.disk == nil then return end
   local used = tonumber(env.disk)
   if not used or used < 0 or used > 100 then
-    ssd:set({ label = { string = "--%", color = colors.white } })
+    ssd:set({ icon = { color = colors.white }, label = { string = "--%" } })
     return
   end
-  ssd:set({ label = { string = string.format("%02d%%", used), color = usage_color(used) } })
+  ssd:set({ icon = { color = usage_color(used) }, label = { string = string.format("%02d%%", used) } })
 end)

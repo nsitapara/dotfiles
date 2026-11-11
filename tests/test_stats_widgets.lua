@@ -1,9 +1,10 @@
 -- CPU, memory, SSD and temperature widgets: plain icon + number fed by the
--- system_stats provider, coloured by usage, with no graphs, timers or commands.
+-- system_stats provider, icon coloured by usage (green, yellow, red), with no
+-- graphs, timers or commands.
 -- The provider's accounting is pinned in test_system_stats.c.
 local root = assert(arg[1], "Pass repository path")
-local colors = { blue = 1, yellow = 2, orange = 3, red = 4, white = 5, grey = 6, bg1 = 7 }
-local W, Y, O, R = colors.white, colors.yellow, colors.orange, colors.red
+local colors = { blue = 1, yellow = 2, green = 3, red = 4, white = 5, grey = 6, bg1 = 7 }
+local W, G, Y, R = colors.white, colors.green, colors.yellow, colors.red
 package.preload.colors = function() return colors end
 package.preload.icons = function()
   return { cpu = "cpu", memory = "memory", disk = "disk", temperature = "thermometer" }
@@ -16,19 +17,19 @@ end
 -- { widget file, item name, event field, initial label, cases = { value, label, colour } }
 local widgets = {
   { "cpu", "widgets.cpu", "cpu", "--%", {
-    { "6", "06%", W }, { "30", "30%", W }, { "45", "45%", Y }, { "70", "70%", O },
+    { "6", "06%", G }, { "49", "49%", G }, { "50", "50%", Y }, { "79", "79%", Y },
     { "95", "95%", R }, { "-1", "--%", W }, { "101", "--%", W }, { "", "--%", W },
   } },
   { "memory", "widgets.memory", "mem", "--%", {
-    { "6.2", "06%", W }, { "69.4", "69%", W }, { "75", "75%", Y }, { "85", "85%", O },
+    { "6.2", "06%", G }, { "69.4", "69%", G }, { "75", "75%", Y }, { "89.4", "89%", Y },
     { "99.6", "100%", R }, { "-1", "--%", W }, { "nan", "--%", W }, { "", "--%", W },
   } },
   { "ssd", "widgets.ssd", "disk", "--%", {
-    { "7", "07%", W }, { "74", "74%", W }, { "85", "85%", Y }, { "92", "92%", O },
+    { "7", "07%", G }, { "74", "74%", G }, { "85", "85%", Y }, { "94", "94%", Y },
     { "97", "97%", R }, { "-1", "--%", W }, { "101", "--%", W }, { "", "--%", W },
   } },
   { "temperature", "widgets.temperature", "temp", "—", {
-    { "59.7", "60C", W }, { "75", "75C", Y }, { "85", "85C", O }, { "92", "92C", R },
+    { "59.7", "60C", G }, { "75", "75C", Y }, { "89", "89C", Y }, { "92", "92C", R },
     { "-1", "—", W }, { "0", "—", W }, { "nan", "—", W }, { "inf", "—", W },
     { "999", "—", W }, { "", "—", W },
   } },
@@ -67,7 +68,8 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
     for i, case in ipairs(cases) do
       events.system_stats({ [field] = case[1] })
       assert(item.props.label.string == case[2], where .. ": label in case " .. i)
-      assert(item.props.label.color == case[3], where .. ": colour in case " .. i)
+      assert(item.props.icon.color == case[3], where .. ": icon colour in case " .. i)
+      assert(item.props.label.color == nil, where .. ": number stays the default white")
     end
     if file == "ssd" then
       events.system_stats({ cpu = "10", mem = "50.0", temp = "50.0" })

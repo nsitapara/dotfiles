@@ -18,11 +18,10 @@ local cpu = sbar.add("item", "widgets.cpu", {
   click_script = "open -a 'Activity Monitor'",
 })
 
--- White when idle, then yellow, orange and red as load climbs.
+-- Green when idle, yellow when busy, red when maxed out.
 local function load_color(load)
-  if load <= 30 then return colors.white end
-  if load < 60 then return colors.yellow end
-  if load < 80 then return colors.orange end
+  if load < 50 then return colors.green end
+  if load < 80 then return colors.yellow end
   return colors.red
 end
 
@@ -30,10 +29,10 @@ end
 cpu:subscribe("system_stats", function(env)
   local load = tonumber(env.cpu)
   if not load or load < 0 or load > 100 then
-    cpu:set({ label = { string = "--%", color = colors.white } })
+    cpu:set({ icon = { color = colors.white }, label = { string = "--%" } })
     return
   end
-  cpu:set({ label = { string = string.format("%02d%%", load), color = load_color(load) } })
+  cpu:set({ icon = { color = load_color(load) }, label = { string = string.format("%02d%%", load) } })
 end)
 
 sbar.add("bracket", "widgets.cpu.bracket", { cpu.name }, {

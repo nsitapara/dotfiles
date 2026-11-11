@@ -27,11 +27,10 @@ sbar.add("item", "widgets.memory.padding", {
   width = settings.group_paddings,
 })
 
--- White under 70%, then yellow, orange and red as RAM fills up.
+-- Green under 70%, yellow under 90%, red when RAM is nearly full.
 local function usage_color(percent)
-  if percent < 70 then return colors.white end
-  if percent < 80 then return colors.yellow end
-  if percent < 90 then return colors.orange end
+  if percent < 70 then return colors.green end
+  if percent < 90 then return colors.yellow end
   return colors.red
 end
 
@@ -40,11 +39,11 @@ end
 memory:subscribe("system_stats", function(env)
   local percent = tonumber(env.mem)
   if not percent or percent < 0 or percent > 100 then
-    memory:set({ label = { string = "--%", color = colors.white } })
+    memory:set({ icon = { color = colors.white }, label = { string = "--%" } })
     return
   end
-  memory:set({ label = {
-    string = string.format("%02d%%", math.floor(percent + 0.5)),
-    color = usage_color(percent),
-  } })
+  memory:set({
+    icon = { color = usage_color(percent) },
+    label = { string = string.format("%02d%%", math.floor(percent + 0.5)) },
+  })
 end)

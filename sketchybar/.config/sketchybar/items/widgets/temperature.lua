@@ -32,11 +32,10 @@ sbar.add("item", "widgets.temperature.padding", {
   width = settings.group_paddings,
 })
 
--- White at normal Apple Silicon die temperatures, then yellow, orange and red.
+-- Green at normal Apple Silicon die temperatures, yellow when warm, red when hot.
 local function heat_color(value)
-  if value < 70 then return colors.white end
-  if value < 80 then return colors.yellow end
-  if value < 90 then return colors.orange end
+  if value < 70 then return colors.green end
+  if value < 90 then return colors.yellow end
   return colors.red
 end
 
@@ -45,11 +44,11 @@ end
 temperature:subscribe("system_stats", function(env)
   local value = tonumber(env.temp)
   if not value or value ~= value or value <= 10 or value >= 120 then
-    temperature:set({ label = { string = "—", color = colors.white } })
+    temperature:set({ icon = { color = colors.white }, label = { string = "—" } })
     return
   end
-  temperature:set({ label = {
-    string = string.format("%02dC", math.floor(value + 0.5)),
-    color = heat_color(value),
-  } })
+  temperature:set({
+    icon = { color = heat_color(value) },
+    label = { string = string.format("%02dC", math.floor(value + 0.5)) },
+  })
 end)
