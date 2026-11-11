@@ -31,7 +31,17 @@ func bar(_ arguments: [String]) {
     }
 }
 
+// Private SkyLight call (also used by the SketchyBar menus helper) that sets
+// the native menu bar's opacity without changing whether macOS reveals it.
+@_silgen_name("SLSMainConnectionID") func SLSMainConnectionID() -> Int32
+@_silgen_name("SLSSetMenuBarInsetAndAlpha")
+func SLSSetMenuBarInsetAndAlpha(_ cid: Int32, _ u1: Double, _ u2: Double, _ alpha: Float)
+func setNativeMenuAlpha(_ alpha: Float) {
+    SLSSetMenuBarInsetAndAlpha(SLSMainConnectionID(), 0, 1, alpha)
+}
+
 func restore() {
+    setNativeMenuAlpha(1)
     bar(["--bar", "topmost=off", "hidden=off", "y_offset=0"])
 }
 
@@ -66,7 +76,7 @@ for sig in [SIGTERM, SIGINT] {
 var state = HoverState()
 var ticks = 0
 var menuVisible = false
-var covering = false
+var masked = false
 // Screen geometry queries round-trip to the window server; refresh once a second
 // instead of on every pointer tick. Auto-hide can report a zero visible-frame
 // inset, so keep at least 36pt as the menu zone, or the notch's safe area.
@@ -78,6 +88,7 @@ func refreshScreens() {
     }
 }
 refreshScreens()
+setNativeMenuAlpha(1) // In case a previous helper died while masking it.
 bar(["--bar", "topmost=window", "hidden=off", "y_offset=0"])
 let timer = DispatchSource.makeTimerSource(queue: .main)
 timer.schedule(deadline: .now(), repeating: .milliseconds(33), leeway: .milliseconds(5))
@@ -103,18 +114,15 @@ timer.setEventHandler {
                                   mouseDown: NSEvent.pressedMouseButtons != 0,
                                   menuVisible: menuVisible,
                                   now: ProcessInfo.processInfo.systemUptime)
-        // While the reveal delay runs, the native bar is already out; draw
-        // SketchyBar above it. Drop back below native dropdowns once hidden.
-        let cover = !state.hidden && menuVisible
-        var settings: [String] = []
+        // The native bar draws above SketchyBar, so keep it transparent while
+        // the reveal delay runs. Reassert each tick: other tools reset it.
+        if state.maskNative || state.maskNative != masked {
+            masked = state.maskNative
+            setNativeMenuAlpha(masked ? 0 : 1)
+        }
         if let hidden = change {
-            settings += ["hidden=\(hidden ? "on" : "off")", "y_offset=0"]
+            bar(["--bar", "hidden=\(hidden ? "on" : "off")", "y_offset=0"])
         }
-        if cover != covering {
-            covering = cover
-            settings.append("topmost=\(cover ? "on" : "window")")
-        }
-        if !settings.isEmpty { bar(["--bar"] + settings) }
     }
 }
 timer.resume()

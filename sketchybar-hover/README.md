@@ -10,10 +10,14 @@ older Xcode compiler with SDK settings inherited during the OS upgrade.
 
 SketchyBar hands off to the native menu bar only after the pointer has stayed
 in the top zone for 3 seconds (`HoverState.revealDelay`) and macOS has revealed
-its auto-hidden menu bar; brushing the top edge alone does nothing. While the
-delay runs, SketchyBar switches to `topmost=on` so it stays drawn above the
-native bar. A menu opened from the keyboard (pointer away from the top) hands
-off at once.
+its auto-hidden menu bar; brushing the top edge alone does nothing. The native
+bar draws above SketchyBar, so while the delay runs the helper keeps it
+transparent with the private `SLSSetMenuBarInsetAndAlpha` call (the SketchyBar
+menus helper uses the same call), and keeps it transparent while it slides away
+if the pointer leaves early. A menu opened from the keyboard (pointer away from
+the top for over a second) hands off at once. The helper restores full opacity
+when it starts and when it stops; if it is force-killed mid-delay and the native
+bar stays invisible, reload SketchyBar.
 It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
@@ -23,7 +27,7 @@ without capturing screen contents: 2 Hz while the bar is shown and the pointer
 is away from the top, 10 Hz while hidden, and 30 Hz while the pointer is in the
 menu zone. Screen geometry is cached and refreshed once a second. macOS 27 marks some window layers with
 bit 31; this flag is masked when identifying the menu layer. Pointer polling
-remains 30 Hz. The native menu must be configured to auto-hide.
+remains 30 Hz. `run.py` links the helper against the private SkyLight framework. The native menu must be configured to auto-hide.
 
 SketchyBar remains at `y_offset=0`; there is no second row or window retiling.
 Visibility is global, so all displays hide/show together.

@@ -46,6 +46,7 @@ if not binary.exists() or any(p.stat().st_mtime > binary.stat().st_mtime for p i
         subprocess.run([
             '/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-sdk', sdk,
             '-target', platform.machine() + '-apple-macosx13.0', '-O',
+            '-F', '/System/Library/PrivateFrameworks', '-framework', 'SkyLight',
             *map(str, sources), '-o', str(output),
         ], env=build_env, check=True, timeout=60)
         output.replace(binary)

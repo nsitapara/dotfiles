@@ -10,13 +10,16 @@ struct HoverTests {
                          mouseDown: down, menuVisible: menu, now: now)
         }
         let delay = HoverState.revealDelay
-        precondition(update(100, 0) == nil)
+        precondition(update(100, 0) == nil && !state.maskNative)
         precondition(update(20, 0.1) == nil) // Ordinary bar interaction stays put.
+        precondition(state.maskNative) // Native bar kept invisible from the start.
         precondition(update(1, 0.2, down: true) == nil) // Dragging to the top.
         precondition(update(1, 0.3) == nil) // Brushing the edge alone does nothing.
         precondition(update(1, 0.6, menu: true) == nil) // Native bar out: hold SketchyBar.
-        precondition(update(1, 0.1 + delay - 0.05, menu: true) == nil && !state.hidden)
+        precondition(update(1, 0.1 + delay - 0.05, menu: true) == nil)
+        precondition(!state.hidden && state.maskNative)
         precondition(update(1, 0.1 + delay + 0.01, menu: true) == true) // Hand off after the delay.
+        precondition(!state.maskNative) // Native bar shown once SketchyBar hides.
         precondition(update(30, 3.4) == nil && state.hidden)
         precondition(update(100, 3.5) == nil)
         precondition(update(30, 3.6) == nil) // Returning cancels the leave delay.
@@ -24,9 +27,12 @@ struct HoverTests {
         precondition(update(100, 3.9) == nil && state.hidden)
         precondition(update(100, 4.1) == false)
 
-        // Leaving the top zone restarts the delay.
+        // Leaving early keeps SketchyBar and hides the native bar's retreat.
         precondition(update(0, 5, menu: true) == nil)
-        precondition(update(100, 6) == nil)
+        precondition(update(300, 5.8, menu: true) == nil && !state.hidden)
+        precondition(state.maskNative)
+        precondition(update(300, 6.4) == nil && !state.maskNative) // Native bar gone.
+        // Coming back restarts the delay.
         precondition(update(0, 6.5, menu: true) == nil)
         precondition(update(0, 5 + delay + 0.1, menu: true) == nil && !state.hidden)
         precondition(update(0, 6.5 + delay, menu: true) == true)
@@ -35,6 +41,7 @@ struct HoverTests {
 
         // Keyboard/menu-item activation (pointer away from the top) hides at once.
         precondition(update(400, 11, menu: true) == true)
+        precondition(!state.maskNative)
         precondition(update(150, 11.1, down: true) == nil)
         precondition(update(150, 11.6, down: true) == nil && state.hidden)
         precondition(update(400, 12, menu: true) == nil) // Dropdown below the bar.
