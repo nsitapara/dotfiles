@@ -22,7 +22,7 @@ end
 
 -- CodexBar must have Merge Icons disabled. macOS 27 no longer exposes these
 -- status-item windows to SketchyBar's aliases, so read usage from its CLI,
--- which takes ~10s per fetch. Older systems use the original aliases and
+-- which takes ~10-30 s per fetch. Older systems use the original aliases and
 -- need Screen Recording.
 for _, provider in ipairs({ "codex", "claude" }) do
   local alias_name = "CodexBar,codexbar-" .. provider
@@ -30,7 +30,8 @@ for _, provider in ipairs({ "codex", "claude" }) do
     position = "right",
     width = "dynamic",
     alias = not native_items and { scale = 1.0, color = colors.white, update_freq = 5 } or nil,
-    update_freq = native_items and provider == "codex" and 60 or 0,
+    -- Each CLI fetch takes ~30 s and ~0.2 s CPU; usage moves slowly.
+    update_freq = native_items and provider == "codex" and 120 or 0,
     icon = { drawing = native_items, string = provider == "codex" and ":openai:" or ":claude:",
       color = provider == "claude" and colors.orange or colors.white,
       font = "sketchybar-app-font:Regular:18.0", padding_left = 8, padding_right = 4 },
