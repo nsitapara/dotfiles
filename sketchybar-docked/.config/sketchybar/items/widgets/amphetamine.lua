@@ -15,12 +15,15 @@ local hover_revision = 0
 local check_hover
 local watch_pointer
 local suppress_hover = false
+-- Closed-widget power check. Clicks, power changes and wake update at once;
+-- a session started from Amphetamine's own menu shows up within this.
+local idle_freq = 15
 
 local amphetamine = sbar.add(native_item and "item" or "alias", alias_name, {
   position = "right",
   width = "dynamic",
   alias = not native_item and { scale = 1.0, color = colors.grey, update_freq = 2 } or nil,
-  update_freq = native_item and 5 or 1,
+  update_freq = native_item and idle_freq or 1,
   icon = { drawing = native_item, string = "􀸙", color = colors.grey, padding_left = 8, padding_right = 8 },
   label = { drawing = false },
   padding_left = 5,
@@ -142,7 +145,7 @@ amphetamine:subscribe("mouse.clicked", function(env)
     hover_revision = hover_revision + 1
     suppress_hover = true
     amphetamine:set({ popup = { drawing = false } })
-    if native_item then amphetamine:set({ update_freq = 5 }) end
+    if native_item then amphetamine:set({ update_freq = idle_freq }) end
     watch_pointer()
     sbar.exec(native_item
       and '/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" open amphetamine'
@@ -162,7 +165,7 @@ end)
 local function hide_tooltip()
   hovered = false
   hover_revision = hover_revision + 1
-  amphetamine:set({ popup = { drawing = false }, update_freq = native_item and 5 or 1 })
+  amphetamine:set({ popup = { drawing = false }, update_freq = native_item and idle_freq or 1 })
 end
 
 watch_pointer = function()

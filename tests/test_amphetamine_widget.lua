@@ -48,14 +48,14 @@ for _, version in ipairs({27, 26}) do
     assert(count("pmset")==1, "Slow power queries must not overlap")
     pending.callback("", 0)
     if version==27 then
-      assert(item.kind=="item" and item.props.update_freq==5)
+      assert(item.kind=="item" and item.props.update_freq==15)
       assert(count("hover-")==0, "Regular items must not spawn hover polling")
       event("mouse.entered")
       assert(item.props.popup.drawing and item.props.update_freq==1)
       local status=commands[#commands]
       event("mouse.exited")
       status.callback({seconds=100}, 0)
-      assert(not item.props.popup.drawing and item.props.update_freq==5,
+      assert(not item.props.popup.drawing and item.props.update_freq==15,
         "A late status response must not reopen the tooltip")
       event("mouse.entered")
       event("mouse.clicked", {BUTTON="right"})
