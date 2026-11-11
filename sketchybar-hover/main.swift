@@ -66,6 +66,7 @@ for sig in [SIGTERM, SIGINT] {
 var state = HoverState()
 var ticks = 0
 var menuVisible = false
+var covering = false
 // Screen geometry queries round-trip to the window server; refresh once a second
 // instead of on every pointer tick. Auto-hide can report a zero visible-frame
 // inset, so keep at least 36pt as the menu zone, or the notch's safe area.
@@ -98,12 +99,22 @@ timer.setEventHandler {
         let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
         let menuInterval = nearTop ? 1 : (state.hidden ? 3 : 15)
         if ticks % menuInterval == 0 { menuVisible = nativeMenuVisible() }
-        if let hidden = state.update(distance: distance, menuHeight: menuHeight,
-                                     mouseDown: NSEvent.pressedMouseButtons != 0,
-                                     menuVisible: menuVisible,
-                                     now: ProcessInfo.processInfo.systemUptime) {
-            bar(["--bar", "hidden=\(hidden ? "on" : "off")", "y_offset=0"])
+        let change = state.update(distance: distance, menuHeight: menuHeight,
+                                  mouseDown: NSEvent.pressedMouseButtons != 0,
+                                  menuVisible: menuVisible,
+                                  now: ProcessInfo.processInfo.systemUptime)
+        // While the reveal delay runs, the native bar is already out; draw
+        // SketchyBar above it. Drop back below native dropdowns once hidden.
+        let cover = !state.hidden && menuVisible
+        var settings: [String] = []
+        if let hidden = change {
+            settings += ["hidden=\(hidden ? "on" : "off")", "y_offset=0"]
         }
+        if cover != covering {
+            covering = cover
+            settings.append("topmost=\(cover ? "on" : "window")")
+        }
+        if !settings.isEmpty { bar(["--bar"] + settings) }
     }
 }
 timer.resume()

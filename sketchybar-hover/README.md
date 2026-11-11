@@ -8,8 +8,12 @@ The builder resolves Swift and its SDK through Xcode's `xcrun`, clears inherited
 SDK/deployment overrides, and targets macOS 13 or later. This avoids mixing the
 older Xcode compiler with SDK settings inherited during the OS upgrade.
 
-SketchyBar hides the moment macOS reveals its auto-hidden menu bar, so the
-hand-off follows the native delay; brushing the top edge alone does nothing.
+SketchyBar hands off to the native menu bar only after the pointer has stayed
+in the top zone for 3 seconds (`HoverState.revealDelay`) and macOS has revealed
+its auto-hidden menu bar; brushing the top edge alone does nothing. While the
+delay runs, SketchyBar switches to `topmost=on` so it stays drawn above the
+native bar. A menu opened from the keyboard (pointer away from the top) hands
+off at once.
 It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
