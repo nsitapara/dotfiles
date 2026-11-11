@@ -73,10 +73,15 @@ the requested positions. The reproduced move fell from about 1.03 seconds to
 
 CodexBar status readout measured 140 ms including AppleScript, once every five
 seconds. It already combines both providers and suppresses overlapping requests.
-On macOS 27 it reads the `codexbar usage` CLI instead, which measured ~30 s and
-0.18 s CPU per fetch (2026-11-10), so it refreshes every 2 minutes in both
-profiles (the docked profile had still been on 5 s, keeping the CLI running
-almost continuously).
+On macOS 27 it read the `codexbar usage` CLI instead: ~30 s and 0.18 s CPU
+per fetch, because the CLI loads the OpenAI dashboard in a hidden web view and,
+for Claude, drives the `claude` CLI's `/usage` screen. It was replaced by the
+native `ai_usage` provider (`helpers/event_providers/ai_usage`, Swift), which
+asks Anthropic's and OpenAI's usage endpoints directly with the tokens Claude
+Code and Codex already store: under 0.5 s per refresh, every 5 minutes (the
+Anthropic endpoint answers HTTP 429 to faster polling), 15 MB resident. The
+CodexBar app itself measured 630 MB resident and about 1 s of CPU per minute
+with token-cost scanning, OpenAI web access and icon blinking enabled.
 The native Swift menu-hover helper polls the pointer at 30 Hz and menu window
 metadata at 10 Hz. That existing scan implements native-menu hide/show. Python
 only builds/launches the helper and then replaces itself with the Swift process.

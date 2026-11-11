@@ -6,32 +6,28 @@ if version_file then version_file:close() end
 local version = version_xml:match("<key>ProductVersion</key>%s*<string>(%d+)") or "0"
 local native_items = (tonumber(version:match("^%d+")) or 0) >= 27
 local items = {}
-local status_pending = false
-local function refresh()
-  if status_pending then return end
-  status_pending = true
-  sbar.exec('/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" status', function(result, code)
-    status_pending = false
-    -- Keep the last reading when a fetch fails rather than flashing "?".
-    if code ~= 0 or type(result) ~= "table" then return end
-    for provider, item in pairs(items) do
-      item:set({ label = { string = result[provider] or "--" } })
-    end
-  end)
+local usage_pages = {
+  claude = "https://claude.ai/settings/usage",
+  codex = "https://chatgpt.com/codex/settings/usage",
+}
+
+-- macOS 27 no longer exposes CodexBar's status-item windows to SketchyBar's
+-- aliases, so the native ai_usage provider asks Claude's and Codex's usage
+-- endpoints directly every 5 minutes (Anthropic rate-limits faster polling) and
+-- fires "ai_usage"; no CodexBar app, CLI or Python is involved. Older systems
+-- use the original CodexBar aliases (Merge Icons off) and need Screen Recording.
+if native_items then
+  sbar.add("event", "ai_usage")
+  sbar.exec("killall ai_usage >/dev/null 2>&1; "
+    .. "exec $CONFIG_DIR/helpers/event_providers/ai_usage/bin/ai_usage ai_usage 300")
 end
 
--- CodexBar must have Merge Icons disabled. macOS 27 no longer exposes these
--- status-item windows to SketchyBar's aliases, so read usage from its CLI,
--- which takes ~10-30 s per fetch. Older systems use the original aliases and
--- need Screen Recording.
 for _, provider in ipairs({ "codex", "claude" }) do
   local alias_name = "CodexBar,codexbar-" .. provider
   local item = sbar.add(native_items and "item" or "alias", alias_name, {
     position = "right",
     width = "dynamic",
     alias = not native_items and { scale = 1.0, color = colors.white, update_freq = 5 } or nil,
-    -- Each CLI fetch takes ~30 s and ~0.2 s CPU; usage moves slowly.
-    update_freq = native_items and provider == "codex" and 120 or 0,
     icon = { drawing = native_items, string = provider == "codex" and ":openai:" or ":claude:",
       color = provider == "claude" and colors.orange or colors.white,
       font = "sketchybar-app-font:Regular:18.0", padding_left = 8, padding_right = 4 },
@@ -50,12 +46,17 @@ for _, provider in ipairs({ "codex", "claude" }) do
       corner_radius = 9,
     },
     click_script = native_items
-      and '/usr/bin/python3 "$HOME/dotfiles/scripts/menu-status.py" open ' .. provider
+      and "open " .. usage_pages[provider]
       or '"$CONFIG_DIR/helpers/menus/bin/menus" -s "' .. alias_name .. '"',
   })
   items[provider] = item
-  if native_items and provider == "codex" then
-    item:subscribe({ "routine", "forced", "system_woke" }, refresh)
-  end
 end
-if native_items then refresh() end
+
+if native_items then
+  -- A provider missing from the event failed this round; keep its last reading.
+  items.codex:subscribe("ai_usage", function(env)
+    for provider, item in pairs(items) do
+      if env[provider] then item:set({ label = { string = env[provider] } }) end
+    end
+  end)
+end
