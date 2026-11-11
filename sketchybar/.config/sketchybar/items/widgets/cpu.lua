@@ -47,7 +47,7 @@ cpu:subscribe("system_stats", function(env)
 
   cpu:set({
     graph = { color = color },
-    label = string.format("%d%%", load),
+    label = string.format("%02d%%", load),
   })
 end)
 

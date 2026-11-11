@@ -55,5 +55,5 @@ ssd:subscribe("system_stats", function(env)
   end
   -- Match the other widgets' lower-third trace below the percentage label.
   ssd:push({ used / 100 * 0.3 })
-  ssd:set({ label = string.format("%d%%", used) })
+  ssd:set({ label = string.format("%02d%%", used) })
 end)

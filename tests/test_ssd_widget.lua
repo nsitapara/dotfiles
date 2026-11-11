@@ -40,6 +40,7 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
     { "", "--%", 1 },
     { "101", "--%", 1 },
     { "75", "75%", 2, 0.75 * 0.3 },
+    { "7", "07%", 3, 0.07 * 0.3 },
   }) do
     events.system_stats({ disk = case[1] })
     assert(item.props.label.string == case[2], "Unexpected label in case " .. i)

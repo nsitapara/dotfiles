@@ -47,5 +47,5 @@ memory:subscribe("system_stats", function(env)
   end
   -- Match CPU's lower-third trace. Usage alone does not indicate pressure.
   memory:push({ percent / 100 * 0.3 })
-  memory:set({ label = string.format("%d%%", math.floor(percent + 0.5)) })
+  memory:set({ label = string.format("%02d%%", math.floor(percent + 0.5)) })
 end)

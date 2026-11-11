@@ -64,6 +64,6 @@ temperature:subscribe("system_stats", function(env)
   end
   temperature:set({
     graph = { color = color },
-    label = string.format("%dC", math.floor(value + 0.5)),
+    label = string.format("%02dC", math.floor(value + 0.5)),
   })
 end)

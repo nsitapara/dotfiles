@@ -42,11 +42,12 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   for i, case in ipairs({
     { "80.0", "80%", 1 },
     { "45.4", "45%", 2 },
-    { "-1", "--%", 2 },
-    { "", "--%", 2 },
-    { "nan", "--%", 2 },
-    { "101", "--%", 2 },
-    { "99.6", "100%", 3 },
+    { "6.2", "06%", 3 },
+    { "-1", "--%", 3 },
+    { "", "--%", 3 },
+    { "nan", "--%", 3 },
+    { "101", "--%", 3 },
+    { "99.6", "100%", 4 },
   }) do
     events.system_stats({ mem = case[1] })
     assert(item.props.label.string == case[2], "Unexpected label in case " .. i)
