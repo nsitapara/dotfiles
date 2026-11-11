@@ -2,34 +2,23 @@ local colors = require("colors")
 local icons = require("icons")
 local settings = require("settings")
 
-local ssd = sbar.add("graph", "widgets.ssd", 36, {
+local ssd = sbar.add("item", "widgets.ssd", {
   position = "right",
-  graph = { color = colors.blue },
   icon = {
     string = icons.disk,
-    width = 22,
-    align = "center",
+    padding_left = 5,
+    padding_right = 3,
     font = { style = settings.font.style_map["Regular"], size = 14.0 },
   },
   label = {
     string = "--%",
-    padding_right = 2,
+    padding_left = 0,
+    padding_right = 5,
     font = {
       family = settings.font.numbers,
       style = settings.font.style_map["Semibold"],
       size = 13.0,
     },
-    align = "right",
-    width = 0,
-    y_offset = 4,
-  },
-  padding_left = 5,
-  padding_right = settings.paddings + 6,
-  background = {
-    height = 22,
-    drawing = true,
-    color = { alpha = 0 },
-    border_color = { alpha = 0 },
   },
   click_script = "open -a Finder /",
 })
@@ -43,17 +32,23 @@ sbar.add("item", "widgets.ssd.padding", {
   width = settings.group_paddings,
 })
 
+-- White under 80%, then yellow, orange and red as the disk fills up.
+local function usage_color(used)
+  if used < 80 then return colors.white end
+  if used < 90 then return colors.yellow end
+  if used < 95 then return colors.orange end
+  return colors.red
+end
+
 -- Fed by the system_stats provider started in widgets/init.lua: space used
--- across the APFS container, as the label and as the graph. The provider sends
--- it only every 5 minutes and after wake, so the graph spans about 3 hours.
+-- across the APFS container. The provider sends it only every 5 minutes and
+-- after wake; ticks without a disk reading leave this widget untouched.
 ssd:subscribe("system_stats", function(env)
   if env.disk == nil then return end
   local used = tonumber(env.disk)
   if not used or used < 0 or used > 100 then
-    ssd:set({ label = "--%" })
+    ssd:set({ label = { string = "--%", color = colors.white } })
     return
   end
-  -- Match the other widgets' lower-third trace below the percentage label.
-  ssd:push({ used / 100 * 0.3 })
-  ssd:set({ label = string.format("%02d%%", used) })
+  ssd:set({ label = { string = string.format("%02d%%", used), color = usage_color(used) } })
 end)

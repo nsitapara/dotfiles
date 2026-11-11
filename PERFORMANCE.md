@@ -26,15 +26,14 @@ CPU, memory, SSD and temperature used to run their own timers and shell out:
 `iostat` every 2 s (each run blocks for a 1 s sample), `sysctl` + `vm_stat` and
 Stats.app's `smc` every 5 s, plus a separate `cpu_load` provider. They now share
 one C provider, `helpers/event_providers/system_stats`, which reads the kernel
-directly and fires a single `system_stats` event. The SSD widget's graph now
-plots used space (the same value as its label) instead of disk throughput:
+directly and fires a single `system_stats` event:
 
 | Reading | Source | Cadence |
 | --- | --- | --- |
 | CPU load | `host_statistics` | 2 s |
 | Memory | `host_statistics64` (same app + wired + compressed formula as before) | 2 s |
 | Temperature | AppleSMC user client, key `TCMb` (same key Stats.app reads) | 2 s |
-| Disk space (label and graph) | `statfs` on `/System/Volumes/Data` | 5 min and on wake |
+| Disk space | `statfs` on `/System/Volumes/Data` | 5 min and on wake |
 
 Readings were checked against the old commands at the same moment: memory 45.0%
 vs 45.1% from `vm_stat`, disk 74% from `df`, and `TCMb` 48.3 vs 48.25 from `smc`.
@@ -47,9 +46,10 @@ vs 45.1% from `vm_stat`, disk 74% from `df`, and `TCMb` 48.3 vs 48.25 from `smc`
 | Provider CPU / memory | `cpu_load` 0.00 s | `system_stats` 0.00 s, 5.4 MB, flat |
 
 A forced 0.25 s tick put the cost of one update of all four graphs at about
-7.5 ms of daemon + Lua CPU, almost all of it SketchyBar redrawing. That is about
-0.2 s/min at 2 s ticks and 0.45 s/min at 1 s, so the graphs stay. The SSD
-widget redraws only every 5 minutes. Daemon samples are noisy: window and Space changes also redraw the bar.
+7.5 ms of daemon + Lua CPU, almost all of it SketchyBar redrawing. The graphs
+were later removed: each widget is now an icon and a number coloured by usage
+(white, then yellow, orange and red), which redraws less and is about 5-10 pt
+narrower per widget. Daemon samples are noisy: window and Space changes also redraw the bar.
 
 The hover helper polls the pointer at 10 Hz while it is more than 200 pt below
 the top (30 Hz near the top or during a hand-off), and checks the window list for

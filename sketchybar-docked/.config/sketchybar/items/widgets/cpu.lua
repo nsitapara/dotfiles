@@ -2,66 +2,45 @@ local icons = require("icons")
 local colors = require("colors")
 local settings = require("settings")
 
-local cpu = sbar.add("graph", "widgets.cpu" , 36, {
+local cpu = sbar.add("item", "widgets.cpu", {
   position = "right",
-  graph = { color = colors.blue },
-  background = {
-    height = 22,
-    color = { alpha = 0 },
-    border_color = { alpha = 0 },
-    drawing = true,
-  },
-  icon = { string = icons.cpu, width = 22, align = "center" },
+  icon = { string = icons.cpu, padding_left = 5, padding_right = 3 },
   label = {
-    string = "??%",
+    string = "--%",
+    padding_left = 0,
+    padding_right = 5,
     font = {
       family = settings.font.numbers,
       style = settings.font.style_map["Semibold"],
       size = 13.0,
     },
-    align = "right",
-    padding_right = 2,
-    width = 0,
-    y_offset = 4
   },
-  padding_right = settings.paddings + 6
+  click_script = "open -a 'Activity Monitor'",
 })
+
+-- White when idle, then yellow, orange and red as load climbs.
+local function load_color(load)
+  if load <= 30 then return colors.white end
+  if load < 60 then return colors.yellow end
+  if load < 80 then return colors.orange end
+  return colors.red
+end
 
 -- Fed by the system_stats provider started in widgets/init.lua.
 cpu:subscribe("system_stats", function(env)
   local load = tonumber(env.cpu)
-  if not load or load < 0 or load > 100 then return end
-  -- Keep the graph in the lower third, below the percentage label.
-  cpu:push({ load / 100. * 0.3 })
-
-  local color = colors.blue
-  if load > 30 then
-    if load < 60 then
-      color = colors.yellow
-    elseif load < 80 then
-      color = colors.orange
-    else
-      color = colors.red
-    end
+  if not load or load < 0 or load > 100 then
+    cpu:set({ label = { string = "--%", color = colors.white } })
+    return
   end
-
-  cpu:set({
-    graph = { color = color },
-    label = string.format("%02d%%", load),
-  })
+  cpu:set({ label = { string = string.format("%02d%%", load), color = load_color(load) } })
 end)
 
-cpu:subscribe("mouse.clicked", function(env)
-  sbar.exec("open -a 'Activity Monitor'")
-end)
-
--- Background around the cpu item
 sbar.add("bracket", "widgets.cpu.bracket", { cpu.name }, {
-  background = { color = colors.bg1 }
+  background = { color = colors.bg1 },
 })
 
--- Background around the cpu item
 sbar.add("item", "widgets.cpu.padding", {
   position = "right",
-  width = settings.group_paddings
+  width = settings.group_paddings,
 })
