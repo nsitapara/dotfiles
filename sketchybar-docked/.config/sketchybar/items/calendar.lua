@@ -1,13 +1,18 @@
 local settings = require("settings")
 local colors = require("colors")
 
+-- 12-hour time without AM/PM or a leading zero, e.g. "9:16".
+local function clock_label()
+  return (os.date("%I:%M"):gsub("^0", ""))
+end
+
 -- Padding item required because of bracket
 sbar.add("item", { position = "right", width = settings.group_paddings })
 
 local cal = sbar.add("item", "calendar", {
   icon = { drawing = false },
   label = {
-    string = os.date("%I:%M %p"),
+    string = clock_label(),
     color = colors.white,
     padding_left = 8,
     padding_right = 8,
@@ -40,5 +45,5 @@ sbar.add("bracket", { cal.name }, {
 sbar.add("item", { position = "right", width = settings.group_paddings })
 
 cal:subscribe({ "forced", "routine", "system_woke" }, function(env)
-  cal:set({ label = os.date("%I:%M %p") })
+  cal:set({ label = clock_label() })
 end)
