@@ -50,6 +50,9 @@
           "hidden": []
         },
         {
+          "id": "nsitapara.lan-mouse"
+        },
+        {
           "id": "nsitapara.system-monitor",
           "barMode": "All"
         },
