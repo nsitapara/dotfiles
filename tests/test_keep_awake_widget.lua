@@ -56,7 +56,7 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   assert(not shown("off") and not shown("auto"))
 
   fire(cup.name, "keep_awake", { awake = "0", mode = "off", power = "AC", ends = "0" })
-  assert(status.props.label.string == "Off · back on at the next plug-in")
+  assert(status.props.label.string == "Off · until the next plug-in")
   assert(not shown("off") and shown("auto"))
 
   fire(cup.name, "keep_awake", { awake = "1", mode = "on", power = "BATTERY", ends = "0" })
@@ -79,15 +79,22 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   assert(not cup.props.popup.drawing and cup.props.update_freq == 0)
 
   -- Each menu row sends its choice to the provider and closes the menu.
+  -- The row under the pointer is highlighted until the pointer leaves or it is chosen.
   for id, command in pairs({
     ["30m"] = "set on 1800", ["1h"] = "set on 3600", ["2h"] = "set on 7200",
     unlimited = "set on", custom = "custom", off = "set off", auto = "set auto",
   }) do
+    local chosen = items["keep_awake." .. id]
     fire(cup.name, "mouse.clicked")
-    fire("keep_awake." .. id, "mouse.clicked")
+    fire(chosen.name, "mouse.entered")
+    assert(chosen.props.background.drawing, id)
+    fire(chosen.name, "mouse.clicked")
     assert(ran("keep_awake " .. command), id)
-    assert(not cup.props.popup.drawing, id)
+    assert(not cup.props.popup.drawing and not chosen.props.background.drawing, id)
   end
+  fire("keep_awake.1h", "mouse.entered")
+  fire("keep_awake.1h", "mouse.exited")
+  assert(not items["keep_awake.1h"].props.background.drawing)
 
   for _, event in ipairs({ "power_source_change", "system_woke" }) do
     fire(cup.name, event)

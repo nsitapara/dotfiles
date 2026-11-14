@@ -31,7 +31,8 @@ local keep_awake = sbar.add("item", "widgets.keep_awake", {
     corner_radius = 9,
   },
   popup = {
-    align = "center",
+    -- The cup sits near the screen edge; a centred menu would run off it.
+    align = "right",
     height = 28,
     background = {
       color = colors.popup.bg,
@@ -47,7 +48,8 @@ local function row(id, text)
     position = "popup." .. keep_awake.name,
     width = popup_width,
     icon = { drawing = false },
-    label = { string = text, padding_left = 12, padding_right = 12, color = colors.grey },
+    label = { string = text, padding_left = 12, padding_right = 12, color = colors.white },
+    background = { drawing = false, color = colors.bg2, height = 24, corner_radius = 6 },
   })
 end
 
@@ -72,7 +74,7 @@ local function status_text()
       math.floor(left / 3600), math.floor(left % 3600 / 60), left % 60)
   end
   if state.mode == "on" then return "Awake · no time limit" end
-  if state.mode == "off" then return "Off · back on at the next plug-in" end
+  if state.mode == "off" then return "Off · until the next plug-in" end
   if state.awake then return "Awake · plugged in" end
   return "Off · on battery"
 end
@@ -106,12 +108,13 @@ end
 for _, action in ipairs(actions) do
   action.item = row(action.id, action.text)
   action.item:subscribe("mouse.entered", function()
-    action.item:set({ label = { color = colors.white } })
+    action.item:set({ background = { drawing = true } })
   end)
   action.item:subscribe("mouse.exited", function()
-    action.item:set({ label = { color = colors.grey } })
+    action.item:set({ background = { drawing = false } })
   end)
   action.item:subscribe("mouse.clicked", function()
+    action.item:set({ background = { drawing = false } })
     set_open(false)
     sbar.exec(bin .. " " .. action.command)
   end)
