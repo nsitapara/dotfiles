@@ -459,10 +459,12 @@ not needed; clicking a pill opens that provider's usage page. A failed read keep
 the last percentage. Older macOS versions keep the CodexBar aliases.
 These SketchyBar changes are independent of the temporary yabai build.
 
-The coffee cup keeps the Mac from idle-sleeping without the Amphetamine app. The
-native `keep_awake` provider (`helpers/event_providers/keep_awake`) holds one
-power assertion itself; the display may still sleep. The cup is green while the
-Mac is kept awake and grey when it may sleep.
+The coffee cup keeps the Mac awake without the Amphetamine app. The native
+`keep_awake` provider (`helpers/event_providers/keep_awake`) holds one power
+assertion against idle sleep; the display may still sleep. On the power adapter
+it also tells the kernel not to sleep on a closed lid, with the same call
+Amphetamine's closed-display mode made. The cup is green while the Mac is kept
+awake and grey when it may sleep.
 
 - **Automatic:** awake on the power adapter, off on battery.
 - **Click:** a menu overrides that for 30 minutes, 1 hour, 2 hours, no time
@@ -472,8 +474,15 @@ Mac is kept awake and grey when it may sleep.
 
 The override and the last power source are saved in
 `~/.local/state/sketchybar/keep-awake.json`, so they survive a bar reload or
-profile switch. It does not keep a Mac awake with the lid closed and no external
-display; that needs `sudo pmset disablesleep 1`.
+profile switch.
+
+Allowing lid sleep again while the lid is closed sleeps the Mac at once, because
+the kernel shares that setting with macOS's own docked-mode logic. So with the
+lid closed on the adapter, the menu's row reads "Turn off (lid closed: sleeps
+now)", and unplugging a closed Mac sleeps it. Quitting Amphetamine with the lid
+closed did the same on 2026-11-13: the Mac slept, the monitors re-connected on
+wake, and the bar hung until it was restarted. On battery a closed lid always
+sleeps the Mac.
 
 The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,

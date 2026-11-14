@@ -1,14 +1,16 @@
-// Keeps the Mac from idle-sleeping for the bar's coffee-cup widget, without the
-// Amphetamine app. The provider holds one power assertion (display sleep stays
-// allowed) while the rules in keep_awake_logic.swift say "awake", and fires one
+// Keeps the Mac awake for the bar's coffee-cup widget, without the Amphetamine
+// app. While the rules in keep_awake_logic.swift say "awake", the provider holds
+// one power assertion against idle sleep (display sleep stays allowed) and, on
+// the power adapter, also stops a closed lid from sleeping the Mac. It fires one
 // SketchyBar event whenever that changes:
-//   <event> awake=1 mode=auto power=AC ends=0
+//   <event> awake=1 mode=auto power=AC ends=0 lid=1
 //
 // Usage:
 //   keep_awake daemon <event-name>     the provider; runs until the bar replaces it
 //   keep_awake set auto|off|on [secs]  the widget's menu; "on" without seconds has no limit
 //   keep_awake custom                  ask for a duration, then "set on" with it
-//   keep_awake sync [AC|BATTERY]       re-check the power source (an argument pretends, for testing)
+//   keep_awake sync [AC|BATTERY]       re-check the power source (an argument pretends, for testing;
+//                                      it leaves the lid setting alone)
 //   keep_awake status                  the event's fields as JSON
 import Foundation
 import IOKit.ps
@@ -41,6 +43,40 @@ func currentPower() -> Power {
     let sources = IOPSCopyPowerSourcesInfo().takeRetainedValue()
     let providing = IOPSGetProvidingPowerSourceType(sources).takeUnretainedValue() as String
     return providing == kIOPSBatteryPowerValue ? .battery : .ac
+}
+
+/// The power manager's IORegistry entry; the caller releases it.
+func powerManager() -> io_service_t {
+    IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+}
+
+func lidIsClosed() -> Bool {
+    let root = powerManager()
+    defer { IOObjectRelease(root) }
+    let closed = IORegistryEntryCreateCFProperty(root, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)
+    return (closed?.takeRetainedValue() as? Bool) ?? false
+}
+
+/// Tells the kernel whether a closed lid may put the Mac to sleep. An idle-sleep
+/// assertion does not cover this: without it a docked, closed Mac sleeps as soon
+/// as its displays do. It is the call powerd itself makes (and Amphetamine made),
+/// kPMSetClamshellSleepState, and the setting outlives this connection.
+/// Allowing sleep again while the lid is closed sleeps the Mac at once.
+@discardableResult
+func setLidSleep(disabled: Bool) -> Bool {
+    let root = powerManager()
+    defer { IOObjectRelease(root) }
+    var connection: io_connect_t = 0
+    guard IOServiceOpen(root, mach_task_self_, 0, &connection) == KERN_SUCCESS else {
+        fputs("keep_awake: cannot reach the power manager\n", stderr)
+        return false
+    }
+    defer { IOServiceClose(connection) }
+    let setClamshellSleepState: UInt32 = 12
+    var input: UInt64 = disabled ? 1 : 0
+    let result = IOConnectCallScalarMethod(connection, setClamshellSleepState, &input, 1, nil, nil)
+    if result != KERN_SUCCESS { fputs("keep_awake: lid sleep setting refused (\(result))\n", stderr) }
+    return result == KERN_SUCCESS
 }
 
 /// Holds an exclusive lock on a file in the state directory until the returned
@@ -86,7 +122,8 @@ func requestSync(pretend: Power? = nil) {
 
 func fields(_ state: KeepAwake) -> [(String, String)] {
     [("awake", state.awake ? "1" : "0"), ("mode", state.mode.rawValue),
-     ("power", state.power.rawValue), ("ends", String(Int(state.ends ?? 0)))]
+     ("power", state.power.rawValue), ("ends", String(Int(state.ends ?? 0))),
+     ("lid", lidIsClosed() ? "1" : "0")]
 }
 
 func runDaemon(event: String) -> Never {
@@ -95,9 +132,20 @@ func runDaemon(event: String) -> Never {
     run(sketchybar, ["--add", "event", event])
     var assertion = IOPMAssertionID(kIOPMNullAssertionID)
     var timer: DispatchSourceTimer?
+    // Present while this provider has told the kernel to ignore a closed lid, so
+    // only a setting it made is ever undone, also after a bar reload.
+    let lidMarker = stateDirectory + "/keep-awake.lid"
 
     func apply(pretend: Power? = nil) {
         let state = update(power: pretend ?? currentPower())
+        // A pretended power source must never really sleep a closed Mac.
+        if pretend != nil {
+        } else if state.protectsLid {
+            if setLidSleep(disabled: true) { FileManager.default.createFile(atPath: lidMarker, contents: nil) }
+        } else if FileManager.default.fileExists(atPath: lidMarker) {
+            setLidSleep(disabled: false)
+            try? FileManager.default.removeItem(atPath: lidMarker)
+        }
         if state.awake, assertion == kIOPMNullAssertionID {
             IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleSystemSleep as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn),
@@ -131,6 +179,14 @@ func runDaemon(event: String) -> Never {
     // holds even while no bar is running to forward its own power event.
     var powerToken: Int32 = 0
     notify_register_dispatch(kIOPSNotifyPowerSource, &powerToken, .main) { _ in apply() }
+    // powerd shares the lid setting and rewrites it around wake and display
+    // changes, and the kernel acts on it about 30 seconds after a wake.
+    let lidGuard = DispatchSource.makeTimerSource(queue: .main)
+    lidGuard.schedule(deadline: .now() + 20, repeating: 20)
+    lidGuard.setEventHandler {
+        if FileManager.default.fileExists(atPath: lidMarker) { setLidSleep(disabled: true) }
+    }
+    lidGuard.resume()
     apply()
     dispatchMain()
 }

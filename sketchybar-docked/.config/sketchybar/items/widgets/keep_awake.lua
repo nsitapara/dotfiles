@@ -5,10 +5,11 @@ local colors = require("colors")
 -- holds the power assertion itself, so the Amphetamine app is not needed. Left
 -- alone it keeps the Mac awake on the power adapter and lets it sleep on
 -- battery. A click opens a menu that overrides that until the chosen time ends
--- or the power source changes. The widget runs no timer while the menu is closed.
+-- or the power source changes. On the adapter, awake also means a closed lid
+-- does not sleep the Mac. The widget runs no timer while the menu is closed.
 local bin = "$CONFIG_DIR/helpers/event_providers/keep_awake/bin/keep_awake"
 local popup_width = 250
-local state = { awake = false, mode = "auto", power = "AC", ends = 0 }
+local state = { awake = false, mode = "auto", power = "AC", ends = 0, lid_closed = false }
 local open = false
 
 sbar.add("event", "keep_awake")
@@ -85,6 +86,11 @@ local function render()
   status:set({ label = { string = status_text(), color = color } })
   for _, action in ipairs(actions) do
     action.item:set({ drawing = not action.shown or action.shown() })
+    if action.id == "off" then
+      -- Docked with the lid closed, only this widget keeps the Mac from sleeping.
+      local sleeps_now = state.lid_closed and state.power == "AC"
+      action.item:set({ label = { string = sleeps_now and "Turn off (lid closed: sleeps now)" or action.text } })
+    end
   end
 end
 
@@ -95,14 +101,19 @@ local function apply(values)
   state.mode = values.mode
   state.power = values.power
   state.ends = tonumber(values.ends) or 0
+  state.lid_closed = tonumber(values.lid) == 1
   render()
 end
 
--- The countdown only ticks while the menu is open.
+-- The countdown only ticks while the menu is open. Opening re-reads the state,
+-- since the lid can open or close without the provider reporting anything.
 local function set_open(value)
   open = value
   keep_awake:set({ popup = { drawing = open }, update_freq = open and 1 or 0 })
-  if open then render() end
+  if open then
+    render()
+    sbar.exec(bin .. " status", apply)
+  end
 end
 
 for _, action in ipairs(actions) do

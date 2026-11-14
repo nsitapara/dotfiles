@@ -14,6 +14,11 @@ struct KeepAwakeTests {
         precondition(plugged.settled(power: .battery, now: now) == unplugged)
         precondition(unplugged.settled(power: .ac, now: now) == plugged)
 
+        // A closed lid is only ignored while kept awake on the adapter.
+        precondition(plugged.protectsLid && !unplugged.protectsLid)
+        precondition(!plugged.turnedOff().protectsLid)
+        precondition(!unplugged.keptAwake(for: nil, now: now).protectsLid)
+
         // A click overrides automatic until the timer ends or the power source changes.
         let timed = unplugged.keptAwake(for: 3600, now: now)
         precondition(timed.awake && timed.ends == now + 3600)

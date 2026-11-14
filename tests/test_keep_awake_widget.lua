@@ -51,6 +51,14 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   assert(cup.props.icon.color == colors.green and status.props.label.string == "Awake · plugged in")
   assert(shown("off") and not shown("auto"))
 
+  -- Docked with the lid closed, turning off sleeps the Mac at once; say so.
+  local off = items["keep_awake.off"]
+  assert(off.props.label.string == "Turn off")
+  fire(cup.name, "keep_awake", { awake = "1", mode = "auto", power = "AC", ends = "0", lid = "1" })
+  assert(off.props.label.string == "Turn off (lid closed: sleeps now)")
+  fire(cup.name, "keep_awake", { awake = "1", mode = "on", power = "BATTERY", ends = "0", lid = "1" })
+  assert(off.props.label.string == "Turn off")
+
   fire(cup.name, "keep_awake", { awake = "0", mode = "auto", power = "BATTERY", ends = "0" })
   assert(cup.props.icon.color == colors.grey and status.props.label.string == "Off · on battery")
   assert(not shown("off") and not shown("auto"))
@@ -69,6 +77,7 @@ for _, profile in ipairs({ "sketchybar", "sketchybar-docked" }) do
   fire(cup.name, "mouse.clicked")
   assert(cup.props.popup.drawing and cup.props.update_freq == 1)
   assert(status.props.label.string == "Awake · 1h 31m 40s left")
+  assert(ran("keep_awake status"), "Opening re-reads the state, for the lid")
   os.time = function() return 1001 end
   fire(cup.name, "routine")
   assert(status.props.label.string == "Awake · 1h 31m 39s left")

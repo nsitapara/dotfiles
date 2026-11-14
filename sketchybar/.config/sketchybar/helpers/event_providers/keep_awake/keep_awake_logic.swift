@@ -14,6 +14,10 @@ struct KeepAwake: Codable, Equatable {
     /// Automatic keeps the Mac awake on the power adapter and lets it sleep on battery.
     var awake: Bool { mode == .on || (mode == .auto && power == .ac) }
 
+    /// Whether a closed lid must not put the Mac to sleep. Only on the adapter:
+    /// a closed Mac on battery is probably in a bag.
+    var protectsLid: Bool { awake && power == .ac }
+
     /// The state once the current power source and time are taken into account.
     /// Plugging in, unplugging and a timer running out all return to automatic.
     func settled(power: Power, now: Double) -> KeepAwake {

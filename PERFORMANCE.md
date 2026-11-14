@@ -64,7 +64,8 @@ Python plus `osascript` start on every click, power change, wake and open-toolti
 second. The `keep_awake` provider (Swift) now holds the power assertion itself
 and reports to the bar only when something changes. The closed widget runs no
 timer and starts no process; the open menu redraws its countdown once a second
-in Lua. A minute after start the provider used 6.5 MB of memory and 0.0% CPU.
+in Lua. While it ignores a closed lid, the provider repeats that one kernel call
+every 20 seconds, because macOS rewrites the setting around wake. A minute after start the provider used 6.5 MB of memory and 0.0% CPU.
 
 ## Why keep Python
 
