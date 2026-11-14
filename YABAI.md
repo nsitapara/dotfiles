@@ -451,15 +451,29 @@ the events; changing Raycast's shortcuts will not fix it.
 ## SketchyBar and borders
 
 On macOS 27, the regular and docked profiles use normal SketchyBar items for
-Claude/Codex usage and Amphetamine because their native menu windows are absent
-from SketchyBar's alias lookup. The native `ai_usage` provider
+Claude/Codex usage because CodexBar's native menu windows are absent from
+SketchyBar's alias lookup. The native `ai_usage` provider
 (`helpers/event_providers/ai_usage`) reads both usage percentages straight from
 Anthropic's and OpenAI's usage endpoints every 5 minutes, so the CodexBar app is
 not needed; clicking a pill opens that provider's usage page. A failed read keeps
-the last percentage. `scripts/menu-status.py` opens Amphetamine's native menu.
-Amphetamine keeps its session controls and shows a coffee icon colored by its
-current state. Older macOS versions keep the CodexBar aliases.
+the last percentage. Older macOS versions keep the CodexBar aliases.
 These SketchyBar changes are independent of the temporary yabai build.
+
+The coffee cup keeps the Mac from idle-sleeping without the Amphetamine app. The
+native `keep_awake` provider (`helpers/event_providers/keep_awake`) holds one
+power assertion itself; the display may still sleep. The cup is green while the
+Mac is kept awake and grey when it may sleep.
+
+- **Automatic:** awake on the power adapter, off on battery.
+- **Click:** a menu overrides that for 30 minutes, 1 hour, 2 hours, no time
+  limit or a typed time (`90`, `45m`, `1h 30m`, `1:30`), or turns it off.
+- **Back to automatic:** when the timer ends, when the adapter is plugged in or
+  pulled, or from the menu.
+
+The override and the last power source are saved in
+`~/.local/state/sketchybar/keep-awake.json`, so they survive a bar reload or
+profile switch. It does not keep a Mac awake with the lid closed and no external
+display; that needs `sudo pmset disablesleep 1`.
 
 The existing regular and docked Lua themes select yabai items while the trial
 job exists. The replacement shows desktop numbers, app icons, focused desktop,
@@ -526,6 +540,9 @@ stow --dir="$PWD" --target="$HOME" -D yabai skhd
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 lua tests/test_yabai_bar.lua "$PWD"
 lua tests/test_service_mode.lua "$PWD"
+lua tests/test_keep_awake_widget.lua "$PWD"
+swiftc sketchybar/.config/sketchybar/helpers/event_providers/keep_awake/keep_awake_logic.swift \
+  tests/test_keep_awake.swift -o /tmp/test-keep-awake && /tmp/test-keep-awake
 ```
 
 These tests simulate the desktop commands. They check failure recovery,

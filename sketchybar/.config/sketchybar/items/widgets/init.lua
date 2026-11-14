@@ -6,7 +6,7 @@ sbar.add("event", "system_stats")
 sbar.exec("killall cpu_load system_stats >/dev/null 2>&1; "
   .. "exec $CONFIG_DIR/helpers/event_providers/system_stats/bin/system_stats system_stats 2.0")
 
-require("items.widgets.amphetamine")
+require("items.widgets.keep_awake")
 require("items.display_profile")
 require("items.widgets.battery")
 require("items.widgets.volume")

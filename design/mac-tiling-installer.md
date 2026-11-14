@@ -103,7 +103,7 @@ none starts the brew services. `setup.sh` installs AeroSpace and stows
 - `skhdrc:14-21,27-28`
 - `yabai/.config/yabai/scripts/window.sh:6,8`
 - the SketchyBar profiles (`init.lua:19`, `items/display_profile.lua`,
-  `codexbar.lua`, `amphetamine.lua`)
+  `codexbar.lua`)
 - `bin/.local/bin/theme:9`
 
 `display-profile.sh:13-14` also only works because `~/.config/yabai` is a
@@ -130,7 +130,7 @@ directory link into the repo.
 | SbarLua (`~/.local/share/sketchybar_lua/sketchybar.so`, `helpers/init.lua:2`) | Not installed by any script. Upstream install: `git clone FelixKratz/SbarLua && make install` |
 | Xcode Command Line Tools | `swiftc` for the Spaces helper and the hover helper; `clang`/`make` for the bar helpers; `codesign` for the patched builds. Not checked: whether the patched builds work with only the Command Line Tools (Xcode.app is installed here) |
 | Python | `/usr/bin/python3`, standard library only |
-| Optional widget apps | CodexBar, Amphetamine (Mac App Store id 937984704) |
+| Optional widget apps | CodexBar |
 
 ## macOS settings and permissions
 
@@ -234,7 +234,7 @@ first and skips itself if that state is already correct.
   daemon (same PIDs), leave no git diff and ask no questions;
 - the fresh-install path can only be tested on the new Mac.
 
-**Left out:** Dock autohide, Raycast, the CodexBar and Amphetamine apps.
+**Left out:** Dock autohide, Raycast, the CodexBar app.
 
 ## Known bugs found during research
 

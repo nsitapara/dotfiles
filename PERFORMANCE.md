@@ -14,11 +14,9 @@ shortcuts. It immediately returns when focus is already correct. Repairs still
 wait 80 ms for Space activation and re-check the active Space before focusing a
 window, so late events cannot pull the user back to an old desktop.
 
-The regular Amphetamine item uses SketchyBar mouse entry/exit events. Its closed
-widget checks power assertions every five seconds; an open tooltip refreshes
-every second. Clicks and power/wake events still update immediately. Slow power
-queries cannot overlap. Older macOS alias items retain pointer polling because
-image refreshes can produce unreliable mouse exit events.
+The Amphetamine item used SketchyBar mouse entry/exit events. Its closed widget
+checked power assertions every five seconds; an open tooltip refreshed every
+second. The keep_awake provider replaced it on 2026-11-13 (below).
 
 ## Stats widgets: one native provider (2026-11-10, macOS 27.2.1)
 
@@ -57,6 +55,16 @@ keyboard-opened menus at 1 Hz instead of 2 Hz; the native bar draws above
 SketchyBar, so the later hide is invisible. The Amphetamine widget's closed-state
 power check went from 5 s to 15 s; clicks, power changes and wake still update it
 at once.
+
+## Keep awake: native provider instead of Amphetamine (2026-11-13, macOS 27.2)
+
+The coffee cup used to drive the Amphetamine app through AppleScript from a
+Python helper: one `pmset -g assertions` every 15 seconds while closed, and a
+Python plus `osascript` start on every click, power change, wake and open-tooltip
+second. The `keep_awake` provider (Swift) now holds the power assertion itself
+and reports to the bar only when something changes. The closed widget runs no
+timer and starts no process; the open menu redraws its countdown once a second
+in Lua. A minute after start the provider used 6.5 MB of memory and 0.0% CPU.
 
 ## Why keep Python
 
