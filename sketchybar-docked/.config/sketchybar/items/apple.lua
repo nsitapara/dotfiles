@@ -42,3 +42,10 @@ sbar.exec(
   "osascript -e 'tell application \"System Events\" to get name of first process whose frontmost is true'",
   show_app
 )
+
+-- Explicit handoff bypasses the hover delay and opens the native Apple menu.
+front_icon:subscribe("mouse.clicked", function(env)
+  if env.BUTTON == "left" then
+    sbar.exec('/usr/bin/python3 "$HOME/dotfiles/sketchybar-hover/run.py" --apple-menu')
+  end
+end)

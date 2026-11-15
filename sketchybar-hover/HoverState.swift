@@ -17,6 +17,15 @@ struct HoverState {
     private var hoverStart: TimeInterval?
     private var lastInZone: TimeInterval?
 
+    // A click explicitly requesting the native menu bypasses hover suppression.
+    mutating func revealNativeMenu() {
+        hidden = true
+        maskNative = false
+        leaveTime = nil
+        hoverStart = nil
+        lastInZone = nil
+    }
+
     mutating func update(distance: Double?, menuHeight: Int,
                          mouseDown: Bool, menuVisible: Bool, now: TimeInterval,
                          popupVisible: Bool = false) -> Bool? {

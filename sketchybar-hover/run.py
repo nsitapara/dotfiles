@@ -25,6 +25,11 @@ def stop():
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+if sys.argv[1:] == ['--apple-menu']:
+    result = subprocess.run(['pkill', '-USR1', '-u', str(os.getuid()), '-x', 'sbar-hover'])
+    sys.exit(result.returncode)
+
+
 if sys.argv[1:] == ['stop']:
     stop()
     sys.exit(0)

@@ -16,6 +16,7 @@ guard flock(lockFD, LOCK_EX) == 0 else { exit(1) }
 signal(SIGCHLD, SIG_DFL)
 signal(SIGTERM, SIG_IGN)
 signal(SIGINT, SIG_IGN)
+signal(SIGUSR1, SIG_IGN)
 
 func bar(_ arguments: [String]) {
     let task = Process()
@@ -157,5 +158,23 @@ timer.setEventHandler {
         }
     }
 }
+// The corner icon signals this existing helper so it owns the handoff state.
+// Merely hiding the bar from Lua would leave the hover timer masking the menu.
+let appleMenuSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
+appleMenuSignal.setEventHandler {
+    state.revealNativeMenu()
+    masked = false
+    setNativeMenuAlpha(1)
+    bar(["--bar", "hidden=on", "y_offset=0"])
+    let menu = Process()
+    menu.executableURL = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".config/sketchybar/helpers/menus/bin/menus")
+    menu.arguments = ["-s", "0"] // first native menu item is Apple
+    menu.standardOutput = FileHandle.nullDevice
+    do { try menu.run() }
+    catch { fputs("SketchyBar Apple menu: \(error)\n", stderr) }
+}
+appleMenuSignal.resume()
+signalSources.append(appleMenuSignal)
 timer.resume()
 RunLoop.main.run()

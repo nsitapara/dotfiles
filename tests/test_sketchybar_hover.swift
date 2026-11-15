@@ -66,6 +66,15 @@ struct HoverTests {
         precondition(update(20, 31, menu: true) == nil)
         precondition(update(20, 31 + delay, menu: true) == true,
                      "native menu access resumes after the popup closes")
+        // The corner click must reveal immediately even in the suppression zone.
+        state = HoverState()
+        precondition(update(20, 40, menu: true) == nil && state.maskNative)
+        state.revealNativeMenu()
+        precondition(state.hidden && !state.maskNative)
+        precondition(update(20, 40.1, down: true, menu: true) == nil && state.hidden)
+        precondition(update(150, 41, menu: true) == nil && state.hidden)
+        precondition(update(150, 42) == nil && state.hidden)
+        precondition(update(150, 42.4) == false && !state.hidden)
         let display = CGRect(x: 0, y: 0, width: 1728, height: 1117)
         let popup = CGRect(x: 1421, y: 40, width: 191, height: 152)
         let cases: [(Int32, Int64, CGRect, Double, Bool)] = [

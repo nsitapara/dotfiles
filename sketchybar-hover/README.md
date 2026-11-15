@@ -24,6 +24,12 @@ windows owned by this SketchyBar process, including a custom app bundle name.
 Parked off-screen popup windows do not count. The scan continues at 10 Hz while
 a popup is open, with no extra process or polling timer.
 
+Clicking the far-left app icon explicitly hands off immediately and opens the
+Apple menu through the existing native `menus -s 0` helper. The click sends
+`SIGUSR1` to the running hover helper (`run.py --apple-menu`), so its state stays
+in sync with the hidden bar. Opening the Apple menu uses the menu helper's
+existing Accessibility permission.
+
 It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
