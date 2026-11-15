@@ -99,7 +99,9 @@ func refreshScreens() {
 }
 refreshScreens()
 setNativeMenuAlpha(1) // In case a previous helper died while masking it.
-bar(["--bar", "topmost=window", "hidden=off", "y_offset=0"])
+// Keep item windows above the native menu hit area. At floating-window level
+// the first click after using another app can land on that area instead.
+bar(["--bar", "topmost=on", "hidden=off", "y_offset=0"])
 // Poll the pointer at 30 Hz near the top or while a hand-off is in progress,
 // and at 10 Hz otherwise: that is enough to see it heading for the top before
 // macOS starts revealing its menu bar.
@@ -126,8 +128,7 @@ timer.setEventHandler {
         // The window-list query is the costly part. Poll it every tick only while
         // the pointer is in the menu zone so the hide lands as the bar appears,
         // 10 Hz while hidden to notice the menu closing, and 1 Hz otherwise for
-        // keyboard-driven menu activation (the native bar already draws on top,
-        // so a late hide is invisible).
+        // keyboard-driven menu activation while the pointer is elsewhere.
         let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
         let menuEvery = nearTop ? 0 : ((state.hidden || menus.popup) ? 0.1 : 1.0)
         if now - lastMenuCheck >= menuEvery {
@@ -145,8 +146,8 @@ timer.setEventHandler {
             timer.schedule(deadline: .now() + interval, repeating: interval,
                            leeway: .milliseconds(fast ? 5 : 20))
         }
-        // The native bar draws above SketchyBar, so keep it transparent while
-        // the reveal delay runs. Reassert each tick: other tools reset it.
+        // Keep the native bar transparent while the reveal delay runs, then
+        // restore it for the handoff. Reassert each tick: other tools reset it.
         if state.maskNative || state.maskNative != masked {
             masked = state.maskNative
             setNativeMenuAlpha(masked ? 0 : 1)

@@ -10,8 +10,7 @@ older Xcode compiler with SDK settings inherited during the OS upgrade.
 
 SketchyBar hands off to the native menu bar only after the pointer has stayed
 in the top zone for 3 seconds (`HoverState.revealDelay`) and macOS has revealed
-its auto-hidden menu bar; brushing the top edge alone does nothing. The native
-bar draws above SketchyBar, so while the delay runs the helper keeps it
+its auto-hidden menu bar; brushing the top edge alone does nothing. While the delay runs the helper keeps the native bar
 transparent with the private `SLSSetMenuBarInsetAndAlpha` call (the SketchyBar
 menus helper uses the same call), and keeps it transparent while it slides away
 if the pointer leaves early. A menu opened from the keyboard (pointer away from
@@ -41,8 +40,11 @@ SkyLight framework. The native menu must be configured to auto-hide.
 SketchyBar remains at `y_offset=0`; there is no second row or window retiling.
 Visibility is global, so all displays hide/show together.
 
-The helper uses `topmost=window` so native dropdown menus stay above it. Stopping
-it restores `topmost=off hidden=off y_offset=0`:
+The helper uses `topmost=on` to keep SketchyBar items above the native menu's
+click area. At `topmost=window`, the first click after using another app could
+select that area instead; a live test confirmed the higher level fixes it.
+Native dropdowns remain above the bar, and the hover handoff still hides it.
+Stopping it restores `topmost=off hidden=off y_offset=0`:
 
 ```sh
 python3 ~/dotfiles/sketchybar-hover/run.py stop
