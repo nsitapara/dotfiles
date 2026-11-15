@@ -70,3 +70,8 @@ Related upstream reports:
 - [SketchyBar #810](https://github.com/FelixKratz/SketchyBar/pull/810): merged macOS 26 menu-height correction.
 - [SketchyBar #833](https://github.com/FelixKratz/SketchyBar/pull/833): proposed fix for zero menu insets on external displays.
 - [sketchybar-toggle](https://github.com/malpern/sketchybar-toggle): related hide/show implementation.
+
+The launcher follows the oldest matching SketchyBar process, including ancestors.
+Short-lived IPC clients share the daemon's process name and can have lower PIDs
+after PID wrap; following one makes the helper exit as soon as that client ends.
+The launcher regression runs with `python3 -m unittest discover -s tests -p test_sketchybar_hover_launcher.py`.

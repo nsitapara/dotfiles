@@ -51,8 +51,10 @@ if not binary.exists() or any(p.stat().st_mtime > binary.stat().st_mtime for p i
         ], env=build_env, check=True, timeout=60)
         output.replace(binary)
 
-# The daemon is an ancestor when this launcher is run from its Lua config.
-pid = subprocess.check_output(['pgrep', '-a', '-u', str(os.getuid()), '-x', 'sketchybar'],
+# The daemon is an ancestor when launched by Lua. Concurrent IPC clients have
+# the same name; after PID wrap they can sort before the daemon. Follow the
+# oldest process, not the lowest PID, or the helper exits when a client finishes.
+pid = subprocess.check_output(['pgrep', '-a', '-o', '-u', str(os.getuid()), '-x', 'sketchybar'],
                               text=True).splitlines()[0]
 bar = shutil.which('sketchybar')
 if not bar:
