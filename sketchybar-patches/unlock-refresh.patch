@@ -1,0 +1,68 @@
+diff --git a/src/event.c b/src/event.c
+index 0c05b58..bcbfde2 100644
+--- a/src/event.c
++++ b/src/event.c
+@@ -53,6 +53,18 @@ static void event_system_woke(void* context) {
+   bar_manager_handle_system_woke(&g_bar_manager);
+ }
+ 
++// Unlocking does not invalidate the rendering surfaces. The real wake path
++// rebuilds them for power/display recovery; using it here blanks every item.
++static void event_system_unlocked(void* context) {
++  bar_manager_handle_space_change(&g_bar_manager, true);
++  bar_manager_handle_display_change(&g_bar_manager);
++  g_bar_manager.needs_ordering = true;
++  bar_manager_refresh(&g_bar_manager, true);
++  bar_manager_custom_events_trigger(&g_bar_manager,
++                                    COMMAND_SUBSCRIBE_SYSTEM_WOKE,
++                                    NULL);
++}
++
+ static void event_system_will_sleep(void* context) {
+   bar_manager_handle_system_will_sleep(&g_bar_manager);
+ }
+@@ -366,6 +378,7 @@ static callback_type* event_handler[] = {
+   [DISTRIBUTED_NOTIFICATION]   = event_distributed_notification,
+   [MENU_BAR_HIDDEN_CHANGED]    = event_menu_bar_hidden_changed,
+   [SYSTEM_WOKE]                = event_system_woke,
++  [SYSTEM_UNLOCKED]            = event_system_unlocked,
+   [SYSTEM_WILL_SLEEP]          = event_system_will_sleep,
+   [SHELL_REFRESH]              = event_shell_refresh,
+   [ANIMATOR_REFRESH]           = event_animator_refresh,
+diff --git a/src/event.h b/src/event.h
+index 627acff..4c8d73c 100644
+--- a/src/event.h
++++ b/src/event.h
+@@ -13,6 +13,7 @@ enum event_type {
+   DISPLAY_CHANGED,
+   MENU_BAR_HIDDEN_CHANGED,
+   SYSTEM_WOKE,
++  SYSTEM_UNLOCKED,
+   SYSTEM_WILL_SLEEP,
+   SHELL_REFRESH,
+   ANIMATOR_REFRESH,
+diff --git a/src/workspace.m b/src/workspace.m
+index 32237f5..f8a114c 100644
+--- a/src/workspace.m
++++ b/src/workspace.m
+@@ -143,7 +143,7 @@ CGImageRef workspace_icon_for_app(char* app) {
+                 name:@"AppleInterfaceMenuBarHidingChangedNotification"
+                 object:nil];
+         [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+-                selector:@selector(didWake:)
++                selector:@selector(didUnlock:)
+                 name:@"com.apple.screenIsUnlocked"
+                 object:nil];
+     }
+@@ -189,6 +189,11 @@ CGImageRef workspace_icon_for_app(char* app) {
+     event_post(&event);
+ }
+ 
++- (void)didUnlock:(NSNotification *)notification {
++    struct event event = { NULL, SYSTEM_UNLOCKED };
++    event_post(&event);
++}
++
+ - (void)didWake:(NSNotification *)notification {
+     struct event event = { NULL, SYSTEM_WOKE };
+     event_post(&event);

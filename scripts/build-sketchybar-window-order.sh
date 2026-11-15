@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the temporary native ordering fix. No running service is changed.
+# Build the native ordering and unlock-refresh fixes. No running service is changed.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 output=${1:-"$HOME/Applications/SketchyBar Window Order.app"}
@@ -13,6 +13,9 @@ git clone --depth 1 --branch v2.24.0 https://github.com/FelixKratz/SketchyBar.gi
 [[ $(git -C "$work/source" rev-parse HEAD) == 6284ee816601486ace33ca48a0271832eec6de35 ]]
 git -C "$work/source" apply --check "$root/sketchybar-patches/window-order.patch"
 git -C "$work/source" apply "$root/sketchybar-patches/window-order.patch"
+git -C "$work/source" apply --check "$root/sketchybar-patches/unlock-refresh.patch"
+git -C "$work/source" apply "$root/sketchybar-patches/unlock-refresh.patch"
+python3 "$root/tests/test_sketchybar_unlock.py" "$work/source"
 unset SDKROOT MACOSX_DEPLOYMENT_TARGET
 export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
 case $(uname -m) in
