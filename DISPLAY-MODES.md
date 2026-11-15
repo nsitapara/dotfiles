@@ -33,6 +33,17 @@ logs its timestamp and reason.
 Failed or zero-display detection leaves the existing profile alone for the next
 display event or explicit profile application to retry.
 
+Under yabai, wake notifications with the same settled screens preserve a manual
+profile selection. Only a change to the connected screen identities clears it.
+The delayed desktop cleanup runs once inside the display lock after an actual
+profile application; repeated notifications for an unchanged layout do not
+restore windows, sweep desktops, or reload the bar. If desktop creation or cleanup
+is unavailable, an otherwise successful application remains cached.
+
+The monitor menu toggles SketchyBar's actual popup state, so its first click also
+works after the bar has hidden for a native macOS menu. The pill border opens the
+same menu, including the Restart and Quit actions.
+
 Both scripts use macOS `lockf` to prevent overlapping runs. Display events no
 longer kill a pending switch while it is changing symlinks. The event handler
 writes directly to the switcher logs so reloading its parent Lua config cannot

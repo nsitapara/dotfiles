@@ -11,7 +11,11 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
       function item:set(values)
         for k, v in pairs(values) do
           if type(v) == "table" and type(self.props[k]) == "table" then
-            for kk, vv in pairs(v) do self.props[k][kk] = vv end
+            for kk, vv in pairs(v) do
+              if k == "popup" and kk == "drawing" and vv == "toggle" then
+                self.props[k][kk] = not self.props[k][kk]
+              else self.props[k][kk] = vv end
+            end
           else self.props[k] = v end
         end
       end
@@ -49,6 +53,14 @@ for _, profile in ipairs({"sketchybar", "sketchybar-docked"}) do
   assert(items["display.profile.docked"].props.label.color == 2, "inactive row plain")
   events["display.profile:mouse.clicked"]()
   assert(menu.props.popup.drawing == true, "click opens the menu")
+  -- SketchyBar closes popups itself when its bar hides for a native menu.
+  menu.props.popup.drawing = false
+  events["display.profile:mouse.clicked"]()
+  assert(menu.props.popup.drawing == true, "first click reopens a popup hidden by SketchyBar")
+  events["display.profile:mouse.exited.global"]()
+  assert(menu.props.popup.drawing == false, "leaving the menu closes it")
+  events["display.profile.bracket:mouse.clicked"]()
+  assert(menu.props.popup.drawing == true, "the pill border opens the same menu")
   events["display.profile.laptop:mouse.clicked"]()
   assert(commands[#commands]:find('wm.sh" profile laptop', 1, true), commands[#commands])
   assert(menu.props.popup.drawing == false, "choosing a row closes the menu")

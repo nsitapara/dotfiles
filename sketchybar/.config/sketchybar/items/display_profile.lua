@@ -25,10 +25,10 @@ local menu = sbar.add("item", "display.profile", {
 })
 
 -- Same bordered pill and spacing as the other right-side widgets.
-sbar.add("bracket", "display.profile.bracket", { menu.name }, { background = { color = colors.bg1 } })
+local bracket = sbar.add("bracket", "display.profile.bracket", { menu.name }, { background = { color = colors.bg1 } })
 sbar.add("item", "display.profile.padding", { position = "right", width = settings.group_paddings })
 
-local rows, shown = {}, false
+local rows = {}
 local letters = { yabai = "Y", aerospace = "A", none = "Off" }
 local active_manager = "none"
 local generation = 0
@@ -61,7 +61,6 @@ for _, id in ipairs(order) do
     background = { drawing = false },
   })
   row:subscribe("mouse.clicked", function()
-    shown = false
     menu:set({ popup = { drawing = false } })
     sbar.exec(wm .. " " .. id .. " >/dev/null 2>&1; true", refresh)
   end)
@@ -80,7 +79,6 @@ local function manager_row(id, title, command)
       color = colors.white, font = { size = 12 } },
   })
   row:subscribe("mouse.clicked", function()
-    shown = false
     menu:set({ popup = { drawing = false }, label = { string = "…" } })
     sbar.exec('export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; '
       .. 'mkdir -p "$HOME/.local/state/dotfiles-wm"; { ' .. command
@@ -93,9 +91,15 @@ manager_row("restart", "Restart", 'if pgrep -x yabai >/dev/null; then '
   .. 'launchctl kickstart -k "gui/$(id -u)/local.dotfiles.yabai"; '
   .. 'else "$HOME/dotfiles/wm.sh" use yabai --temporary; fi')
 manager_row("quit", "Quit", '"$HOME/dotfiles/wm.sh" quit')
-menu:subscribe("mouse.clicked", function()
-  shown = not shown
-  menu:set({ popup = { drawing = shown } })
+-- SketchyBar also closes popups when the bar hides. Toggle its real state,
+-- rather than a Lua flag which becomes stale after a native-menu handoff.
+local function toggle_menu()
+  menu:set({ popup = { drawing = "toggle" } })
+end
+menu:subscribe("mouse.clicked", toggle_menu)
+bracket:subscribe("mouse.clicked", toggle_menu)
+menu:subscribe("mouse.exited.global", function()
+  menu:set({ popup = { drawing = false } })
 end)
 menu:subscribe({ "display_change", "system_woke" }, refresh)
 refresh()
