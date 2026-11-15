@@ -100,7 +100,7 @@ with (root/'calls.jsonl').open('a') as log:
     log.write(json.dumps([name]+args)+'\n')
 def save(): file.write_text(json.dumps(state))
 if name == 'launchctl': sys.exit(0)
-elif name == 'pgrep': print(42)
+elif name == 'pgrep': print(state.get('pid',42))
 elif name == 'sleep': pass
 elif name == 'readlink': print(str(root/state['package']/'.config/sketchybar/sketchybarrc'))
 elif name == 'display-layout.sh': print(json.dumps(state['plan']))
@@ -126,8 +126,12 @@ elif name == 'sketchybar':
     elif args[0] == '--reload':
         if state.get('reload_failure'): sys.exit(1)
         state['loaded'] = 'docked' if state['package'].endswith('-docked') else 'non-docked'
+        state['backend'] = 'yabai'
         state['queries_remaining'] = state.get('reload_delay', 0)
         save()
+    elif args[0] == '--trigger': pass
+    elif args == ['--query','wm.backend']:
+        print(json.dumps({'label':{'value':state.get('backend','yabai')}},indent=2))
     else:
         loaded = state['loaded']
         if state.get('queries_remaining', 0):
@@ -191,6 +195,29 @@ class NativeProfileTests(unittest.TestCase):
         self.run_profile()
         (self.signature.parent/'display-profile.pin').write_text('laptop\n')
         self.run_profile()
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 2)
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1)
+        self.assertIn(['sketchybar','--trigger','display_change'], self.calls('sketchybar'))
+
+    def test_daemon_restart_and_forced_login_keep_a_matching_bar(self):
+        self.run_profile()
+        before = len(self.calls('ensure-spaces.sh'))
+        self.state['pid'] = 43
+        self.run_profile()
+        self.run_profile(force=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), before + 2,
+                         'new daemon and forced login still restore Space labels')
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1,
+                         'restoring labels must not tear down an already matching bar')
+        self.assertEqual(self.calls('sketchybar').count(['sketchybar','--trigger','display_change']), 2)
+
+    def test_matching_profile_with_wrong_backend_reloads_once(self):
+        self.run_profile()
+        self.state['backend'] = 'aerospace'
+        self.run_profile()
+        self.assertEqual(self.state['backend'], 'yabai')
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
+        self.run_profile()
         self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
 
     def test_screen_change_drops_manual_pick(self):
@@ -213,7 +240,7 @@ class NativeProfileTests(unittest.TestCase):
             self.run_profile(hotplug=True)
         self.assertTrue(pin.exists(), 'wake notifications must not clear an unchanged layout pin')
         self.assertEqual(before, (self.calls('ensure-spaces.sh'), self.calls('spaces.sh')))
-        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1)
 
     def test_hotplug_cleanup_runs_only_for_an_applied_change(self):
         self.run_profile(hotplug=True)

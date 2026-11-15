@@ -60,10 +60,13 @@ signature=$(printf '%s\n%s\n%s\n' "$pid" "$signature" "$pin" | cksum)
 live=$(readlink -f "$HOME/.config/sketchybar/sketchybarrc" 2>/dev/null || true)
 bar_running=false
 loaded=""
+backend=""
 if pgrep -x sketchybar >/dev/null; then
     bar_running=true
     loaded=$(sketchybar --query display_mode 2>/dev/null |
         sed -nE 's/.*"value":[[:space:]]*"(docked|non-docked)".*/\1/p') || exit 1
+    backend=$(sketchybar --query wm.backend 2>/dev/null |
+        sed -nE 's/.*"value":[[:space:]]*"(yabai|aerospace|none)".*/\1/p') || true
     # Don't interrupt a bar reload in progress. Startup and hotplug callers
     # retry failures; success here would abandon labels/padding for this daemon.
     if [ -z "$loaded" ] && ! $force; then
@@ -72,7 +75,15 @@ if pgrep -x sketchybar >/dev/null; then
 fi
 old=$(cat "$STATE/display-profile.signature" 2>/dev/null || true)
 if ! $force && [ "$signature" = "$old" ] && [[ "$live" == *"/$package/.config/"* ]] &&
-   { ! $bar_running || [ "$loaded" = "$mode" ]; }; then exit 0; fi
+   { ! $bar_running || { [ "$loaded" = "$mode" ] && [ "$backend" = yabai ]; }; }; then exit 0; fi
+
+# Label restoration (new yabai PID or an explicit apply) does not require
+# destroying a healthy bar. Its display event refreshes mappings in place.
+reload_bar=false
+if $bar_running && { [[ "$live" != *"/$package/.config/"* ]] ||
+    [ "$loaded" != "$mode" ] || [ "$backend" != yabai ]; }; then
+    reload_bar=true
+fi
 
 echo "Applying yabai $mode profile ($count active screens)"
 if ! "$HERE/ensure-spaces.sh"; then
@@ -103,7 +114,7 @@ fi
 temp=$(mktemp "$STATE/display-layout.XXXXXX")
 printf '%s\n' "$plan" > "$temp"
 mv "$temp" "$STATE/display-layout.json"
-if $bar_running; then
+if $reload_bar; then
     # Invalidate the old config's marker before requesting the asynchronous
     # reload, so it cannot be mistaken for the new config being ready.
     previous_loaded=$loaded
@@ -125,6 +136,8 @@ if $bar_running; then
         echo 'SketchyBar profile did not load; will retry.' >&2
         exit 1
     fi
+elif $bar_running; then
+    sketchybar --trigger display_change
 fi
 # Sweep once for an actual hotplug application, not once per notification.
 # Keep the lock and recheck the plan so delayed cleanup cannot touch a newer

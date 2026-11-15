@@ -35,6 +35,11 @@ display event or explicit profile application to retry.
 
 Under yabai, wake notifications with the same settled screens preserve a manual
 profile selection. Only a change to the connected screen identities clears it.
+When startup, a new yabai daemon, or a manual profile pick needs to restore Space
+labels, an already matching bar receives a display refresh rather than a full
+reload. Only a different Stow package, loaded profile, or window-manager backend
+requires rebuilding the bar. Login no longer requests an extra backend reload
+before that profile application.
 The delayed desktop cleanup runs once inside the display lock after an actual
 profile application; repeated notifications for an unchanged layout do not
 restore windows, sweep desktops, or reload the bar. If desktop creation or cleanup
