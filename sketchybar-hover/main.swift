@@ -45,24 +45,30 @@ func restore() {
     bar(["--bar", "topmost=off", "hidden=off", "y_offset=0"])
 }
 
-func nativeMenuVisible() -> Bool {
+func menuVisibility() -> (native: Bool, popup: Bool) {
     guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, 0)
-            as? [[String: Any]] else { return false }
+            as? [[String: Any]] else { return (false, false) }
+    var native = false
+    var popup = false
     for window in windows {
+        guard let number = window[kCGWindowLayer as String] as? NSNumber,
+              let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+              let frame = CGRect(dictionaryRepresentation: bounds) else { continue }
         // macOS 27 marks some layers with bit 31. Ignore it when matching.
-        guard let number = window[kCGWindowLayer as String] as? NSNumber else { continue }
-        let layer: Int64 = number.int64Value & Int64(0x7fff_ffff)
-        guard layer == 24 else { continue }
+        let layer = number.int64Value & Int64(0x7fff_ffff)
         let owner = window[kCGWindowOwnerName as String] as? String
-        guard owner == "Window Server" else { continue }
-        guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
-              let height = bounds["Height"] as? NSNumber,
-              let width = bounds["Width"] as? NSNumber else { continue }
-        if height.doubleValue > 0 && height.doubleValue <= 100 && width.doubleValue > 100 {
-            return true
+        if layer == 24 && owner == "Window Server"
+            && frame.height > 0 && frame.height <= 100 && frame.width > 100 {
+            native = true
+        }
+        let pid = (window[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value ?? 0
+        let alpha = (window[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 0
+        if isSketchyBarPopup(ownerPID: pid, layer: layer, frame: frame, alpha: alpha,
+                            barPID: barPID, displayBounds: displayBounds) {
+            popup = true
         }
     }
-    return false
+    return (native, popup)
 }
 
 var signalSources: [DispatchSourceSignal] = []
@@ -74,14 +80,19 @@ for sig in [SIGTERM, SIGINT] {
 }
 
 var state = HoverState()
-var menuVisible = false
+var menus = (native: false, popup: false)
 var masked = false
 // Screen geometry queries round-trip to the window server; refresh once a second
 // instead of on every pointer tick. Auto-hide can report a zero visible-frame
 // inset, so keep at least 36pt as the menu zone, or the notch's safe area.
 struct ScreenInfo { let frame: CGRect; let menuHeight: Int }
 var screens: [ScreenInfo] = []
+var displayBounds: [CGRect] = []
 func refreshScreens() {
+    displayBounds = NSScreen.screens.compactMap { screen in
+        guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return nil }
+        return CGDisplayBounds(id.uint32Value)
+    }
     screens = NSScreen.screens.map {
         ScreenInfo(frame: $0.frame, menuHeight: Int(ceil(max(36, $0.safeAreaInsets.top))))
     }
@@ -118,14 +129,14 @@ timer.setEventHandler {
         // keyboard-driven menu activation (the native bar already draws on top,
         // so a late hide is invisible).
         let nearTop = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
-        let menuEvery = nearTop ? 0 : (state.hidden ? 0.1 : 1.0)
+        let menuEvery = nearTop ? 0 : ((state.hidden || menus.popup) ? 0.1 : 1.0)
         if now - lastMenuCheck >= menuEvery {
             lastMenuCheck = now
-            menuVisible = nativeMenuVisible()
+            menus = menuVisibility()
         }
         let change = state.update(distance: distance, menuHeight: menuHeight,
                                   mouseDown: NSEvent.pressedMouseButtons != 0,
-                                  menuVisible: menuVisible, now: now)
+                                  menuVisible: menus.native, now: now, popupVisible: menus.popup)
         let wantFast = state.hidden || state.maskNative
             || (distance.map { $0 >= 0 && $0 <= fastZone } ?? false)
         if wantFast != fast {

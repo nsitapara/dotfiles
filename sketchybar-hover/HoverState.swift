@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 // Keep ordinary SketchyBar clicks available and debounce the return from menus.
 struct HoverState {
@@ -17,8 +18,20 @@ struct HoverState {
     private var lastInZone: TimeInterval?
 
     mutating func update(distance: Double?, menuHeight: Int,
-                         mouseDown: Bool, menuVisible: Bool, now: TimeInterval) -> Bool? {
+                         mouseDown: Bool, menuVisible: Bool, now: TimeInterval,
+                         popupVisible: Bool = false) -> Bool? {
         if !hidden {
+            // Hiding the bar also destroys its open popups. A menu interaction
+            // takes priority over the native reveal timer, including its first
+            // click arriving exactly at the deadline.
+            let pressingBar = mouseDown
+                && (distance.map { $0 >= 0 && $0 <= Double(menuHeight + 8) } ?? false)
+            if popupVisible || pressingBar {
+                hoverStart = nil
+                lastInZone = now
+                maskNative = true
+                return nil
+            }
             let inZone = distance.map { $0 >= 0 && $0 <= Double(menuHeight) } ?? false
             if inZone {
                 if hoverStart == nil { hoverStart = now }
@@ -56,4 +69,13 @@ struct HoverState {
         }
         return nil
     }
+}
+
+// CGWindowList's on-screen option also includes SketchyBar's parked windows at
+// (-9999, -9999). Only a popup intersecting a real display holds the handoff.
+func isSketchyBarPopup(ownerPID: Int32, layer: Int64, frame: CGRect, alpha: Double,
+                      barPID: Int32, displayBounds: [CGRect]) -> Bool {
+    ownerPID == barPID && (layer & 0x7fff_ffff) == 101 && alpha > 0
+        && frame.width > 0 && frame.height > 0
+        && displayBounds.contains { $0.intersects(frame) }
 }

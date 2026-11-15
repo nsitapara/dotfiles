@@ -18,6 +18,13 @@ if the pointer leaves early. A menu opened from the keyboard (pointer away from
 the top for over a second) hands off at once. The helper restores full opacity
 when it starts and when it stops; if it is force-killed mid-delay and the native
 bar stays invisible, reload SketchyBar.
+An open SketchyBar popup pauses that handoff and resets its timer. This prevents
+the first menu click from opening a popup just as the helper hides the entire bar
+(and closes the popup). The existing window-metadata scan recognizes popup-level
+windows owned by this SketchyBar process, including a custom app bundle name.
+Parked off-screen popup windows do not count. The scan continues at 10 Hz while
+a popup is open, with no extra process or polling timer.
+
 It stays hidden while the native menu bar is visible,
 including when the pointer moves down into an open dropdown. It returns after
 the native menu closes and the pointer has left its top zone for 350 ms.
