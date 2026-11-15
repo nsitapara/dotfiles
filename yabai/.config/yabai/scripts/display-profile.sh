@@ -13,8 +13,6 @@ export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 STATE="$HOME/.local/state/dotfiles-wm"
-# A bar pick overrides detection only until the screens change.
-if $hotplug; then rm -f "$STATE/display-profile.pin"; fi
 if [ "${DOTFILES_WM_LOCKED:-0}" != 1 ]; then
     exec 9>"${TMPDIR:-/tmp}/.display-mode-state.lock"
     lockf -s -t 10 9 || { echo 'Another display profile run holds the lock; will retry.' >&2; exit 1; }
@@ -25,16 +23,32 @@ if ! launchctl list local.dotfiles.yabai >/dev/null 2>&1; then
 fi
 mkdir -p "$STATE"
 
-previous=""
-settled=false
-for attempt in 1 2 3 4 5; do
-    plan=$("$HERE/display-layout.sh") || exit 1
-    signature=$(jq -cS . <<< "$plan")
-    if [ "$signature" = "$previous" ]; then settled=true; break; fi
-    previous=$signature
-    sleep 0.5
-done
-$settled || { echo 'Yabai display detection did not settle; will retry.' >&2; exit 1; }
+settled_plan() {
+    local previous="" plan signature
+    for attempt in 1 2 3 4 5; do
+        plan=$("$HERE/display-layout.sh") || return 1
+        signature=$(jq -cS . <<< "$plan") || return 1
+        if [ "$signature" = "$previous" ]; then printf '%s\n' "$plan"; return 0; fi
+        previous=$signature
+        sleep 0.5
+    done
+    echo 'Yabai display detection did not settle; will retry.' >&2
+    return 1
+}
+plan=$(settled_plan) || exit 1
+# macOS emits add/remove/move/resize notifications on wake too. A manual pick
+# expires only when the settled set of physical screens actually changes, and
+# only under the profile lock. Failed detection must leave the pin alone.
+if $hotplug && [ -f "$STATE/display-profile.pin" ] && [ -f "$STATE/display-layout.json" ]; then
+    identities='map({uuid,name,builtin}) | sort_by(.uuid,.name)'
+    before=$(jq -cS "$identities" "$STATE/display-layout.json") || exit 1
+    now=$(jq -cS "$identities" <<< "$plan") || exit 1
+    if [ "$before" != "$now" ]; then
+        rm -f "$STATE/display-profile.pin"
+        plan=$(settled_plan) || exit 1
+    fi
+fi
+signature=$(jq -cS . <<< "$plan")
 count=$(jq 'length' <<< "$plan")
 mode=non-docked
 package=sketchybar
@@ -110,6 +124,17 @@ if $bar_running; then
         sketchybar --set display_mode label="$previous_loaded" 2>/dev/null || true
         echo 'SketchyBar profile did not load; will retry.' >&2
         exit 1
+    fi
+fi
+# Sweep once for an actual hotplug application, not once per notification.
+# Keep the lock and recheck the plan so delayed cleanup cannot touch a newer
+# arrangement. A no-op above never restores windows or sweeps desktops.
+if $hotplug; then
+    sleep 5
+    after=$("$HERE/display-layout.sh") || exit 1
+    [ "$(jq -cS . <<< "$after")" = "$(jq -cS . <<< "$plan")" ] || exit 1
+    if ! "$HERE/ensure-spaces.sh"; then
+        echo 'Desktop cleanup unavailable; keeping the applied profile.' >&2
     fi
 fi
 printf '%s\n' "$signature" > "$STATE/display-profile.signature"

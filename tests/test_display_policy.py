@@ -199,8 +199,28 @@ class NativeProfileTests(unittest.TestCase):
         pin.write_text('single\n')
         self.run_profile()
         self.assertTrue(pin.exists())
+        self.state['plan'].append(dict(screen(2, 'LG HDR QHD'), workspaces=[2,4,6], top_padding=50))
         self.run_profile(hotplug=True)
         self.assertFalse(pin.exists())
+
+    def test_lid_event_burst_preserves_pin_without_reloading_or_restoring(self):
+        self.run_profile()
+        pin = self.signature.parent/'display-profile.pin'
+        pin.write_text('laptop\n')
+        self.run_profile()
+        before = self.calls('ensure-spaces.sh'), self.calls('spaces.sh')
+        for _ in range(4):
+            self.run_profile(hotplug=True)
+        self.assertTrue(pin.exists(), 'wake notifications must not clear an unchanged layout pin')
+        self.assertEqual(before, (self.calls('ensure-spaces.sh'), self.calls('spaces.sh')))
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 2)
+
+    def test_hotplug_cleanup_runs_only_for_an_applied_change(self):
+        self.run_profile(hotplug=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 2)
+        self.run_profile(hotplug=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 2)
+        self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1)
 
     def test_busy_bar_retries_during_startup_and_hotplug(self):
         self.run_profile()
@@ -227,14 +247,14 @@ class NativeProfileTests(unittest.TestCase):
 
     def test_creation_failure_still_applies_profile_without_repeated_setup(self):
         self.state['ensure_failure'] = True
-        self.run_profile()
+        self.run_profile(hotplug=True)
         self.assertEqual(self.state['package'], 'sketchybar')
         self.assertEqual(self.state['loaded'], 'non-docked')
         self.assertEqual(len([c for c in self.calls('spaces.sh') if '--check' not in c]), 1)
         self.assertIn(['yabai','-m','config','--space','1','top_padding','16'], self.calls('yabai'))
         self.assertTrue(self.signature.exists())
-        self.run_profile()
-        self.assertEqual(len(self.calls('ensure-spaces.sh')), 1)
+        self.run_profile(hotplug=True)
+        self.assertEqual(len(self.calls('ensure-spaces.sh')), 2)
         self.assertEqual(sum(c[1] == '--reload' for c in self.calls('sketchybar')), 1)
 
     def test_topology_change_does_not_cache_success(self):
