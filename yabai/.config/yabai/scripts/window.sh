@@ -1,6 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+# skhd's log has no times, so a shortcut that never reached skhd looks the same
+# as one that ran. A start line here proves the key arrived; the exit line says how it ended.
+trace="$HOME/.local/state/dotfiles-wm/window-trace.log"
+if [ "$(stat -f%z "$trace" 2>/dev/null || echo 0)" -gt 1000000 ]; then : > "$trace"; fi
+log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$trace" 2>/dev/null || true; }
+log "start $*"
+trap 'log "exit $? $*"' EXIT
 # The bar places the icon on its last frame at once; yabai answers no query
 # for 1-2 s after a cross-display move.
 announce() { sketchybar --trigger yabai_window_moved WINDOW_ID="$1" SPACE="$2" >/dev/null 2>&1 & }
