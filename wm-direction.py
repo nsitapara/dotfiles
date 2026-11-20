@@ -150,6 +150,21 @@ def arrival_hint(anchor, windows, incoming, source_frame):
     return DIRECTIONS[incoming]
 
 
+def cycle_stack_layout(selected, direction):
+    """In a stack-layout space (Cmd+,) every window shares one frame, so
+    left/right cycle through the stack, wrapping at either end. Up/down
+    keep the usual display crossing."""
+    if direction not in ('left', 'right') or not selected.get('stack-index'):
+        return False
+    if query('--spaces', '--space', selected['space']).get('type') != 'stack':
+        return False
+    step, wrap = ('stack.next', 'stack.first') if direction == 'right' else ('stack.prev', 'stack.last')
+    for target in (step, wrap):
+        if run('yabai', '-m', 'window', '--focus', target, check=False).returncode == 0:
+            return True
+    return False
+
+
 def focus_yabai(direction):
     displays = query('--displays')
     source = next((d for d in displays if d.get('has-focus')), None)
@@ -158,6 +173,8 @@ def focus_yabai(direction):
     windows = [w for w in query('--windows') if w.get('is-visible')
                and not w.get('is-minimized') and not w.get('is-hidden')]
     selected = next((w for w in windows if w.get('has-focus') and w['display'] == source['index']), None)
+    if selected and cycle_stack_layout(selected, direction):
+        return
     if selected:
         local = [w for w in windows if w['display'] == source['index'] and w['space'] == selected['space']]
         target_window = neighbor(selected, local, direction, allow_overlap=True)
